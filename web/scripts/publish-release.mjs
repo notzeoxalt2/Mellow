@@ -124,9 +124,20 @@ async function main() {
     console.log(`Release created: ${release.html_url}`);
   }
 
-  // 2. Upload assets
+  // 2. Upload assets (replace if already exists)
   for (const file of filesToUpload) {
     if (fs.existsSync(file)) {
+      const fileName = path.basename(file);
+      const existing = (release.assets || []).find((a) => a.name === fileName);
+      if (existing) {
+        console.log(`Replacing existing asset ${fileName} (id: ${existing.id})...`);
+        try {
+          await apiRequest(`/repos/${OWNER}/${REPO}/releases/assets/${existing.id}`, 'DELETE');
+          console.log(`Deleted old asset ${fileName}`);
+        } catch (e) {
+          console.warn(`Could not delete old asset ${fileName}:`, e.message);
+        }
+      }
       await uploadAsset(release.upload_url, file);
     } else {
       console.warn(`File not found: ${file}`);

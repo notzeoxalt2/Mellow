@@ -1,4 +1,5 @@
-import { Film, Maximize, Minimize, Video, VideoOff, X } from 'lucide-react';
+import { Film, Maximize, Minimize, Minus, Video, VideoOff, X } from 'lucide-react';
+import type { Track } from '@/data/music/types';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router';
 import {
@@ -181,6 +182,14 @@ export function FullScreenPlayer() {
   };
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const browserFullScreen = useBrowserFullScreen();
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+  const [isDesktopMaximized, setIsDesktopMaximized] = useState(false);
+  useEffect(() => {
+    if (isDesktop && window.electronAPI?.isMaximized) {
+      void window.electronAPI.isMaximized().then(setIsDesktopMaximized);
+      return window.electronAPI.onMaximizeChange?.(setIsDesktopMaximized);
+    }
+  }, [isDesktop]);
   const close = useRef<HTMLButtonElement>(null);
   // Whether this player put the page in the browser's full screen, so closing it leaves it again.
   const enteredBrowserFullScreen = useRef(false);
@@ -230,6 +239,10 @@ export function FullScreenPlayer() {
   }, [nowPlaying, setFullScreen]);
 
   const toggleBrowserFullScreen = () => {
+    if (isDesktop) {
+      window.electronAPI?.maximize?.();
+      return;
+    }
     if (document.fullscreenElement) {
       void document.exitFullscreen();
     } else {
@@ -294,7 +307,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       <button ref={close} className={closeCorner} aria-label="Close" title="Close player" onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
         <X size={20} />
       </button>
-      {/* Video playback remains audio-first: this controls only the optional picture stream. */}
+      {/* Top right window & video controls */}
       <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-2">
         {(video || videoPreviewEnabled) && <VideoQuality />}
         <button
@@ -314,16 +327,28 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         >
           {videoPreviewEnabled ? <Video size={17} /> : <VideoOff size={17} />}
         </button>
+        {(document.fullscreenEnabled || isDesktop) && (
+          <button
+            className={`${chromeButton} size-8 cursor-pointer bg-black/25 text-white/80 backdrop-blur-md hover:bg-black/45 hover:text-white`}
+            aria-label={isDesktop ? (isDesktopMaximized ? 'Restore window' : 'Maximize window') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
+            title={isDesktop ? (isDesktopMaximized ? 'Restore' : 'Maximize') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
+            onClick={toggleBrowserFullScreen}
+          >
+            {(isDesktop ? isDesktopMaximized : browserFullScreen) ? <Minimize size={17} /> : <Maximize size={17} />}
+          </button>
+        )}
+        {isDesktop && (
+          <button
+            type="button"
+            className={`${chromeButton} size-8 cursor-pointer bg-black/25 text-white/80 backdrop-blur-md hover:bg-black/45 hover:text-white`}
+            aria-label="Minimize window"
+            title="Minimize"
+            onClick={() => window.electronAPI?.minimize?.()}
+          >
+            <Minus size={15} />
+          </button>
+        )}
       </div>
-      {document.fullscreenEnabled && (
-        <button
-          className={`${chrome} top-4 right-[116px] cursor-pointer`}
-          aria-label={browserFullScreen ? 'Exit full screen' : 'Enter full screen'}
-          onClick={toggleBrowserFullScreen}
-        >
-          {browserFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
-        </button>
-      )}
 
       {/* Apple's grid areas "controls lyrics": the artwork column, then the lyrics. */}
       <div
@@ -434,16 +459,27 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
             </div>
             <FavoriteButton
               videoId={nowPlaying.videoId}
-              className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary"
+              className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary cursor-pointer"
               size={18}
             />
-            {track && (
-              <TrackMenu
-                track={track}
-                className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary"
-                placement="above-end"
-              />
-            )}
+            {(() => {
+              const effectiveTrack = track ?? (nowPlaying ? {
+                videoId: nowPlaying.videoId,
+                title: nowPlaying.title,
+                artist: nowPlaying.artist,
+                artworkUrl: nowPlaying.artworkUrl,
+                durationSec: nowPlaying.durationSec ?? 0,
+                album: null,
+                artists: [],
+              } as unknown as Track : null);
+              return effectiveTrack ? (
+                <TrackMenu
+                  track={effectiveTrack}
+                  className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary cursor-pointer"
+                  placement="above-end"
+                />
+              ) : null;
+            })()}
           </div>
 
           <Scrubber />
@@ -467,17 +503,19 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       </div>
 
       <button
-        className={`${corner} bottom-5 left-5 aria-pressed:text-primary`}
+        className={`${corner} bottom-5 left-5 z-30 pointer-events-auto cursor-pointer aria-pressed:text-primary`}
         aria-label="Lyrics"
         aria-pressed={showLyrics}
+        onPointerEnter={wake}
         onClick={() => togglePanel('lyrics')}
       >
         {showLyrics ? <LyricsActiveIcon size={18} /> : <LyricsIcon size={18} />}
       </button>
       {/* Up Next, with the speaker beside it: the level slides in over Up Next, as it does in the pill. */}
       <div
-        className={`group/actions absolute right-5 bottom-5 z-1 flex items-center [--volume-gap:36px] transition-opacity duration-300${hidden}`}
+        className={`group/actions absolute right-5 bottom-5 z-30 pointer-events-auto flex items-center [--volume-gap:36px] transition-opacity duration-300${hidden}`}
         data-volume-open={volumeOpen || undefined}
+        onPointerEnter={wake}
         onPointerLeave={(e) => {
           // The slider is positioned to the left of this compact action row.
           // Keep it open when the pointer crosses from the speaker into it.
@@ -488,14 +526,14 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         }}
       >
         <button
-          className={`${chromeButton} ${fadeForVolume} aria-pressed:text-primary`}
+          className={`${chromeButton} ${fadeForVolume} cursor-pointer aria-pressed:text-primary`}
           aria-label="Up Next"
           aria-pressed={showQueue}
           onClick={() => togglePanel('queue')}
         >
           <UpNextIcon size={18} />
         </button>
-        <VolumeControl open={volumeOpen} onOpen={() => setVolumeOpen(true)} className={chromeButton} iconSize={18} />
+        <VolumeControl open={volumeOpen} onOpen={() => setVolumeOpen(true)} className={`${chromeButton} cursor-pointer`} iconSize={18} />
       </div>
     </div>
   );
