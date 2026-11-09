@@ -39,9 +39,17 @@
   --body-gutter: 25px;
   --player-pill-height: 56px;
   --player-bottom-offset: 20px;
-  --side-panel-width: 300px;
+  --side-panel-width: clamp(360px, 29vw, 460px);
   --mobile-top-bar-height: 52px;
   --mini-player-height: 52px;
+
+  --theme-accent: #9b55f5;
+  --theme-accent-glow: rgba(155, 85, 245, 0.34);
+  --glass-opacity: 82%;
+  --glass-blur: 22px;
+  --artwork-glow-strength: 0.42;
+  --artwork-glow-art-opacity: 0.2016;
+  --artwork-glow-bloom-opacity: 0.2268;
 
   /* ---- Radii ------------------------------------------------------------- */
   --radius-artwork-small: 5px; /* 40px track rows, horizontal lockups */
@@ -81,12 +89,12 @@
   --systemSecondary-onDark: #ffffffa3;
   --systemTertiary-onDark: #ffffff66;
 
-  --keyColor: #d60017;
-  --keyColor-rgb: 214, 0, 23;
-  --keyColor-rollover: #a20000;
-  --keyColor-pressed: #bb0000;
-  --keyColorBG: #d60017;
-  --selectionColor: #d60017;
+  --keyColor: #9b55f5;
+  --keyColor-rgb: 155, 85, 245;
+  --keyColor-rollover: #b17aff;
+  --keyColor-pressed: #733fbe;
+  --keyColorBG: #9b55f5;
+  --selectionColor: #9b55f5;
   --keyColor-focus-color: rgba(var(--keyColor-rgb), 0.6);
 
   --systemRed: #ff3b30;
@@ -155,8 +163,8 @@
   :root {
     color-scheme: dark;
 
-    --pageBG: #1f1f1f;
-    --pageBG-rgb: 31, 31, 31;
+    --pageBG: #0c0d12;
+    --pageBG-rgb: 12, 13, 18;
 
     --systemPrimary: #ffffffeb;
     --systemSecondary: #ffffffa3;
@@ -164,12 +172,12 @@
     --systemQuaternary: #ffffff1a;
     --systemQuinary: #ffffff0d;
 
-    --keyColor: #fa586a;
-    --keyColor-rgb: 250, 88, 106;
-    --keyColor-rollover: #ff5f7a;
-    --keyColor-pressed: #ff4661;
-    --keyColorBG: #fa233b;
-    --selectionColor: #c11b2e;
+    --keyColor: #9b55f5;
+    --keyColor-rgb: 155, 85, 245;
+    --keyColor-rollover: #b17aff;
+    --keyColor-pressed: #733fbe;
+    --keyColorBG: #9b55f5;
+    --selectionColor: #9b55f5;
 
     --systemRed: #ff453a;
     --systemGreen: #32d74b;
@@ -184,7 +192,7 @@
     --labelDivider: #ffffff1a;
     --vibrantDivider: #ebebf530;
 
-    --glassMaterialBackground: #26262899;
+    --glassMaterialBackground: #14151ecc;
     --glassMaterialShadowColor: #00000033;
     --glassMaterialInnerStroke: #ffffff;
     --glassMaterialInnerStrokeAlpha: 0.25;
@@ -237,31 +245,18 @@
  * Artwork tint on album and playlist pages (lib/usePageTint.ts): the page's
  * labels recoloured for the artwork's own background.
  */
+[data-tint='light'],
 [data-tint='dark'] {
   --systemPrimary: #ffffffeb;
-  --systemSecondary: color-mix(in srgb, #ffffff 64%, var(--page-tint));
-  --systemTertiary: color-mix(in srgb, #ffffff 40%, var(--page-tint));
+  --systemSecondary: color-mix(in srgb, #ffffff 68%, var(--page-tint, transparent));
+  --systemTertiary: color-mix(in srgb, #ffffff 42%, var(--page-tint, transparent));
   --labelDivider: #ffffff1f;
   --tracklistHoverColor: #ffffff14;
   --systemQuinary: #ffffff12;
   --systemQuaternary: #ffffff24;
   --button-pill-color: #000000;
   --button-pill-background-color: #ffffff;
-  --genericJoeColor: color-mix(in srgb, #ffffff 10%, var(--page-tint));
-}
-
-[data-tint='light'] {
-  --systemPrimary: #000000e0;
-  --systemSecondary: color-mix(in srgb, #000000 60%, var(--page-tint));
-  --systemTertiary: color-mix(in srgb, #000000 40%, var(--page-tint));
-  --labelDivider: #0000001f;
-  --tracklistHoverColor: #00000012;
-  --systemQuinary: #0000000f;
-  --systemQuaternary: #00000024;
-  --button-pill-color: #ffffff;
-  --button-pill-background-color: #000000;
-  --genericJoeColor: color-mix(in srgb, #000000 8%, var(--page-tint));
-  color: var(--systemPrimary);
+  --genericJoeColor: color-mix(in srgb, #ffffff 10%, var(--page-tint, transparent));
 }
 
 /*
@@ -275,4 +270,9 @@
   --systemTertiary: var(--systemTertiary-onDark);
   --systemQuaternary: #ffffff2e;
   --systemQuinary: #ffffff1a;
+}
+
+@keyframes mellowBar {
+  0%, 100% { transform: scaleY(0.28); }
+  50% { transform: scaleY(1); }
 }

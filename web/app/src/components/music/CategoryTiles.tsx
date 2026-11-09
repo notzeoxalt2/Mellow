@@ -1,131 +1,150 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { ExternalLink, Search } from 'lucide-react';
 import { PrefetchLink } from '@/components/PrefetchLink';
+import { useCategories, useBrowse } from '@/data/music/queries';
 import { firstBrowseArtwork } from '@/data/music/mappers';
-import { browseQuery, useYouTubeReady } from '@/data/music/queries';
-import { sizedArtwork } from '@/lib/artwork';
-import type { Category, CategoryGroup } from '@/data/music/types';
-import { browseHref } from './links';
+import { useSpotifyCategories } from '@/data/spotify/queries';
+import catalog from '@/data/appleCategories.json';
 
-/**
- * True once the element is near the viewport. Tile artwork loads the way
- * the phone's does — in the background, as tiles arrive — rather than in
- * one burst of browse requests for every category on the page.
- */
-function useNearViewport<T extends HTMLElement>(rootMargin = '600px') {
-  const ref = useRef<T | null>(null);
-  const [near, setNear] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || near) return;
-    if (!('IntersectionObserver' in window)) {
-      setNear(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setNear(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [near, rootMargin]);
-  return { ref, near };
+type AppleCategory = { title: string; artwork: string; appleUrl: string; searchTerm: string };
+type AppleGroup = { title: string; source: string; categories: AppleCategory[] };
+type Source = 'apple' | 'youtube' | 'spotify';
+const appleGroups = (catalog.groups as AppleGroup[]);
+
+const targetFor = (title: string, source: Exclude<Source, 'apple'>, categoryId?: string) =>
+  `/search?q=${encodeURIComponent(title)}&source=${source}${categoryId ? `&category=${encodeURIComponent(categoryId)}` : ''}`;
+
+function ArtworkTile({ title, image, color, to, index, externalUrl }: { title: string; image?: string | null; color?: string; to: string; index: number; externalUrl?: string }) {
+  return (
+    <li className="group/tile relative min-w-0">
+      <PrefetchLink
+        to={to}
+        aria-label={`Browse ${title}`}
+        className="mellow-category group relative isolate block aspect-square overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#18191f] shadow-[0_8px_24px_rgb(0_0_0/14%)] transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-white/[0.2] hover:shadow-[0_14px_34px_rgb(0_0_0/24%)] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]"
+        style={color ? { backgroundColor: color } : undefined}
+      >
+        {image && <img
+          src={image}
+          alt=""
+          loading={index < 12 ? 'eager' : 'lazy'}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          draggable={false}
+          className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
+          onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }}
+        />}
+        <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/10" />
+        <span className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-4 sm:bottom-4">
+          <span className="min-w-0 truncate text-[13px] font-semibold tracking-[-0.02em] text-white drop-shadow-[0_1px_8px_rgb(0_0_0/70%)] sm:text-[15px]">{title}</span>
+          <Search size={15} aria-hidden="true" className="mb-0.5 shrink-0 text-white/75 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+        </span>
+      </PrefetchLink>
+      {externalUrl && <a
+        href={externalUrl}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Open ${title} on Apple Music`}
+        title="Open this Apple Music catalog page"
+        className="absolute right-2 top-2 z-10 grid size-8 place-items-center rounded-[8px] border border-white/20 bg-black/55 text-white/90 opacity-0 shadow-sm backdrop-blur-md transition-opacity duration-150 group-hover/tile:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]"
+      ><ExternalLink size={15} aria-hidden="true" /></a>}
+    </li>
+  );
 }
 
-const tile =
-  'relative flex aspect-video items-end overflow-hidden rounded-artwork-lg bg-[radial-gradient(120%_90%_at_100%_0%,color-mix(in_srgb,var(--tile-color)_70%,#fff)_0%,transparent_70%),linear-gradient(160deg,var(--tile-color),color-mix(in_srgb,var(--tile-color)_55%,#000))] px-3.5 py-3 text-white transition-[scale] duration-200 ease-panel hover:scale-[1.015]';
+function AppleTile({ category, index }: { category: AppleCategory; index: number }) {
+  const artwork = category.artwork.replace(/\/1200x1200bf\.webp$/, '/600x600bf.webp');
+  // Keep Apple's editorial art, but search the category name itself across
+  // the connected Spotify and YouTube Music catalogs. Adding "playlist"
+  // narrowed broad genres (Pop, Dance, Hip-Hop) into noisy playlist matches.
+  return <ArtworkTile title={category.title} image={artwork} to={`/search?q=${encodeURIComponent(category.searchTerm)}`} index={index} externalUrl={category.appleUrl} />;
+}
 
-function CategoryTile({ category }: { category: Category }) {
-  const { ready } = useYouTubeReady();
-  const { ref, near } = useNearViewport<HTMLLIElement>();
-  const [loaded, setLoaded] = useState(false);
-  // The same query BrowsePage runs, so borrowing the cover also warms the
-  // page the tile opens — the phone caches the shelves for the same reason.
-  const browse = useQuery({ ...browseQuery(category.link), enabled: ready && near });
-  const borrowed = browse.data ? firstBrowseArtwork(browse.data) : null;
-  // The URL as served is a small shelf thumbnail; stretched over a tile it
-  // pixelates. Ask the CDN for the rendered size, as Artwork does
-  // everywhere else (prompt §3). Wide stills keep their fixed size.
-  const artwork = borrowed ? (borrowed.wide ? borrowed.thumbnail : sizedArtwork(borrowed.thumbnail, 480)) : null;
-  const fade = {
-    opacity: loaded ? 1 : 0,
-    transition: 'opacity 300ms ease',
-  } as React.CSSProperties;
+/** YouTube does not publish category images in its genre chip list. Borrow the first real cover from that exact category's browse page, on demand as the card enters view. */
+function YouTubeTile({ category, index }: { category: { title: string; color: string; link: { browseId: string; params: string | null } }; index: number }) {
+  const ref = useRef<HTMLLIElement>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || nearViewport) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) {
+        setNearViewport(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '240px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [nearViewport]);
+  const browse = useBrowse(nearViewport ? category.link : { browseId: '', params: null });
+  const cover = browse.data ? firstBrowseArtwork(browse.data)?.thumbnail : null;
   return (
-    <li ref={ref}>
-      <PrefetchLink to={browseHref(category.link)} className={tile} style={{ '--tile-color': category.color } as React.CSSProperties}>
-        {artwork && (
-          <>
-            <img
-              src={artwork}
-              alt=""
-              // As with Artwork: googleusercontent throttles by Referer.
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              decoding="async"
-              draggable={false}
-              onLoad={() => setLoaded(true)}
-              className="absolute inset-0 size-full object-cover grayscale contrast-[1.05]"
-              // Square covers in a 16:9 tile lose 44% of their height; the
-              // crop window leans up (shows 11%–67%) so faces survive and
-              // the bottom — where the tile's own label sits — is what goes.
-              style={{ ...fade, objectPosition: '50% 25%' }}
-            />
-            {/*
-              The phone's duotone, as blends: the greyscale cover multiplied
-              by the stripe colour's highlight, screened by its shadow, so
-              the photo reads as one tinted sleeve, not a pasted picture.
-            */}
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 mix-blend-multiply"
-              style={{ ...fade, background: 'color-mix(in srgb, var(--tile-color) 68%, #fff)' }}
-            />
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 mix-blend-screen"
-              style={{ ...fade, background: 'color-mix(in srgb, var(--tile-color) 32%, #000)' }}
-            />
-            <span
-              aria-hidden="true"
-              className="absolute inset-x-0 bottom-0 h-3/5 bg-[linear-gradient(to_top,rgba(0,0,0,0.45),transparent)]"
-              style={fade}
-            />
-          </>
-        )}
-        {/* The solid stripe down the left, as on the phone. */}
-        <span aria-hidden="true" className="absolute inset-y-0 left-0 w-2.5" style={{ background: 'var(--tile-color)' }} />
-        <span className="relative type-title-2-emphasized [text-shadow:0_1px_8px_#0000004d]">{category.title}</span>
+    <li ref={ref} className="min-w-0">
+      <PrefetchLink
+        to={`/browse/${encodeURIComponent(category.link.browseId)}${category.link.params ? `?params=${encodeURIComponent(category.link.params)}` : ''}`}
+        aria-label={`Browse YouTube Music ${category.title}`}
+        className="mellow-category group relative isolate block aspect-square overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#18191f] shadow-[0_8px_24px_rgb(0_0_0/14%)] transition-[transform,border-color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-white/[0.2] focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)]"
+        style={{ backgroundColor: category.color }}
+      >
+        {cover && <img src={cover} alt="" loading={index < 12 ? 'eager' : 'lazy'} decoding="async" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]" />}
+        <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/5" />
+        <span className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-4 sm:bottom-4">
+          <span className="min-w-0 truncate text-[13px] font-semibold text-white drop-shadow-[0_1px_8px_rgb(0_0_0/70%)] sm:text-[15px]">{category.title}</span>
+          <Search size={15} aria-hidden="true" className="shrink-0 text-white/75 opacity-0 transition-opacity group-hover:opacity-100" />
+        </span>
       </PrefetchLink>
     </li>
   );
 }
 
-/**
- * Browse Categories bricks (report §6): 16:9 tiles, radius 10, the title at
- * the bottom left. Coloured from YouTube's own stripe colour per mood/genre,
- * with the category's first real cover borrowed as a duotone sleeve — the
- * moods page itself sends no artwork (YtMusicRepository.moodGenreArtwork).
- */
-export function CategoryTiles({ groups }: { groups: CategoryGroup[] }) {
+function SourceTabs({ source, onChange }: { source: Source; onChange: (source: Source) => void }) {
+  const choices: [Source, string][] = [['apple', 'Apple Music'], ['spotify', 'Spotify'], ['youtube', 'YouTube Music']];
+  return <div className="mx-(--body-gutter) mt-4 mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Category source">
+    {choices.map(([id, label]) => <button key={id} role="tab" aria-selected={source === id} onClick={() => onChange(id)} className={`rounded-[8px] px-3.5 py-2 type-callout-emphasized transition-colors ${source === id ? 'bg-white text-black' : 'bg-white/[0.07] text-secondary hover:bg-white/[0.12] hover:text-primary'}`}>{label}</button>)}
+  </div>;
+}
+
+/** Browse editorial categories by provider; every provider tile uses its own catalog and artwork. */
+export function CategoryTiles() {
+  const [source, setSource] = useState<Source>('apple');
+  const youtube = useCategories();
+  const spotify = useSpotifyCategories(source === 'spotify');
+  let appleOffset = 0;
   return (
-    <>
-      {groups.map((group) => (
-        <section key={group.title} className="pt-3" aria-label={group.title}>
+    <div className="pb-8">
+      <header className="mx-(--body-gutter) pt-2 pb-2">
+        <p className="type-caption-1 text-secondary">Browse the catalog</p>
+        <h1 className="mt-1 type-large-title">Categories</h1>
+        <p className="mt-1 type-callout text-secondary">Explore the real genre, mood and editorial catalogs for each service.</p>
+      </header>
+      <SourceTabs source={source} onChange={setSource} />
+      {source === 'apple' && appleGroups.map((group) => {
+        const start = appleOffset;
+        appleOffset += group.categories.length;
+        return <section key={group.title} className="pt-3" aria-label={group.title}>
           <h2 className="mx-(--body-gutter) type-title-2-emphasized">{group.title}</h2>
-          {/* 4 columns at ≥1000px, gap 20px (report §6); 3, then 2, below. */}
-          <ul className="mx-(--body-gutter) mt-3 mb-8 grid grid-cols-4 gap-5 max-lg:grid-cols-3 max-[607px]:grid-cols-2 max-[607px]:gap-2.5">
-            {group.categories.map((category) => (
-              <CategoryTile key={`${category.title}-${category.link.params}`} category={category} />
-            ))}
+          <ul className="mx-(--body-gutter) mt-3 mb-8 grid grid-cols-6 gap-4 max-2xl:grid-cols-5 max-xl:grid-cols-4 max-lg:grid-cols-3 max-[607px]:grid-cols-2 max-[607px]:gap-2.5">
+            {group.categories.map((category, i) => <AppleTile key={`${group.title}-${category.title}`} category={category} index={start + i} />)}
           </ul>
-        </section>
-      ))}
-    </>
+        </section>;
+      })}
+      {source === 'youtube' && (youtube.data?.length ? youtube.data.map((group) => <section key={group.title} className="pt-3" aria-label={group.title}>
+        <h2 className="mx-(--body-gutter) type-title-2-emphasized">{group.title}</h2>
+        <ul className="mx-(--body-gutter) mt-3 mb-8 grid grid-cols-6 gap-4 max-2xl:grid-cols-5 max-xl:grid-cols-4 max-lg:grid-cols-3 max-[607px]:grid-cols-2 max-[607px]:gap-2.5">
+          {group.categories.map((category, i) => <YouTubeTile key={`${group.title}-${category.link.browseId}`} category={category} index={i} />)}
+        </ul>
+      </section>) : <div className="mx-(--body-gutter) mt-8 flex flex-wrap items-center gap-3" aria-live="polite">
+        <p className="type-callout text-secondary">{youtube.isFetching ? 'Loading YouTube Music categories…' : 'YouTube Music’s genre feed did not load. Check its connection, then retry.'}</p>
+        {!youtube.isFetching && <button type="button" onClick={() => void youtube.refetch()} className="rounded-[8px] border border-white/10 bg-white/[0.06] px-3 py-1.5 type-callout-emphasized text-primary transition-colors hover:bg-white/[0.12]">Retry</button>}
+      </div>)}
+      {source === 'spotify' && <>
+        {spotify.data?.length ? <section className="pt-3" aria-label="Spotify Browse categories">
+          <h2 className="mx-(--body-gutter) type-title-2-emphasized">Browse all</h2>
+          <ul className="mx-(--body-gutter) mt-3 mb-8 grid grid-cols-6 gap-4 max-2xl:grid-cols-5 max-xl:grid-cols-4 max-lg:grid-cols-3 max-[607px]:grid-cols-2 max-[607px]:gap-2.5">
+            {spotify.data.map((category, i) => <ArtworkTile key={category.id} title={category.name} image={category.imageUrl} to={targetFor(category.name, 'spotify', category.id)} index={i} />)}
+          </ul>
+        </section> : <p className="mx-(--body-gutter) mt-8 type-callout text-secondary">{spotify.isLoading ? 'Loading Spotify Browse categories…' : 'Spotify’s Browse category feed is unavailable for this account or API session.'}</p>}
+      </>}
+      <p className="mx-(--body-gutter) type-caption-1 text-tertiary">Spotify category data and images come from Spotify. YouTube Music genre tiles open their own genre browse pages; Apple artwork is used only in the Apple Music tab.</p>
+    </div>
   );
 }

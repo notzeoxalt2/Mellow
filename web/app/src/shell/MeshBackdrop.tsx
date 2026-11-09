@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { GRID, meshPalette, type Rgb } from '@/lib/meshPalette';
+import { useLowResourceMode } from '@/lib/appearance';
 
 /*
  * The 2D fallback's banding is broken up by a still film of grain (bg-grain).
@@ -8,7 +9,9 @@ import { GRID, meshPalette, type Rgb } from '@/lib/meshPalette';
 const backdrop =
   'absolute inset-0 -z-1 overflow-hidden bg-[#343438] data-fallback:after:absolute data-fallback:after:inset-0 data-fallback:after:bg-grain data-fallback:after:opacity-6';
 
-const FRAME_MS = 1000 / 30;
+// A slower cadence keeps the ambient colour drift smooth while leaving more
+// GPU headroom for games and foreground work.
+const FRAME_MS = 1000 / 24;
 const FADE_MS = 1200;
 /** Before the artwork is read, and when it can't be: a neutral dark grey. */
 const FALLBACK: Rgb[] = Array.from({ length: GRID * GRID }, () => [52, 52, 56]);
@@ -105,7 +108,7 @@ void main() {
   gl_FragColor = vec4(color, 1.0);
 }`;
 
-function webglRenderer(canvas: HTMLCanvasElement): Renderer | null {
+function webglRenderer(canvas: HTMLCanvasElement, lowResourceMode: boolean): Renderer | null {
   const gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, powerPreference: 'low-power' });
   if (!gl) return null;
   const shader = (type: number, source: string) => {
@@ -137,8 +140,10 @@ function webglRenderer(canvas: HTMLCanvasElement): Renderer | null {
 
   return {
     draw(cells, seconds) {
-      // One device pixel per CSS pixel at most: the mesh has no detail a denser canvas would show.
-      const scale = Math.min(window.devicePixelRatio || 1, 1);
+      // A blurred colour field has no useful detail at native resolution.
+      // Keeping the working surface at 68% of CSS size cuts fragment work by
+      // more than half; low-resource mode goes lower for gaming laptops.
+      const scale = lowResourceMode ? 0.42 : Math.min(window.devicePixelRatio || 1, 0.68);
       const width = Math.max(1, Math.round(canvas.clientWidth * scale));
       const height = Math.max(1, Math.round(canvas.clientHeight * scale));
       if (canvas.width !== width || canvas.height !== height) {
@@ -204,7 +209,8 @@ function canvasRenderer(canvas: HTMLCanvasElement): Renderer | null {
 export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | null; playing: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const still = useReducedMotion();
-  const animate = playing && !still;
+  const lowResourceMode = useLowResourceMode();
+  const animate = playing && !still && !lowResourceMode;
   // A lost WebGL context remounts the canvas, which starts over with a fresh one.
   const [generation, setGeneration] = useState(0);
   const [fallback, setFallback] = useState(false);
@@ -236,7 +242,7 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
-    const renderer = fallback ? canvasRenderer(el) : webglRenderer(el);
+    const renderer = fallback ? canvasRenderer(el) : webglRenderer(el, lowResourceMode);
     if (!renderer) {
       // No WebGL, or a shader it won't compile: a fresh canvas for the 2D version.
       if (!fallback) setFallback(true);
@@ -246,8 +252,10 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
     let frame = 0;
     let last = performance.now();
     let drawn = -Infinity;
+    const visible = () => !document.hidden;
     const tick = (now: number) => {
       frame = 0;
+      if (!visible()) return;
       if (animate) s.seconds += Math.min(now - last, 100) / 1000;
       last = now;
       const fade = Math.min(1, (now - s.fadeStart) / FADE_MS);
@@ -259,11 +267,20 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
       if (animate || fade < 1) frame = requestAnimationFrame(tick);
     };
     s.wake = () => {
-      if (!frame) {
+      if (!frame && visible()) {
         last = performance.now();
         frame = requestAnimationFrame(tick);
       }
     };
+    const visibilityChanged = () => {
+      if (!visible() && frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      } else if (visible()) {
+        s.wake();
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityChanged);
     // A paused mesh still has to follow the window's size.
     const resized = new ResizeObserver(() => s.wake());
     resized.observe(el);
@@ -275,12 +292,13 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
     s.wake();
     return () => {
       cancelAnimationFrame(frame);
+      document.removeEventListener('visibilitychange', visibilityChanged);
       resized.disconnect();
       el.removeEventListener('webglcontextlost', lost);
       renderer.dispose();
       s.wake = () => {};
     };
-  }, [animate, generation, fallback]);
+  }, [animate, generation, fallback, lowResourceMode]);
 
   return (
     <div className={backdrop} aria-hidden="true" data-fallback={fallback || undefined}>

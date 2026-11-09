@@ -12,6 +12,9 @@ import type { Track } from '@/data/music/types';
 import { usePlayer } from '@/state/player';
 import { useUi } from '@/state/ui';
 import { useHasVideo } from '@/state/video';
+import { useCanvas } from '@/data/spotify/canvas';
+import { useAnimatedArtworkEnabled } from '@/lib/appearance';
+import { CanvasArtwork } from '@/components/music/CanvasArtwork';
 import { albumPageFor, artistPageFor } from './nowPlayingLinks';
 import { MixWindowHighlight } from './NerdStats';
 import { useScrubber } from './useScrubber';
@@ -104,6 +107,8 @@ export function Lcd() {
     return entry && entry.videoId === s.nowPlaying?.videoId ? entry : null;
   });
   const video = useHasVideo(nowPlaying?.videoId);
+  const canvas = useCanvas();
+  const animatedArtworkEnabled = useAnimatedArtworkEnabled();
 
   if (!nowPlaying) {
     return (
@@ -135,6 +140,13 @@ export function Lcd() {
             decoding="async"
             className="size-full object-cover opacity-0 transition-opacity duration-200 ease-in data-loaded:opacity-100"
             onLoad={(e) => e.currentTarget.setAttribute('data-loaded', '')}
+          />
+        )}
+        {canvas && animatedArtworkEnabled && (
+          <CanvasArtwork
+            url={canvas}
+            playing={status === 'playing' || status === 'buffering'}
+            className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
           />
         )}
         <VideoSurface
@@ -203,7 +215,7 @@ function Progress() {
         aria-hidden="true"
       >
         <MixWindowHighlight />
-        <div ref={bar} className="relative size-full origin-left scale-x-(--progress) bg-secondary [--progress:0]" />
+        <div ref={bar} className="relative size-full origin-left scale-x-(--progress) bg-(--theme-accent) [--progress:0]" />
       </div>
     </div>
   );

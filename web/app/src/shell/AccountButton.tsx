@@ -2,12 +2,13 @@ import { ArrowUpRight, ChevronsUpDown } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import { useRefreshYtAuth, useSelectChannel, useSetConnected, useYtAuth } from '@/extension/useYtAuth';
+import { useSpotifyAuth } from '@/extension/useSpotifyAuth';
 
 const SIGN_IN_URL = 'https://accounts.google.com/ServiceLogin?service=youtube&continue=https://music.youtube.com/';
 
-// The signed-out pill: Apple's red "Sign In" (report §1, .navigation__native-cta).
+// The signed-out pill: Mellow's purple "Sign In"
 const pill =
-  'self-start rounded-[16px] bg-key px-3.5 py-[5px] type-[600_13px/18px] text-white hover:brightness-[1.08] disabled:opacity-60';
+  'self-start rounded-[16px] bg-key px-3.5 py-[5px] type-[600_13px/18px] text-white hover:brightness-[1.08] disabled:opacity-60 cursor-pointer';
 const avatar = 'inline-grid flex-none place-items-center rounded-full bg-quinary object-cover type-[600_11px/1] text-secondary';
 
 function Avatar({ src, name, size }: { src: string | null; name: string; size: number }) {
@@ -21,23 +22,43 @@ function Avatar({ src, name, size }: { src: string | null; name: string; size: n
 }
 
 /**
- * The sidebar's account control (report §1: avatar and name at the bottom,
- * opening the account menu; a red "Sign In" pill when signed out).
- *
- * There is no sign-in form (prompt §5.3): BitChord uses the YouTube session
- * this browser already has, through the extension. "Sign In" opens Google's
- * own sign-in; the extension notices the new session and this updates itself.
+ * The sidebar's account control (avatar and name at the bottom,
+ * opening the account menu; a clean profile when synced).
  */
 export function AccountButton() {
   const status = useYtAuth();
+  const spotifyAuth = useSpotifyAuth();
   const select = useSelectChannel();
   const connect = useSetConnected();
   const refresh = useRefreshYtAuth();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = useCallback(() => setAnchor(null), []);
 
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+
   if (status.state !== 'ready') return null;
   const { auth } = status;
+  const spotifyIdentity = isDesktop && spotifyAuth.state === 'ready' && spotifyAuth.auth.signedIn
+    ? spotifyAuth.auth.user
+    : null;
+
+  // Desktop keeps the familiar Spotify profile in the sidebar. Selecting it
+  // opens the YouTube sign-in flow only when the saved YT session needs repair.
+  if (isDesktop && (!auth.browserSignedIn || !auth.connected || !auth.active)) {
+    const displayName = spotifyIdentity?.name ?? 'Mellow';
+    return (
+      <button
+        className="flex w-full min-w-0 items-center gap-2 rounded-nav px-1 py-1.5 text-start type-body-reduced text-primary hover:bg-quinary"
+        title={auth.problem ?? 'Connect YouTube Music'}
+        aria-label={`${displayName}. Connect YouTube Music`}
+        onClick={() => window.electronAPI?.openGoogleLogin?.()}
+      >
+        <Avatar src={spotifyIdentity?.avatarUrl ?? null} name={displayName} size={24} />
+        <span className="min-w-0 flex-1 truncate">{displayName}</span>
+        <ChevronsUpDown size={14} strokeWidth={2} className="flex-none text-secondary" />
+      </button>
+    );
+  }
 
   if (!auth.browserSignedIn) {
     return (
@@ -46,6 +67,7 @@ export function AccountButton() {
       </a>
     );
   }
+
   if (!auth.connected) {
     return (
       <button className={pill} onClick={() => connect.mutate(true)} disabled={connect.isPending}>
@@ -53,8 +75,8 @@ export function AccountButton() {
       </button>
     );
   }
+
   if (!auth.active) {
-    // Signed in to the browser, but the account couldn't be read (the reason is on the Extension page).
     return (
       <button
         className={pill}
@@ -66,7 +88,10 @@ export function AccountButton() {
       </button>
     );
   }
+
   const active = auth.active;
+  const displayName = spotifyIdentity?.name ?? active.name;
+  const displayAvatar = spotifyIdentity?.avatarUrl ?? active.avatarUrl;
   const multiple = auth.accounts.flatMap((a) => a.channels).length > 1;
 
   return (
@@ -78,8 +103,8 @@ export function AccountButton() {
         aria-expanded={anchor !== null}
         onClick={(event) => setAnchor(anchor ? null : event.currentTarget)}
       >
-        <Avatar src={active.avatarUrl} name={active.name} size={24} />
-        <span className="min-w-0 flex-1 truncate">{active.name}</span>
+        <Avatar src={displayAvatar} name={displayName} size={24} />
+        <span className="min-w-0 flex-1 truncate">{displayName}</span>
         {multiple && <ChevronsUpDown size={14} strokeWidth={2} className="flex-none text-secondary" />}
       </button>
       {anchor && (
@@ -98,20 +123,20 @@ export function AccountButton() {
                     if (channel.id !== active.id) select.mutate(channel.id);
                   }}
                 >
-                  {channel.name}
+                  <span className="truncate">{channel.name}</span>
                 </MenuItem>
               ))}
             </div>
           ))}
           <MenuSeparator />
           <MenuItem
+            icon={<ArrowUpRight size={16} />}
             onSelect={() => {
               close();
-              window.open(SIGN_IN_URL.replace('ServiceLogin', 'AddSession'), '_blank', 'noreferrer');
+              window.open(SIGN_IN_URL, '_blank', 'noreferrer');
             }}
-            trailing={<ArrowUpRight size={13} />}
           >
-            Add Account
+            Switch Accounts on YouTube
           </MenuItem>
           <MenuItem
             destructive
@@ -120,7 +145,7 @@ export function AccountButton() {
               connect.mutate(false);
             }}
           >
-            Disconnect from BitChord
+            Disconnect YouTube Music
           </MenuItem>
         </Menu>
       )}

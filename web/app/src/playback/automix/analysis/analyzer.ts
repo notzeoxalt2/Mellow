@@ -25,10 +25,13 @@ const BEAT_WINDOW_SEC = 59;
  * essentia's grid as the fallback. The open-unmix vocal mask picks the
  * instrumental bars.
  */
-const USE_BEAT_MODEL = true;
-const USE_VOCAL_MODEL = true;
+const USE_BEAT_MODEL = false;
+const USE_VOCAL_MODEL = false;
 /** BitChord: compressed audio kept for the loop mix to decode from (current, next, a few around). */
 const KEEP_BYTES_FOR = 6;
+const KEEP_ANALYSES_IN_MEMORY = 64;
+const KEEP_STATUSES_IN_MEMORY = 256;
+const MAX_QUEUED_ANALYSES = 128;
 
 /**
  * Sequential analysis queue: fetch -> decode at 44.1k -> mono downmix ->
@@ -68,7 +71,11 @@ class Analyzer {
 
   /** The analysis of [videoId], if it is done. */
   get(videoId: string): TrackAnalysis | null {
-    return this.results.get(videoId) ?? null;
+    const result = this.results.get(videoId);
+    if (!result) return null;
+    this.results.delete(videoId);
+    this.results.set(videoId, result);
+    return result;
   }
 
   statusOf(videoId: string): AnalysisStatus | null {
@@ -97,10 +104,17 @@ class Analyzer {
       }
       return;
     }
+    if (this.queue.length >= MAX_QUEUED_ANALYSES) {
+      if (!urgent) return;
+      const displaced = this.queue.pop();
+      if (displaced && this.status.get(displaced.videoId) === 'pending') {
+        this.status.delete(displaced.videoId);
+      }
+    }
     this.setStatus(videoId, 'pending');
     void getAnalysis(videoId).then((cached) => {
       if (cached && cached.analysisVersion === ANALYSIS_VERSION) {
-        this.results.set(videoId, cached);
+        this.cacheResult(videoId, cached);
         this.queue = this.queue.filter((q) => q.videoId !== videoId);
         this.setStatus(videoId, 'done');
       }
@@ -112,7 +126,25 @@ class Analyzer {
 
   private setStatus(videoId: string, status: AnalysisStatus) {
     this.status.set(videoId, status);
+    if (status === 'done') this.failedAt.delete(videoId);
+    while (this.status.size > KEEP_STATUSES_IN_MEMORY) {
+      const evictable = [...this.status].find(([, value]) => value === 'done' || value === 'error');
+      if (!evictable) break;
+      this.status.delete(evictable[0]);
+      this.failedAt.delete(evictable[0]);
+    }
+    while (this.failedAt.size > KEEP_STATUSES_IN_MEMORY / 2) {
+      this.failedAt.delete(this.failedAt.keys().next().value!);
+    }
     for (const l of this.listeners) l();
+  }
+
+  private cacheResult(videoId: string, analysis: TrackAnalysis): void {
+    this.results.delete(videoId);
+    this.results.set(videoId, analysis);
+    while (this.results.size > KEEP_ANALYSES_IN_MEMORY) {
+      this.results.delete(this.results.keys().next().value!);
+    }
   }
 
   private ensureWorker(): Worker {
@@ -142,7 +174,7 @@ class Analyzer {
       const started = performance.now();
       try {
         const analysis = await this.analyzeOne(videoId, tags);
-        this.results.set(videoId, analysis);
+        this.cacheResult(videoId, analysis);
         await putAnalysis(analysis);
         trackLog.i(
           `automix analysis: ${analysis.bpm?.toFixed(1) ?? '?'} BPM, ${analysis.keyName ?? '?'}, grid ${analysis.gridConfidence.toFixed(2)} in ${Math.round(performance.now() - started)}ms`,

@@ -90,7 +90,8 @@ function place() {
     video.remove();
     return;
   }
-  video.className = top.fit === 'contain' ? 'block size-full object-contain' : 'block size-full object-cover';
+  // The video is a visual layer. Custom player chrome owns the hit targets.
+  video.className = top.fit === 'contain' ? 'pointer-events-none block size-full object-contain' : 'pointer-events-none block size-full object-cover';
   if (video.parentElement !== top.host) top.host.append(video);
 }
 

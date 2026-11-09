@@ -1,0 +1,21 @@
+{
+  "name": "@bitchord/desktop",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "start": "node build.js && electron .",
+    "dev": "node build.js && electron .",
+    "package": "node build.js && node package.js"
+  },
+  "dependencies": {
+    "@bitchord/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.7.3"
+  }
+}

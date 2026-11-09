@@ -1,6 +1,6 @@
 /*
  * Grouped inset rows, the settings idiom the app uses elsewhere: the
- * Extension, Settings, Discord and Listen Together pages.
+ * Extension, Settings and Listen Together pages.
  */
 
 const row = 'relative flex items-center justify-between px-4 py-[11px] type-title-3 hairline-[16px]';

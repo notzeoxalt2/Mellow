@@ -112,7 +112,15 @@ async function signedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   if (!isInnertubeCall(url)) return simpleRequestFetch(input, init);
 
   const bridge = getBridge();
-  if (!bridge) throw new Error('Signed-in requests need the BitChord extension');
+  if (!bridge) {
+    // This client is explicitly for private, signed-in requests. Falling back
+    // to the anonymous fetch here makes library pages look successfully empty
+    // when the extension reconnects late or disappears mid-session.
+    return new Response('The Mellow extension is not connected. Reconnect it to load your YouTube Music library.', {
+      status: 503,
+      statusText: 'Extension Unavailable',
+    });
+  }
   const method = (init?.method ?? request?.method ?? 'GET').toUpperCase() as 'GET' | 'POST';
   const headers: Record<string, string> = {};
   new Headers(init?.headers ?? request?.headers).forEach((value, key) => (headers[key] = value));
@@ -120,16 +128,34 @@ async function signedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   if (body === undefined && request && method !== 'GET') body = await request.text();
   if (body != null && typeof body !== 'string') body = await new Response(body).text();
 
-  const response = await bridge.call(
-    'yt.fetch',
-    { url: url.toString(), method, headers, ...(typeof body === 'string' && { body }), auth: true },
-    { ...(init?.signal && { signal: init.signal }) },
-  );
-  const payload = response.bodyEncoding === 'base64' ? decodeBase64(response.body) : response.body;
-  return new Response(response.status === 204 || response.status === 304 ? null : payload, {
-    status: response.status,
-    headers: response.headers,
-  });
+  try {
+    const response = await bridge.call(
+      'yt.fetch',
+      { url: url.toString(), method, headers, ...(typeof body === 'string' && { body }), auth: true },
+      { ...(init?.signal && { signal: init.signal }) },
+    );
+    if (!response) {
+      return new Response('The signed-in YouTube Music bridge returned no response.', {
+        status: 502,
+        statusText: 'Bad Gateway',
+      });
+    }
+    const payload = response.bodyEncoding === 'base64' ? decodeBase64(response.body) : response.body;
+    return new Response(response.status === 204 || response.status === 304 ? null : payload, {
+      status: response.status,
+      headers: response.headers,
+    });
+  } catch (error) {
+    // Never turn a signed-in failure into an anonymous success. Auth failures
+    // are surfaced as 401; transport/bridge failures stay visible as errors
+    // so private libraries can't appear successfully empty or incomplete.
+    const message = error instanceof Error ? error.message : String(error);
+    const unauthorized = /unauthenticated|needs sign-in|session is missing|HTTP 401/i.test(message);
+    return new Response(message, {
+      status: unauthorized ? 401 : 502,
+      statusText: unauthorized ? 'Unauthorized' : 'Bad Gateway',
+    });
+  }
 }
 
 async function isFirstRun(): Promise<boolean> {

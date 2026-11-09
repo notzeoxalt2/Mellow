@@ -128,9 +128,11 @@ export class YouTubeEngine {
       // the body built at 0.4s). With no Shaka-level retries, the failure
       // callback restarts streaming instead, which builds a fresh request.
       streaming: {
-        bufferingGoal: 120,
-        rebufferingGoal: 0.01,
-        bufferBehind: 300,
+        // Keep a short resilience buffer without retaining several minutes of
+        // decoded media in memory while the app sits in the background.
+        bufferingGoal: 35,
+        rebufferingGoal: 1.5,
+        bufferBehind: 20,
         retryParameters: { maxAttempts: 1, baseDelay: 1000, backoffFactor: 1, fuzzFactor: 0.5, timeout: 30_000 },
         // A refusal is handled by moving to the next client (onShakaError);
         // retrying it would only collect more 403s.
@@ -390,7 +392,7 @@ export class YouTubeEngine {
     });
   }
 
-  /** Picks Opus 251 (else AAC 140): the preferred codec's highest bitrate, avoiding DRC renditions. */
+  /** Picks the highest-bitrate supported audio rendition, avoiding DRC variants. */
   private selectAudio(player: shaka.Player): { label: string; stats: Omit<StreamStats, 'mode'> } {
     const tracks = player.getVariantTracks().filter((t) => !/drc/i.test(t.originalAudioId ?? ''));
     const statsOf = (t: shaka.extern.Track) => ({
@@ -400,15 +402,21 @@ export class YouTubeEngine {
       sampleRateHz: t.audioSamplingRate,
       channels: t.channelsCount,
     });
-    for (const codec of this.preferredCodecs) {
-      const best = tracks
-        .filter((t) => t.audioCodec?.startsWith(codec))
-        .sort((a, b) => (b.audioBandwidth ?? b.bandwidth) - (a.audioBandwidth ?? a.bandwidth))[0];
-      if (best) {
-        if (!best.active) player.selectVariantTrack(best, true);
-        const itag = (best.originalAudioId ?? '').split('-')[0];
-        return { label: `${itag} ${codec} ${Math.round((best.audioBandwidth ?? best.bandwidth) / 1000)}kbps`, stats: statsOf(best) };
-      }
+    const best = tracks.sort((a, b) => {
+      const bitrateDifference = (b.audioBandwidth ?? b.bandwidth) - (a.audioBandwidth ?? a.bandwidth);
+      if (bitrateDifference) return bitrateDifference;
+      // Keep Opus as the tie-breaker when both renditions are equally strong.
+      const preferred = (codec: string | null | undefined) => {
+        const rank = this.preferredCodecs.findIndex((candidate) => codec?.startsWith(candidate));
+        return rank < 0 ? Number.MAX_SAFE_INTEGER : rank;
+      };
+      return preferred(a.audioCodec) - preferred(b.audioCodec);
+    })[0];
+    if (best) {
+      if (!best.active) player.selectVariantTrack(best, true);
+      const codec = codecName(best.audioCodec);
+      const itag = (best.originalAudioId ?? '').split('-')[0];
+      return { label: `${itag} ${codec} ${Math.round((best.audioBandwidth ?? best.bandwidth) / 1000)}kbps`, stats: statsOf(best) };
     }
     const active = player.getVariantTracks().find((t) => t.active);
     return active

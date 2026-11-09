@@ -1,4 +1,6 @@
 import { PrefetchLink } from '@/components/PrefetchLink';
+import type { YtAuthState } from '@bitchord/shared/bridge';
+import { openYtSignIn, useRefreshYtAuth, useSetConnected } from '@/extension/useYtAuth';
 
 /** A page-sized message, centred: also the Spotify page's sign-in invitation. */
 export const stateStyles = {
@@ -40,6 +42,36 @@ export function EmptyState({ title, detail }: { title: string; detail?: string }
     <div className={stateStyles.state}>
       <p className={stateStyles.title}>{title}</p>
       {detail && <p className={stateStyles.detail}>{detail}</p>}
+    </div>
+  );
+}
+
+/** A recoverable YouTube account state shown in place, with the matching next action. */
+export function YouTubeAuthPrompt({ auth, title }: { auth: YtAuthState; title: string }) {
+  const refresh = useRefreshYtAuth();
+  const connect = useSetConnected();
+  const action = !auth.browserSignedIn
+    ? { label: 'Sign In', run: openYtSignIn }
+    : auth.reauthRequired
+      ? { label: 'Try Again', run: () => refresh.mutate() }
+      : !auth.connected
+        ? { label: 'Connect', run: () => connect.mutate(true) }
+        : { label: 'Retry', run: () => refresh.mutate() };
+  const busy = refresh.isPending || connect.isPending;
+  return (
+    <div className={stateStyles.state}>
+      <p className={stateStyles.title}>{title}</p>
+      <p className={stateStyles.detail}>
+        {auth.problem ?? 'Reconnect YouTube Music to load your personalized home and library.'}
+      </p>
+      <button className={stateStyles.button} onClick={action.run} disabled={busy}>
+        {busy ? 'Checking…' : action.label}
+      </button>
+      {auth.reauthRequired && (
+        <button className="mt-1 type-callout-emphasized text-secondary hover:text-primary" onClick={openYtSignIn}>
+          Open YouTube Music account
+        </button>
+      )}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useArtworkColor } from '@/lib/artworkColor';
+import { PanelRight, PictureInPicture2 } from 'lucide-react';
 import {
   BackwardIcon,
   ForwardIcon,
@@ -19,10 +21,10 @@ import { Lcd } from './Lcd';
 import { fadeForVolume, VolumeControl } from './VolumeControl';
 
 const control = 'grid place-items-center rounded-[6px] disabled:opacity-40';
-// Shuffle and repeat: secondary, and the key colour when on, as Apple's toggles.
-const toggle = `${control} size-7 text-secondary aria-pressed:text-key`;
-const transport = `${control} size-7 text-primary`;
-const action = 'grid h-7 w-6 place-items-center rounded-[4px] text-primary aria-pressed:text-key';
+// Shuffle and repeat: secondary, and the theme accent colour when on
+const toggle = `${control} size-7 text-secondary aria-pressed:text-(--theme-accent) transition-colors`;
+const transport = `${control} size-7 text-primary hover:text-white transition-colors`;
+const action = 'grid h-7 w-6 place-items-center rounded-[4px] text-primary aria-pressed:text-(--theme-accent) transition-colors';
 // The actions the volume level slides in over: they fade out while it's open.
 const fading = `${action} ${fadeForVolume}`;
 
@@ -38,6 +40,8 @@ export function PlayerBar() {
     return entry && entry.videoId === s.nowPlaying?.videoId ? entry : null;
   });
   const playing = usePlayer((s) => s.status === 'playing' || s.status === 'buffering');
+  const nowPlaying = usePlayer((s) => s.nowPlaying);
+  const artColor = useArtworkColor(nowPlaying?.artworkUrl);
   const hasNext = usePlayer((s) => s.index + 1 < s.queue.length || s.repeat !== 'off' || (s.autoplay && s.index >= 0));
   const shuffle = usePlayer((s) => s.shuffle);
   const repeat = usePlayer((s) => s.repeat);
@@ -51,7 +55,11 @@ export function PlayerBar() {
       data-panel-open={sidePanel !== null}
     >
       <div
-        className="glass-pill group/pill pointer-events-auto relative grid h-(--player-pill-height) w-[min(668px,100%)] grid-cols-[184px_minmax(180px,427px)_minmax(57px,auto)] items-center rounded-pill px-4"
+        className="mellow-glass group/pill pointer-events-auto relative grid h-(--player-pill-height) w-[min(680px,100%)] grid-cols-[184px_minmax(180px,427px)_minmax(57px,auto)] items-center rounded-pill px-4 border border-white/12 shadow-[0_18px_42px_rgba(0,0,0,0.58)] transition-all duration-300"
+        style={artColor ? {
+          boxShadow: '0 18px 42px rgba(0, 0, 0, 0.58), 0 0 22px color-mix(in srgb, var(--theme-accent) 10%, transparent)',
+          borderColor: 'color-mix(in srgb, var(--theme-accent) 12%, rgba(255, 255, 255, 0.16))',
+        } : undefined}
         role="region"
         aria-label="Player"
       >
@@ -80,14 +88,18 @@ export function PlayerBar() {
           </button>
         </div>
 
-        <div className="h-full min-w-0 px-4">
+        <div className={`h-full min-w-0 px-4 transition-opacity duration-150${volumeOpen ? ' opacity-0' : ''}`}>
           <Lcd />
         </div>
 
         <div
           className="group/actions relative flex items-center justify-end gap-[9px]"
           data-volume-open={volumeOpen || undefined}
-          onPointerLeave={() => setVolumeOpen(false)}
+          onPointerLeave={(e) => {
+            // The slider is positioned to the left of this compact action row.
+            // Keep it open when the pointer crosses from the speaker into it.
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setVolumeOpen(false);
+          }}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setVolumeOpen(false);
           }}
@@ -98,6 +110,9 @@ export function PlayerBar() {
           <button className={fading} aria-label="Lyrics" aria-pressed={sidePanel === 'lyrics'} onClick={() => toggleSidePanel('lyrics')}>
             {sidePanel === 'lyrics' ? <LyricsActiveIcon size={18} /> : <LyricsIcon size={18} />}
           </button>
+          <button className={fading} aria-label="Now Playing details" title="Now Playing details" aria-pressed={sidePanel === 'now-playing'} onClick={() => toggleSidePanel('now-playing')}>
+            <PanelRight size={18} />
+          </button>
           <button
             className={fading}
             aria-label="Up Next"
@@ -106,6 +121,16 @@ export function PlayerBar() {
           >
             <UpNextIcon size={18} />
           </button>
+          {typeof window !== 'undefined' && window.electronAPI?.isDesktop && (
+            <button
+              className={fading}
+              aria-label="Mini Player Popout"
+              title="Mini Player Popout"
+              onClick={() => window.electronAPI?.toggleMiniPlayer?.()}
+            >
+              <PictureInPicture2 size={18} />
+            </button>
+          )}
           <VolumeControl open={volumeOpen} onOpen={() => setVolumeOpen(true)} className={action} />
         </div>
       </div>

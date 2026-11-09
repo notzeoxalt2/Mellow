@@ -7,3 +7,6 @@ dist/
 
 # Built extension zips (web/extension: pnpm package)
 app/public/downloads/
+
+# Packaged desktop snapshots are local release artifacts, not source files.
+release/

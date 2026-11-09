@@ -1,17 +1,18 @@
 import { useMutation } from '@tanstack/react-query';
-import { ListPlus } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeftRight, Check, ListPlus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { DetailHeader, detailButton } from '@/components/music/DetailHeader';
 import { playList, shuffleList } from '@/components/music/play';
 import { EmptyState, LoadError, NeedsExtension } from '@/components/music/States';
 import { TrackList } from '@/components/music/TrackList';
-import { createPlaylist } from '@/data/music/api';
 import { useSignedIn } from '@/data/music/queries';
 import type { HeaderInfo } from '@/data/music/types';
 import { useSpotifyPlaylistInfo, useSpotifyRows } from '@/data/spotify/queries';
 import { useExtension } from '@/extension/useExtension';
-import { useSpotifySignedIn } from '@/extension/useSpotifyAuth';
+import { useSpotifyAuth, useSpotifySignedIn } from '@/extension/useSpotifyAuth';
+import { findPlaylistSync, syncSpotifyPlaylist } from '@/data/spotify/playlistSync';
+import { queryClient } from '@/lib/queryClient';
 import { useArtworkColor } from '@/lib/artworkColor';
 import { usePageTint } from '@/lib/usePageTint';
 import { PlaylistSkeleton } from '@/skeletons/PageSkeletons';
@@ -26,6 +27,7 @@ import { detailFooter } from './pageStyles';
 export default function SpotifyPlaylistPage() {
   const id = decodeURIComponent(useParams().id ?? '');
   const extension = useExtension();
+  const spotifyAuth = useSpotifyAuth();
   const signedIn = useSpotifySignedIn();
   const info = useSpotifyPlaylistInfo(id);
   const rows = useSpotifyRows(id);
@@ -65,7 +67,16 @@ export default function SpotifyPlaylistPage() {
         canPlay={playable.length > 0}
         onPlay={() => playList(playable, 0, context)}
         onShuffle={() => shuffleList(playable, context)}
-        extra={<ImportButton title={info.data.name} videoIds={playable.map((t) => t.videoId)} ready={rows.matching === 0} />}
+        extra={
+          <SyncButton
+            account={spotifyAuth.state === 'ready' ? spotifyAuth.auth.user?.name ?? '?' : '?'}
+            spotifyPlaylistId={id}
+            title={info.data.name}
+            source={rows.source}
+            rows={rows.rows}
+            ready={rows.status === 'ready' && rows.matching === 0}
+          />
+        }
       />
       <TrackList tracks={rows.rows} variant="playlist" source={context.source} />
       <footer className={detailFooter}>
@@ -75,36 +86,55 @@ export default function SpotifyPlaylistPage() {
   );
 }
 
-/** Keeps the matched songs as a private YouTube Music playlist; asks once before writing to the account. */
-function ImportButton({ title, videoIds, ready }: { title: string; videoIds: string[]; ready: boolean }) {
+/** Creates or updates a private YouTube Music copy. */
+function SyncButton({ account, spotifyPlaylistId, title, source, rows, ready }: {
+  account: string;
+  spotifyPlaylistId: string;
+  title: string;
+  source: import('@bitchord/shared/bridge').SpotifyTrack[];
+  rows: import('@/data/music/types').Track[];
+  ready: boolean;
+}) {
   const ytSignedIn = useSignedIn();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
-  const create = useMutation({
-    mutationFn: () => createPlaylist(title, videoIds, 'Imported from Spotify with BitChord'),
-    onSuccess: (playlistId) => navigate(`/playlist/${encodeURIComponent(`VL${playlistId}`)}`),
+  const current = useMemo(() => findPlaylistSync(account, spotifyPlaylistId), [account, spotifyPlaylistId]);
+  const mutation = useMutation({
+    mutationFn: () => syncSpotifyPlaylist({ account, spotifyPlaylistId, title, spotifyTracks: source, youtubeTracks: rows }),
+    onSuccess: (record) => {
+      window.dispatchEvent(new CustomEvent('mellow:playlist-syncs-changed'));
+      void queryClient.invalidateQueries({ queryKey: ['music', 'playlist', `VL${record.youtubePlaylistId}`] });
+      if (!current) navigate(`/playlist/${encodeURIComponent(`VL${record.youtubePlaylistId}`)}`);
+    },
   });
   if (!ytSignedIn) return null;
   const label = !ready
-    ? 'Import to YouTube Music (matching…)'
-    : create.isPending
-      ? 'Importing…'
-      : create.isError
-        ? 'Import failed. Try again'
-        : confirming
-          ? `Make a private playlist of ${videoIds.length} songs?`
-          : 'Import to YouTube Music';
+    ? 'Matching Spotify tracks…'
+    : mutation.isPending
+      ? 'Syncing…'
+      : mutation.isError
+        ? 'Sync failed. Try again'
+        : confirming && !current
+          ? 'Create a private YouTube playlist?'
+          : current
+            ? 'Sync now'
+            : 'Create synced YouTube playlist';
   return (
     <button
       className={confirming ? detailButton.pill : detailButton.circle}
       aria-label={label}
       title={label}
-      disabled={!ready || !videoIds.length || create.isPending}
-      onClick={() => (confirming ? (setConfirming(false), create.mutate()) : setConfirming(true))}
+      disabled={!ready || !source.length || mutation.isPending}
+      onClick={() => {
+        if (current || confirming) {
+          setConfirming(false);
+          mutation.mutate();
+        } else setConfirming(true);
+      }}
       onBlur={() => setConfirming(false)}
     >
-      <ListPlus size={18} strokeWidth={2.2} />
-      {confirming && <span>Make Playlist</span>}
+      {current ? <ArrowLeftRight size={17} strokeWidth={2.2} /> : mutation.isSuccess ? <Check size={18} /> : <ListPlus size={18} strokeWidth={2.2} />}
+      {(confirming || current) && <span>{label}</span>}
     </button>
   );
 }

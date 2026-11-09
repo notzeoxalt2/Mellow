@@ -30,15 +30,25 @@ type TextLike = { text?: string; runs?: { text: string; bold?: boolean }[] } | u
 const text = (value: TextLike | string | undefined): string =>
   typeof value === 'string' ? value : (value?.text ?? '').trim();
 
-function largest(thumbs: Thumb[] | undefined | null): string | null {
+function largest(thumbs: Thumb[] | undefined | null, preferSquare = false): string | null {
   if (!thumbs?.length) return null;
-  return [...thumbs].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? null;
+  return [...thumbs].sort((a, b) => {
+    const size = (b.width ?? 0) * (b.height ?? 0) - (a.width ?? 0) * (a.height ?? 0);
+    if (!preferSquare) return size;
+    const aspectA = Math.abs((a.width ?? 0) / Math.max(1, a.height ?? 0) - 1);
+    const aspectB = Math.abs((b.width ?? 0) / Math.max(1, b.height ?? 0) - 1);
+    // Music search often includes a large video still beside the square album
+    // cover. Prefer the cover for songs/albums, then choose the largest cover.
+    if (aspectA < 0.18 && aspectB >= 0.18) return -1;
+    if (aspectB < 0.18 && aspectA >= 0.18) return 1;
+    return size;
+  })[0]?.url ?? null;
 }
 
-function thumbnailOf(node: { thumbnail?: unknown }): string | null {
+function thumbnailOf(node: { thumbnail?: unknown }, preferSquare = false): string | null {
   const t = node.thumbnail as { contents?: Thumb[] } | Thumb[] | null | undefined;
   if (!t) return null;
-  return largest(Array.isArray(t) ? t : t.contents);
+  return largest(Array.isArray(t) ? t : t.contents, preferSquare);
 }
 
 function isWide(node: { thumbnail?: unknown }): boolean {
@@ -113,7 +123,7 @@ export function mapResponsiveItem(node: YTNodes.MusicResponsiveListItem): MusicI
     subtitle: subtitleFor(kind, artists, album, text(node.subtitle), node.views),
     artists,
     album,
-    thumbnail: thumbnailOf(node),
+    thumbnail: thumbnailOf(node, kind === 'song' || kind === 'album' || kind === 'playlist'),
     wide: kind === 'video' || isWide(node),
     durationSec: node.duration?.seconds ?? null,
     explicit: explicitOf(node.badges),
@@ -132,7 +142,7 @@ export function mapTwoRowItem(node: YTNodes.MusicTwoRowItem): MusicItem | null {
     subtitle: text(node.subtitle),
     artists,
     album: null,
-    thumbnail: thumbnailOf(node),
+    thumbnail: thumbnailOf(node, kind === 'song' || kind === 'album' || kind === 'playlist'),
     wide: isWide(node),
     durationSec: null,
     explicit: explicitOf(node.badges),
@@ -161,7 +171,9 @@ export function mapTrack(node: unknown): Track | null {
     album: n.album ? { name: n.album.name, id: n.album.id ?? null } : null,
     durationSec: n.duration?.seconds ?? null,
     explicit: explicitOf(n.badges),
-    thumbnail: thumbnailOf(n),
+    // Playlist rows and player art should use the album cover when YouTube
+    // also supplies a larger 16:9 video still for the same recording.
+    thumbnail: thumbnailOf(n, true),
     index: Number.isFinite(index) ? index : null,
     plays: plays ?? n.views ?? null,
   };
@@ -192,16 +204,17 @@ export function mapShelf(node: unknown): Shelf | null {
       seeAll: linkOf(shelf.header?.more_content?.endpoint),
     };
   }
-  if (n?.type === 'MusicShelf') {
-    const shelf = n as unknown as YTNodes.MusicShelf;
-    const items = shelf.contents.map(mapItem).filter((i): i is MusicItem => !!i);
+  if (n?.type === 'MusicShelf' || n?.type === 'MusicPlaylistShelf') {
+    const contents = (n.contents as unknown[] | undefined) ?? [];
+    const items = contents.map(mapItem).filter((i): i is MusicItem => !!i);
     if (!items.length) return null;
+    const header = n.header as { title?: TextLike; more_content?: { endpoint?: unknown } } | undefined;
     return {
-      title: text(shelf.title),
+      title: text(n.title as TextLike) || text(header?.title),
       strapline: null,
       layout: layoutFor(items, true),
       items,
-      seeAll: linkOf(shelf.endpoint) ?? linkOf(shelf.bottom_button?.endpoint),
+      seeAll: linkOf(n.endpoint) ?? linkOf(header?.more_content?.endpoint) ?? linkOf((n.bottom_button as { endpoint?: unknown } | undefined)?.endpoint),
     };
   }
   return null;

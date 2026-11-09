@@ -1,0 +1,1163 @@
+{
+  "source": "https://music.apple.com/us/grouping/178464",
+  "groups": [
+    {
+      "title": "Browse by Genre",
+      "source": "https://music.apple.com/us/room/1654814539",
+      "categories": [
+        {
+          "title": "Acoustic",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/0d/69/b3/0d69b358-6e21-81f8-9102-392e1002d934/3e0fdd4b-bb05-4e74-89b8-86da8461fc44.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-acoustic/979231701",
+          "searchTerm": "Acoustic"
+        },
+        {
+          "title": "African",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/cf/44/d6/cf44d6c2-3575-c63f-78f9-1629500a64e7/696e609f-432f-4dde-a112-b6e2f0dde0df.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-african/988656348",
+          "searchTerm": "African"
+        },
+        {
+          "title": "Afrikaans",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/1d/58/e1/1d58e1c9-e29d-6182-a74c-9a90c34b84d4/509327ad-dbd6-4677-9c53-5de636ebe51b.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-afrikaans/982300891",
+          "searchTerm": "Afrikaans"
+        },
+        {
+          "title": "Afrobeats",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/7f/43/ce/7f43ce54-b0b0-d287-2cc4-4aea3cc83f18/99ed2473-443d-44ff-9524-190daed55214.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-afrobeats/1747003654",
+          "searchTerm": "Afrobeats"
+        },
+        {
+          "title": "Alpha Women",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/fd/13/71/fd137117-93ed-b3f5-8885-3818c74ab218/992f3ba8-7d33-42d3-8bca-10ea9fbb2a6c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/alpha-women/1878215041",
+          "searchTerm": "Alpha Women"
+        },
+        {
+          "title": "Alternative",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/ea/d9/18/ead918b3-ad11-e056-997a-0ae1f8d7f493/05fe3a15-9ed4-4c89-80a0-4827457c4cb2.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-alternative/976439526",
+          "searchTerm": "Alternative"
+        },
+        {
+          "title": "Amapiano",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/f7/c8/a8/f7c8a89e-ffbb-2195-0fad-b367f291ca7d/2f3b0560-a457-44cb-b084-44ed279de006.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-amapiano/1765343179",
+          "searchTerm": "Amapiano"
+        },
+        {
+          "title": "Americana",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/92/d4/8f/92d48f47-423c-f8a7-498a-07796c0872c6/24c50af3-98b8-4455-9682-8a47825a531c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-americana/976439527",
+          "searchTerm": "Americana"
+        },
+        {
+          "title": "Anime",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/3b/93/78/3b937855-3c76-f217-5d02-a41140b6500c/63983291-a6b9-4586-9f3a-c19fc546ea71.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-anime/982302294",
+          "searchTerm": "Anime"
+        },
+        {
+          "title": "Arabic",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/2e/2f/54/2e2f540a-71c3-d2de-49d6-5195266221fb/4bc70059-95b1-42c3-ae8e-52f81bf623b0.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-arabic/982302682",
+          "searchTerm": "Arabic"
+        },
+        {
+          "title": "Baile Funk",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/28/1c/09/281c09f1-81bd-24a4-ae5d-4580eebc009c/634208ba-3f8d-4ee4-9ad8-aa3e3422a7ca.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/baile-funk/1526866928",
+          "searchTerm": "Baile Funk"
+        },
+        {
+          "title": "Behind the Songs",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/06/b9/52/06b95215-4655-dc1c-ea30-243511b25966/97241f24-f626-4876-9c79-6f2bfd164b31.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-behind-the-songs/1554941247",
+          "searchTerm": "Behind the Songs"
+        },
+        {
+          "title": "Blues",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/0f/23/37/0f2337bd-4024-c886-5165-6577c021ffbd/42e85f7b-0d6d-4653-abb2-52a4297daae6.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-blues/976439528",
+          "searchTerm": "Blues"
+        },
+        {
+          "title": "Bollywood",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/4c/1a/e0/4c1ae01f-6e44-d6d2-7b2a-7fe0c2db1f7a/60b5a4e5-5190-4614-98fa-df9a5eb1e18d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-bollywood/982307152",
+          "searchTerm": "Bollywood"
+        },
+        {
+          "title": "Brazilian Hip-Hop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/02/0d/18/020d189b-321c-6258-b00e-bd62b6de3dd0/4df2852a-f0f6-4945-9e30-4aac93e464e7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/brazilian-hip-hop/1701900432",
+          "searchTerm": "Brazilian Hip-Hop"
+        },
+        {
+          "title": "Brazilian Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/40/f0/19/40f019d2-92c9-e961-c52c-c4df71cda264/4c64d213-f228-4518-9a18-8bbd69e454b9.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-brazilian-pop/982356181",
+          "searchTerm": "Brazilian Pop"
+        },
+        {
+          "title": "Brazilian Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/c5/54/f1/c554f120-78b1-234b-a672-2e2484f0b06a/89afa8f6-05b9-4187-89cb-a4499e4c7e4d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-brazilian-rock/1706167533",
+          "searchTerm": "Brazilian Rock"
+        },
+        {
+          "title": "Canadian",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/70/e8/dd/70e8ddd0-b28b-a661-b66c-8700f5f7ee0a/7cf0b0ac-2c86-48cf-8ad6-1857573404df.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-canadian/1531542329",
+          "searchTerm": "Canadian"
+        },
+        {
+          "title": "Cantopop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/e7/23/c7/e723c7c1-6299-edbd-9ecc-06bea9aabd70/fe7cde4b-d185-4096-947b-581ce158c64c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-cantopop/1019398918",
+          "searchTerm": "Cantopop"
+        },
+        {
+          "title": "Música Catalana",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/bb/99/3f/bb993f16-ef31-489e-c768-6604b87f521f/d24f900e-5038-4dfd-8efd-5869d5c74f59.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-m%C3%BAsica-catalana/1628396333",
+          "searchTerm": "Música Catalana"
+        },
+        {
+          "title": "Christian",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/62/11/2a/62112a4f-3dd1-1af0-cde6-3b8ae600d1ad/5ed5c7c0-7f72-4b3e-8445-22dc2a3ae8ec.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-christian/1482068485",
+          "searchTerm": "Christian"
+        },
+        {
+          "title": "Classical",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/12/eb/5b/12eb5b55-452f-a643-a5d0-8bb9e8e83936/a20a9b47-09da-45c4-a5d8-3b1d6b9aea81.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-classical/976439532",
+          "searchTerm": "Classical"
+        },
+        {
+          "title": "Classic Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/b7/37/45/b7374552-33c1-18bb-5995-ae6d22522eea/b06b1b4c-036e-4f51-9aa4-18e8fa860614.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-classic-rock/976439531",
+          "searchTerm": "Classic Rock"
+        },
+        {
+          "title": "Country",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/a0/3c/32/a03c3207-70b9-5a3d-28d9-430e2a1891cc/2775cb3b-a652-41ea-91f5-e28fe0d43bde.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-country/976439534",
+          "searchTerm": "Country"
+        },
+        {
+          "title": "C-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/f7/7c/e4/f77ce433-1e06-ac01-088b-e8186283e5f9/6a176b41-6f57-45fd-8673-5a1d84825317.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-c-pop/1479949880",
+          "searchTerm": "C-Pop"
+        },
+        {
+          "title": "Dance",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/4f/c6/77/4fc6778c-7af1-08c3-e3c9-0366f3ae8c5c/831d198b-cfcf-41c2-9961-7d3dbe755197.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-dance/976439535",
+          "searchTerm": "Dance"
+        },
+        {
+          "title": "Deutschpop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/d5/d5/28/d5d5285e-5eae-8804-1379-9d730fe369d7/872678a9-2b6d-4d87-ac35-66047a389ca7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-deutschpop/982308377",
+          "searchTerm": "Deutschpop"
+        },
+        {
+          "title": "Deutschrap",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/86/a6/85/86a68509-8718-783f-942c-21c7b068fa6e/08597397-4054-4741-8368-e17aa19b941f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-deutschrap/1526867365",
+          "searchTerm": "Deutschrap"
+        },
+        {
+          "title": "Devotional",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/7d/0d/a7/7d0da72c-b244-7320-aba6-38dbe5c72bdc/8338b6a1-1c08-40e9-99a7-5a68cbfb8e41.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-devotional/989076223",
+          "searchTerm": "Devotional"
+        },
+        {
+          "title": "DJ Mixes",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/a0/89/6f/a0896fa8-df58-0c22-74b3-2d0ecad95313/6045d8af-865c-4c75-8fbb-a9aca36b7ed2.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-dj-mixes/1441811365",
+          "searchTerm": "DJ Mixes"
+        },
+        {
+          "title": "Electronic",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/d6/c2/f9/d6c2f9f7-134a-ee3f-4b76-74427b4d1f67/6ad67063-1e81-4c32-b910-3ee68d884f21.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-electronic/976439536",
+          "searchTerm": "Electronic"
+        },
+        {
+          "title": "Family",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/b8/c2/36/b8c2362e-8578-c08f-8c34-560bd4f2401a/7bcded70-3501-4877-916e-03c4a8e17ba8.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-family/1555173397",
+          "searchTerm": "Family"
+        },
+        {
+          "title": "Film, TV & Stage",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/6d/10/67/6d1067ce-3a85-811f-102c-439d9b162b4d/52888644-075a-4cec-ab01-4a65054e479f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-film-tv-stage/976439586",
+          "searchTerm": "Film, TV & Stage"
+        },
+        {
+          "title": "First Nations Australia",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/ec/ea/57/ecea5713-af7a-946d-c8e0-d3ef7dea0ab3/62bfdf4e-42ae-44b3-a9d3-342a38783e53.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-first-nations-australia/1548430699",
+          "searchTerm": "First Nations Australia"
+        },
+        {
+          "title": "Flamenco",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/b2/55/58/b25558a5-e78d-4a99-a277-e77b4cf94a99/95438f00-f1bd-45d1-ac8c-84638018b259.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-flamenco/982308685",
+          "searchTerm": "Flamenco"
+        },
+        {
+          "title": "French Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/fd/10/58/fd1058c2-a841-835b-0915-bf0048254af0/c86555c6-03a4-4a9b-9a37-a027f89b6f58.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-french-pop/982308048",
+          "searchTerm": "French Pop"
+        },
+        {
+          "title": "French Rap",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/4b/cb/38/4bcb3805-6607-ddbf-2bf9-1f6730254146/acb3731b-97c6-4189-b081-967ccab415b7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/french-rap/1526867629",
+          "searchTerm": "French Rap"
+        },
+        {
+          "title": "Gospel",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/96/b9/21/96b9214e-bc91-912e-46f1-54cac89aa951/8848921d-9942-405b-af4d-77e58e6359e1.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-gospel/1482068827",
+          "searchTerm": "Gospel"
+        },
+        {
+          "title": "Halk",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/64/c1/0d/64c10d45-74c3-5e01-fae6-85e6beb16396/4ab279ed-8a95-4310-bdbc-337568d7d156.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-halk/982345933",
+          "searchTerm": "Halk"
+        },
+        {
+          "title": "Hard Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/87/61/36/87613653-9add-2000-cd45-814757e4b0a7/16489eb6-f0a8-4b11-8938-fefd245c354f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-hard-rock/979231690",
+          "searchTerm": "Hard Rock"
+        },
+        {
+          "title": "Hip-Hop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/40/e3/6d/40e36db9-ba12-7486-ccc9-fc0ca5698a6f/ca7dd0ea-d2c8-4b6c-8543-a83db1546d8f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-hip-hop/976439539",
+          "searchTerm": "Hip-Hop"
+        },
+        {
+          "title": "Hits",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/06/8c/0c/068c0c23-fda7-9d29-1953-efa2f61d3aa6/348ecd42-7725-4b21-98f7-79d475c7f515.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-hits/1526756058",
+          "searchTerm": "Hits"
+        },
+        {
+          "title": "Holiday",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/dc/03/16/dc031679-6f1e-5ec0-cd81-17edf19c66c2/7e2c3f93-9d73-41c2-9cec-841a2240173a.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/holiday/976439540",
+          "searchTerm": "Holiday"
+        },
+        {
+          "title": "Hörspiele",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/64/c5/e2/64c5e2e0-f756-5d83-3a78-e87eafd78819/05fafece-bc23-4f67-89f0-e9f86d4bbf2c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-h%C3%B6rspiele/1010399660",
+          "searchTerm": "Hörspiele"
+        },
+        {
+          "title": "Indian Independent",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/f1/5a/30/f15a308e-c51c-ee18-808e-f9184f0acb57/bc0eaf3d-8153-48da-9a41-b9f5822ae1a7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-indian-independent/982346165",
+          "searchTerm": "Indian Independent"
+        },
+        {
+          "title": "Indie",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/83/04/13/830413af-86c8-3217-a6cf-d549bc244f61/73316129-e4af-4863-ad5b-e51dc158a5db.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-indie/976439541",
+          "searchTerm": "Indie"
+        },
+        {
+          "title": "Indonesian Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/bb/71/60/bb71600f-0829-6732-92d7-568b70188395/4969d3e5-ea19-4d6c-9403-c42120db0a4f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-indonesian-music/983062953",
+          "searchTerm": "Indonesian Music"
+        },
+        {
+          "title": "Islamic",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/32/ac/5a/32ac5ae3-a41c-0081-e1a7-5be25500b156/bae983e6-fa9f-4138-b0e5-23d32a5fe1ac.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/islamic/1526867390",
+          "searchTerm": "Islamic"
+        },
+        {
+          "title": "Japanese Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/95/2a/82/952a8231-9c82-4591-9225-b8917dd02f8b/94bcc3f1-0f10-415e-8210-ab0d019a3e7e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/japanese-music/1526867872",
+          "searchTerm": "Japanese Music"
+        },
+        {
+          "title": "Jazz",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/7c/82/38/7c823882-da82-0473-a15f-6bccef636070/3725926b-b050-4edd-98bc-2dc46022899b.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-jazz/976439542",
+          "searchTerm": "Jazz"
+        },
+        {
+          "title": "J-Hip-Hop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/2f/18/f7/2f18f767-0210-76bb-0f6c-5f805306770a/22df43dc-0a2c-41b8-8398-bd2d8e2a76c5.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/j-hip-hop/1526867946",
+          "searchTerm": "J-Hip-Hop"
+        },
+        {
+          "title": "J-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/e8/94/bb/e894bbc7-c766-ff72-e21d-55f940b8150e/bb664aa6-9608-4f6d-8513-29b7ad7bfd1e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-j-pop/987714244",
+          "searchTerm": "J-Pop"
+        },
+        {
+          "title": "J-Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/e8/d9/83/e8d98305-5784-4d09-58b5-138293d4b58d/3ee32d63-ad8e-4648-9c1f-8fc050d9a412.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/j-rock/1526867643",
+          "searchTerm": "J-Rock"
+        },
+        {
+          "title": "Kannada",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/07/18/8e/07188ebc-fc84-114a-92c6-d4a24f8110bf/840cd3eb-d67d-4fcb-b6d2-bad92548bf5d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/kannada/1109032628",
+          "searchTerm": "Kannada"
+        },
+        {
+          "title": "Kayōkyoku",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/8b/cf/4f/8bcf4ffd-51b8-6225-0d67-425dcd77f6fa/b24812ea-2c78-4aab-b34e-6bb978f3c7cc.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-kay%C5%8Dkyoku/982346179",
+          "searchTerm": "Kayōkyoku"
+        },
+        {
+          "title": "Kids",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/30/07/0a/30070ad3-90a5-d23a-984e-fae45b2c58b3/38763425-fea7-4056-b700-68074151d9a0.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-kids/976439538",
+          "searchTerm": "Kids"
+        },
+        {
+          "title": "K-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/a5/64/1c/a5641c37-3a57-6357-6ad4-105f312bc04b/6241efec-ac1e-4458-b03b-a384fdaa70db.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-k-pop/988658197",
+          "searchTerm": "K-Pop"
+        },
+        {
+          "title": "Latin",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/29/69/bf/2969bfbe-4a3e-77fa-e86a-b08ef49a1728/b8c95648-85c2-4613-b761-c5917c1d8882.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-latin/1531542847",
+          "searchTerm": "Latin"
+        },
+        {
+          "title": "Live Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/79/ca/fa/79cafa8f-806e-0534-aac7-ba28b283c2dc/47b7ed59-6d52-4e9f-b791-ad56aa87f3bc.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/live-music/1526866649",
+          "searchTerm": "Live Music"
+        },
+        {
+          "title": "Malayalam",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/99/28/df/9928dfd5-ea5c-f529-2d1a-87d612a59835/414c4b5f-7adb-46bd-91b2-69e805ccd9e0.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/malayalam/1109031609",
+          "searchTerm": "Malayalam"
+        },
+        {
+          "title": "Malaysian Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/01/2e/4f/012e4f83-fd4b-83f3-dc65-e7627daf60d6/2be4f2cb-e0b1-4c31-a90c-f0e9b4411e5c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-malaysian-music/982346310",
+          "searchTerm": "Malaysian Music"
+        },
+        {
+          "title": "Mandopop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/f0/54/89/f054897b-9767-a78d-1e85-ea87743b2b45/124a374d-bca4-49c8-8f5a-78c651e5d265.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-mandopop/988658199",
+          "searchTerm": "Mandopop"
+        },
+        {
+          "title": "Metal",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/c3/28/ed/c328ed69-0c59-4867-339b-5642ed37d5f6/e7b913e0-d0c4-43fa-ab6f-4c2e4325c33c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-metal/976439543",
+          "searchTerm": "Metal"
+        },
+        {
+          "title": "Mizrahi",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/38/97/d7/3897d70c-d42e-f9b1-f724-38cd1c4455f8/ee8a9e93-6ede-4349-a103-f4fe3facf11e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-mizrahi/1106112453",
+          "searchTerm": "Mizrahi"
+        },
+        {
+          "title": "MPB",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/d8/93/f8/d893f853-b818-e86a-0b0a-16af4bb38b14/205b5a5b-b0a6-45d4-9f03-8a1e9349213f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-mpb/982347043",
+          "searchTerm": "MPB"
+        },
+        {
+          "title": "Música Mexicana",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/93/29/56/932956c6-00d9-24d8-308e-e92fcb3b6226/1ae9ea53-93bf-4d42-ba5f-51e32eb71b6d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-m%C3%BAsica-mexicana/976439544",
+          "searchTerm": "Música Mexicana"
+        },
+        {
+          "title": "Música Tropical",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/53/80/5f/53805f09-806e-8bac-84a9-f7738fdaa8af/4d1134e2-3f29-4deb-b352-939a1be450ce.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-m%C3%BAsica-tropical/976439545",
+          "searchTerm": "Música Tropical"
+        },
+        {
+          "title": "Musique francophone",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/7a/a9/1d/7aa91dc7-bb86-8dd0-f2ee-67c008985efa/ba8dfc0d-18e7-439a-8b38-74196f9363d2.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-musique-francophone/982347512",
+          "searchTerm": "Musique francophone"
+        },
+        {
+          "title": "Original Pilipino Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/76/63/5d/76635d22-e3d1-4b5e-7f49-5c87a0e96b98/acdfec6f-a4d2-4b1a-883f-e654f7826979.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-original-pilipino-music/1232062136",
+          "searchTerm": "Original Pilipino Music"
+        },
+        {
+          "title": "Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/0c/06/55/0c065531-6853-6084-9457-4fcefc4f02d9/6e0b972f-9a35-49a7-a714-9a4a1f842a1a.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-pop/976439548",
+          "searchTerm": "Pop"
+        },
+        {
+          "title": "Pop Italiano",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/58/93/69/589369b2-f724-77d9-48b8-ef42007c2ae5/a632b295-c311-4b94-b9f9-0076e0c9dcbd.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-pop-italiano/982348865",
+          "searchTerm": "Pop Italiano"
+        },
+        {
+          "title": "Pop Latino",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/14/e7/c2/14e7c279-f8ab-a7fc-9de4-9cc65c3ae93c/86955a47-a629-4af0-9913-363ee24377f8.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-pop-latino/976439549",
+          "searchTerm": "Pop Latino"
+        },
+        {
+          "title": "Pride",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/d5/92/cd/d592cd67-3316-cc37-4556-00d8c649c083/e43952c2-1ce9-4610-a979-4d845b7a9ffe.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-pride/1554945395",
+          "searchTerm": "Pride"
+        },
+        {
+          "title": "Punjabi",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/02/04/c2/0204c2ce-e871-72b0-b511-c0ff842f4342/e42e0170-d894-4984-9f7f-614fc87d4d75.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-punjabi/1109031457",
+          "searchTerm": "Punjabi"
+        },
+        {
+          "title": "Punk",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/ce/66/09/ce660966-c8f5-59a4-f775-78d1107dd089/8c446632-ac42-4186-ae5b-12504ee23320.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-punk/976439550",
+          "searchTerm": "Punk"
+        },
+        {
+          "title": "Apple Music Radio",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/bc/9c/8d/bc9c8d2a-44bb-a078-8967-e47bd2873ed9/f0870dc4-6d74-4967-bfe3-adfd168d4ea5.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-radio/1531543191",
+          "searchTerm": "Apple Music Radio"
+        },
+        {
+          "title": "Rap Italiano",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/59/9f/85/599f853a-b717-a94e-bddb-51256dacddb1/f65c1daa-df49-44ee-a161-401713c129dc.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-rap-italiano/982355372",
+          "searchTerm": "Rap Italiano"
+        },
+        {
+          "title": "R&B",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/47/94/31/479431e2-12bd-c03e-48bd-1022fe74b1b2/b8395439-127c-43b1-bea6-ebc3433a0e9c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-r-b/976439551",
+          "searchTerm": "R&B"
+        },
+        {
+          "title": "Reggae",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/10/a6/e1/10a6e194-a5cd-3d41-c38e-3a02038fddee/ff2f8fd5-4777-41a0-b8ee-8217b1fd6621.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-reggae/976439552",
+          "searchTerm": "Reggae"
+        },
+        {
+          "title": "Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/d0/d4/4e/d0d44e2c-fc75-b2b3-7d31-8614bae0ad37/d763764f-76c4-46c9-9f1c-39f43c85d6b3.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-rock/976439554",
+          "searchTerm": "Rock"
+        },
+        {
+          "title": "Rock y Alternativo",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/52/ad/78/52ad78c5-c4cf-af1b-8240-5c5ba055ba4b/f941fb63-db4e-4ba2-8e67-7dfa29d9155c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-rock-y-alternativo/988965390",
+          "searchTerm": "Rock y Alternativo"
+        },
+        {
+          "title": "Samba",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/bc/c1/09/bcc10938-32a7-02bc-6ae0-e2d5766263be/e18a9a52-cb10-4143-989a-926e252429fb.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-samba/982356287",
+          "searchTerm": "Samba"
+        },
+        {
+          "title": "Sanat",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/df/f9/1d/dff91d90-b206-5e72-48b2-862e51a83515/5008560c-7412-438c-9726-c13eb8abce6b.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-sanat/982356290",
+          "searchTerm": "Sanat"
+        },
+        {
+          "title": "Schlager",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/e0/f6/90/e0f6907f-b7d6-a9a3-56bf-81aaea1fb138/5963111a-7d84-4823-9831-802bd9d09a46.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/schlager/982307704",
+          "searchTerm": "Schlager"
+        },
+        {
+          "title": "Sertanejo",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/15/8b/b4/158bb43e-fdd5-1478-d599-fe5fba466870/76b5b637-b17a-4e74-a9ca-9ff2dc41f67c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-sertanejo/982356293",
+          "searchTerm": "Sertanejo"
+        },
+        {
+          "title": "Sing",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/99/cf/05/99cf0587-2c71-23ea-1017-c39be7e02f25/cb612d61-3714-4f50-97ab-7a17e041221a.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/sing/1710452798",
+          "searchTerm": "Sing"
+        },
+        {
+          "title": "Soul/Funk",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/cb/8b/86/cb8b86c7-40a7-c732-332f-235551389072/77fd1ea7-b429-4343-8b76-b1162e5b6765.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-soul-funk/976439585",
+          "searchTerm": "Soul/Funk"
+        },
+        {
+          "title": "Spanish Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/0d/01/ad/0d01ad16-cd92-7cf0-abee-cc83caba93ff/ff8ead6f-3070-4f15-8ce6-d13ca488c883.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-spanish-pop/988984973",
+          "searchTerm": "Spanish Pop"
+        },
+        {
+          "title": "Spanish Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/b3/4e/35/b34e3502-9d42-2d39-0dac-741a26cbfbb9/0351dafa-5651-4534-8ffe-67b87c3b00b8.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-spanish-rock/988966543",
+          "searchTerm": "Spanish Rock"
+        },
+        {
+          "title": "Tamil",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/0e/f6/6f/0ef66fbd-9cc9-7d8c-48c8-61a8421d0993/6e0db58d-e264-4df4-bcd7-9fb28c56a125.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-tamil/982356297",
+          "searchTerm": "Tamil"
+        },
+        {
+          "title": "Telugu",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/b4/7d/32/b47d326d-f7f8-58b7-f41c-49fc39e1cfe0/f73aa276-eac2-4a8d-8150-356c83a41de2.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-telugu/1109030996",
+          "searchTerm": "Telugu"
+        },
+        {
+          "title": "Thai Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/47/eb/e0/47ebe05d-7dbe-2e01-af2d-d585498270e3/ddcb4725-6ca4-4b29-bc3b-d202763d6437.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/thai-music/982356299",
+          "searchTerm": "Thai Music"
+        },
+        {
+          "title": "⁧T-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/66/b4/bd/66b4bda7-7b5e-50f9-15cd-9d56144e43ed/4633b319-5726-4d46-a070-c084a835f076.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-t-pop/1708863073",
+          "searchTerm": "⁧T-Pop"
+        },
+        {
+          "title": "Up Next",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/6e/e0/91/6ee0911e-5d88-19de-b694-e1a51b7191d3/7bb08dfd-8579-4e57-9212-275b380ee96d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-up-next/1532467784",
+          "searchTerm": "Up Next"
+        },
+        {
+          "title": "Urbano Latino",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/82/1f/be/821fbeed-ad68-bc3c-d32e-922ea4ba0e67/e861aeb9-890f-4220-9c41-06fc11342c03.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-urbano-latino/976439553",
+          "searchTerm": "Urbano Latino"
+        },
+        {
+          "title": "Vietnamese Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/77/76/6a/77766a56-a42a-5fb7-db20-dd6739cb8901/e5a1cf15-2c3f-4c57-9427-b748dc75eb93.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-vietnamese-music/1708558134",
+          "searchTerm": "Vietnamese Music"
+        },
+        {
+          "title": "Worldwide",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/a4/07/b8/a407b844-3c19-2f0e-35fd-b0adc155b19f/80a941b5-234f-46da-a876-f0d9cfd0a2de.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-worldwide/976439587",
+          "searchTerm": "Worldwide"
+        }
+      ]
+    },
+    {
+      "title": "Decades",
+      "source": "https://music.apple.com/us/room/1654813863",
+      "categories": [
+        {
+          "title": "2010s",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/c3/c2/9c/c3c29c76-d45a-26c4-d7b6-c6c5652caea9/286ef1c4-8bde-4922-a199-87a1f211ae46.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-2010s/1526866702",
+          "searchTerm": "2010s"
+        },
+        {
+          "title": "2000s",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/6e/5e/7b/6e5e7bd2-f6b9-a470-7e44-5102381b93bd/fbc0388e-7a1c-4834-be56-52734f7ca344.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-2000s/1526866635",
+          "searchTerm": "2000s"
+        },
+        {
+          "title": "’90s",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/9e/45/4e/9e454e3f-4d16-352a-0e59-cbf760e3b36e/99799eef-a070-44f1-8d5e-4aaee7ca8d9f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-90s/1526866514",
+          "searchTerm": "’90s"
+        },
+        {
+          "title": "’80s",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/88/dc/4d/88dc4d66-7f84-0d2e-38b6-61878c96d01e/7e1a30ea-e13e-46a4-a171-d90c8ed47b60.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-80s/1526866189",
+          "searchTerm": "’80s"
+        },
+        {
+          "title": "’70s",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/68/dd/a6/68dda670-5d5b-df60-123c-86b4845ac52c/6923d205-aab5-4f12-a53e-a4a90fc72e99.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-70s/1526866261",
+          "searchTerm": "’70s"
+        },
+        {
+          "title": "’60s",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/53/f7/06/53f70676-aa64-9910-fc94-ba0cbb9f2f1b/5cd3e94b-3107-4814-b007-6561c0904bc6.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-60s/1526866135",
+          "searchTerm": "’60s"
+        },
+        {
+          "title": "Oldies",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/55/10/38/551038b4-d3d5-0358-b9ad-0d7f11234919/23d33f0f-9f2e-490b-9cff-06fcc85c5f72.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-oldies/976439547",
+          "searchTerm": "Oldies"
+        }
+      ]
+    },
+    {
+      "title": "Moods and Activities",
+      "source": "https://music.apple.com/us/room/1654813864",
+      "categories": [
+        {
+          "title": "After Hours",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/60/69/ac/6069ac25-8925-c74e-913c-2eeff59f1ceb/9ad65334-11c5-44bb-8dd4-346ecae23585.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-after-hours/1555171646",
+          "searchTerm": "After Hours"
+        },
+        {
+          "title": "Alone Time",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/e5/b0/29/e5b02987-fa55-51d5-4752-78818c392698/4377c466-a68a-4902-bb94-a53bf972885c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-alone-time/1555172841",
+          "searchTerm": "Alone Time"
+        },
+        {
+          "title": "Chill",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/c0/b8/af/c0b8af94-bf2a-1c38-f950-292f971a5621/78fdaa61-b93f-4675-8276-ca10bdf5effd.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-chill/1558256251",
+          "searchTerm": "Chill"
+        },
+        {
+          "title": "Commuting",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/13/24/b2/1324b23c-0744-f31f-9efc-774b78cd7920/5df4dea1-2275-4472-98b3-b6c387deedb7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-commuting/1558257238",
+          "searchTerm": "Commuting"
+        },
+        {
+          "title": "Eating & Cooking",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/7d/56/2c/7d562ce3-c66a-17b4-4256-e3c9d2542dd6/5eb409ea-998e-4410-9bed-9cc6f91ba480.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-eating-cooking/1555172881",
+          "searchTerm": "Eating & Cooking"
+        },
+        {
+          "title": "Evening",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/12/01/d3/1201d3e2-e3f3-8f3e-817c-0b14ab265ecf/24ac93f4-6a4b-44ed-9fca-e411af1156f9.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-evening/1555171590",
+          "searchTerm": "Evening"
+        },
+        {
+          "title": "Feel Good",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/81/10/c5/8110c596-e68c-4538-4d67-9cfb32b81292/8537614a-1ba4-40ec-9be0-6e217e4a52cb.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-feel-good/1558256919",
+          "searchTerm": "Feel Good"
+        },
+        {
+          "title": "Feeling Blue",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/3d/d9/a2/3dd9a284-4777-033c-8d95-95fab6dc2ee1/2ac37cfa-5ba6-449e-b6e2-c0e5454c4fc7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-feeling-blue/1558256865",
+          "searchTerm": "Feeling Blue"
+        },
+        {
+          "title": "Fitness",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/9a/7c/44/9a7c4409-33aa-4b66-f2e7-e4362c01f490/93eac142-43a5-4614-b866-614702fc22ba.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-fitness/1558256909",
+          "searchTerm": "Fitness"
+        },
+        {
+          "title": "Focus",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/0e/45/02/0e450221-a408-297f-b219-515748178701/664885c1-efbe-45a9-8071-c235276fecde.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-focus/1558257095",
+          "searchTerm": "Focus"
+        },
+        {
+          "title": "Gaming",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/25/51/a8/2551a813-cb6e-e9f4-54cf-ec7515ea64dc/2ab38657-502d-4bea-804d-936cb8c1dd0f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-gaming/1558257191",
+          "searchTerm": "Gaming"
+        },
+        {
+          "title": "Heartbreak",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/2a/16/8e/2a168e31-ffaa-db5f-c8e3-399b73573062/82ecb13c-a905-4098-82ef-8837513987f4.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-heartbreak/1555172807",
+          "searchTerm": "Heartbreak"
+        },
+        {
+          "title": "Home",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/d5/65/6f/d5656f2e-a60f-6285-a105-19ef7d1db9b7/5e789814-490e-4bda-aa73-b549f518598d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-home/1558256170",
+          "searchTerm": "Home"
+        },
+        {
+          "title": "Love",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/81/8a/df/818adf5a-0da2-de01-9687-d249bfd0273b/de25867b-5b4c-436d-80c5-560b4bebe600.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-love/1558257331",
+          "searchTerm": "Love"
+        },
+        {
+          "title": "Morning",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/2e/25/1c/2e251c8d-d7fb-2431-7da7-5259875213e1/418c8056-3272-4a5f-b3d1-9b7cc804298e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-morning/1555171966",
+          "searchTerm": "Morning"
+        },
+        {
+          "title": "Motivation",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/39/2b/5d/392b5d07-b3ea-6fc5-d365-256b7668a642/4f1c8b84-a81c-49a4-87c5-7917170f1bdd.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-motivation/1558257146",
+          "searchTerm": "Motivation"
+        },
+        {
+          "title": "Outdoors",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/70/39/15/70391598-ec64-5918-6dd5-e52d46cbf62b/aa1a337e-a87b-4071-8ca2-86fa28d9b22c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-outdoors/1555172657",
+          "searchTerm": "Outdoors"
+        },
+        {
+          "title": "Party",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/b7/4c/1a/b74c1af6-5102-1546-7a4e-f082468f7559/71588d47-fe6e-493a-bc3f-3440371b5e3e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-party/1558257035",
+          "searchTerm": "Party"
+        },
+        {
+          "title": "Sleep",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/f8/30/42/f83042aa-0bbf-4d2c-13d4-a0225f95ffdb/01fc1ecf-1d6e-4035-afd4-79d52f9093e5.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-sleep/1558257257",
+          "searchTerm": "Sleep"
+        },
+        {
+          "title": "Social",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/0b/3f/d2/0b3fd2c6-45a2-b626-b40a-bc87730546ef/b8268562-6ccc-48ce-8deb-b1552b333ca8.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-social/1555173047",
+          "searchTerm": "Social"
+        },
+        {
+          "title": "Sports",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/56/fe/68/56fe682f-5596-cc00-5b31-3de08e56b6ba/316e925d-d053-477f-9fe1-830f76985a18.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-sports/1555172867",
+          "searchTerm": "Sports"
+        },
+        {
+          "title": "Summertime Sounds",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/53/32/64/53326444-61ec-70b7-2abc-2dc064494703/bd36d866-c219-4086-9b0d-31d3e6710ed5.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-summertime-sounds/1558257235",
+          "searchTerm": "Summertime Sounds"
+        },
+        {
+          "title": "Vacation",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/bf/f5/c2/bff5c25a-18ec-5e94-221d-ce7da8613734/e32ea617-da06-4c50-b912-4140c88da5a4.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-vacation/1555172036",
+          "searchTerm": "Vacation"
+        },
+        {
+          "title": "Weekend",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/65/1e/d9/651ed99f-2a27-3066-4aac-67fcc148183b/6b3760dd-ad2c-45ba-b17e-53a82f912539.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-weekend/1555167098",
+          "searchTerm": "Weekend"
+        },
+        {
+          "title": "Wellbeing",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/56/2c/3c/562c3cb6-5c27-7127-7b2d-20b99c6af86b/8c5cbdb2-fa52-4551-b524-7c50cba6438b.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-wellbeing/1558257443",
+          "searchTerm": "Wellbeing"
+        },
+        {
+          "title": "Work",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/01/ee/be/01eebeea-56e5-56d5-c4ee-14aa45fc70c8/55e06c4d-baa2-4e4f-a345-41b6a30b5849.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-work/1555172573",
+          "searchTerm": "Work"
+        }
+      ]
+    },
+    {
+      "title": "Worldwide",
+      "source": "https://music.apple.com/us/room/1654813865",
+      "categories": [
+        {
+          "title": "Afrobeats",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/7f/43/ce/7f43ce54-b0b0-d287-2cc4-4aea3cc83f18/99ed2473-443d-44ff-9524-190daed55214.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-afrobeats/1747003654",
+          "searchTerm": "Afrobeats"
+        },
+        {
+          "title": "African",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/cf/44/d6/cf44d6c2-3575-c63f-78f9-1629500a64e7/696e609f-432f-4dde-a112-b6e2f0dde0df.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-african/988656348",
+          "searchTerm": "African"
+        },
+        {
+          "title": "Afrikaans",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/1d/58/e1/1d58e1c9-e29d-6182-a74c-9a90c34b84d4/509327ad-dbd6-4677-9c53-5de636ebe51b.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-afrikaans/982300891",
+          "searchTerm": "Afrikaans"
+        },
+        {
+          "title": "Alpha Women",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/fd/13/71/fd137117-93ed-b3f5-8885-3818c74ab218/992f3ba8-7d33-42d3-8bca-10ea9fbb2a6c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/alpha-women/1878215041",
+          "searchTerm": "Alpha Women"
+        },
+        {
+          "title": "Amapiano",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/f7/c8/a8/f7c8a89e-ffbb-2195-0fad-b367f291ca7d/2f3b0560-a457-44cb-b084-44ed279de006.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-amapiano/1765343179",
+          "searchTerm": "Amapiano"
+        },
+        {
+          "title": "Anime",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/3b/93/78/3b937855-3c76-f217-5d02-a41140b6500c/63983291-a6b9-4586-9f3a-c19fc546ea71.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-anime/982302294",
+          "searchTerm": "Anime"
+        },
+        {
+          "title": "Arabic",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/2e/2f/54/2e2f540a-71c3-d2de-49d6-5195266221fb/4bc70059-95b1-42c3-ae8e-52f81bf623b0.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-arabic/982302682",
+          "searchTerm": "Arabic"
+        },
+        {
+          "title": "Baile Funk",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/28/1c/09/281c09f1-81bd-24a4-ae5d-4580eebc009c/634208ba-3f8d-4ee4-9ad8-aa3e3422a7ca.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/baile-funk/1526866928",
+          "searchTerm": "Baile Funk"
+        },
+        {
+          "title": "Bollywood",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/4c/1a/e0/4c1ae01f-6e44-d6d2-7b2a-7fe0c2db1f7a/60b5a4e5-5190-4614-98fa-df9a5eb1e18d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-bollywood/982307152",
+          "searchTerm": "Bollywood"
+        },
+        {
+          "title": "Brazilian Hip-Hop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/02/0d/18/020d189b-321c-6258-b00e-bd62b6de3dd0/4df2852a-f0f6-4945-9e30-4aac93e464e7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/brazilian-hip-hop/1701900432",
+          "searchTerm": "Brazilian Hip-Hop"
+        },
+        {
+          "title": "Brazilian Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/40/f0/19/40f019d2-92c9-e961-c52c-c4df71cda264/4c64d213-f228-4518-9a18-8bbd69e454b9.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-brazilian-pop/982356181",
+          "searchTerm": "Brazilian Pop"
+        },
+        {
+          "title": "C-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/f7/7c/e4/f77ce433-1e06-ac01-088b-e8186283e5f9/6a176b41-6f57-45fd-8673-5a1d84825317.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-c-pop/1479949880",
+          "searchTerm": "C-Pop"
+        },
+        {
+          "title": "Canadian",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/70/e8/dd/70e8ddd0-b28b-a661-b66c-8700f5f7ee0a/7cf0b0ac-2c86-48cf-8ad6-1857573404df.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-canadian/1531542329",
+          "searchTerm": "Canadian"
+        },
+        {
+          "title": "Cantopop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/e7/23/c7/e723c7c1-6299-edbd-9ecc-06bea9aabd70/fe7cde4b-d185-4096-947b-581ce158c64c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-cantopop/1019398918",
+          "searchTerm": "Cantopop"
+        },
+        {
+          "title": "Música Catalana",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/bb/99/3f/bb993f16-ef31-489e-c768-6604b87f521f/d24f900e-5038-4dfd-8efd-5869d5c74f59.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-m%C3%BAsica-catalana/1628396333",
+          "searchTerm": "Música Catalana"
+        },
+        {
+          "title": "Deutschpop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/d5/d5/28/d5d5285e-5eae-8804-1379-9d730fe369d7/872678a9-2b6d-4d87-ac35-66047a389ca7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-deutschpop/982308377",
+          "searchTerm": "Deutschpop"
+        },
+        {
+          "title": "Deutschrap",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/86/a6/85/86a68509-8718-783f-942c-21c7b068fa6e/08597397-4054-4741-8368-e17aa19b941f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-deutschrap/1526867365",
+          "searchTerm": "Deutschrap"
+        },
+        {
+          "title": "Devotional",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/7d/0d/a7/7d0da72c-b244-7320-aba6-38dbe5c72bdc/8338b6a1-1c08-40e9-99a7-5a68cbfb8e41.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-devotional/989076223",
+          "searchTerm": "Devotional"
+        },
+        {
+          "title": "First Nations Australia",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/ec/ea/57/ecea5713-af7a-946d-c8e0-d3ef7dea0ab3/62bfdf4e-42ae-44b3-a9d3-342a38783e53.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-first-nations-australia/1548430699",
+          "searchTerm": "First Nations Australia"
+        },
+        {
+          "title": "Flamenco",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/b2/55/58/b25558a5-e78d-4a99-a277-e77b4cf94a99/95438f00-f1bd-45d1-ac8c-84638018b259.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-flamenco/982308685",
+          "searchTerm": "Flamenco"
+        },
+        {
+          "title": "French Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/fd/10/58/fd1058c2-a841-835b-0915-bf0048254af0/c86555c6-03a4-4a9b-9a37-a027f89b6f58.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-french-pop/982308048",
+          "searchTerm": "French Pop"
+        },
+        {
+          "title": "French Rap",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/4b/cb/38/4bcb3805-6607-ddbf-2bf9-1f6730254146/acb3731b-97c6-4189-b081-967ccab415b7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/french-rap/1526867629",
+          "searchTerm": "French Rap"
+        },
+        {
+          "title": "Halk",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/64/c1/0d/64c10d45-74c3-5e01-fae6-85e6beb16396/4ab279ed-8a95-4310-bdbc-337568d7d156.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-halk/982345933",
+          "searchTerm": "Halk"
+        },
+        {
+          "title": "Hörspiele",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/64/c5/e2/64c5e2e0-f756-5d83-3a78-e87eafd78819/05fafece-bc23-4f67-89f0-e9f86d4bbf2c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-h%C3%B6rspiele/1010399660",
+          "searchTerm": "Hörspiele"
+        },
+        {
+          "title": "Indian Independent",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/f1/5a/30/f15a308e-c51c-ee18-808e-f9184f0acb57/bc0eaf3d-8153-48da-9a41-b9f5822ae1a7.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-indian-independent/982346165",
+          "searchTerm": "Indian Independent"
+        },
+        {
+          "title": "Indonesian Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/bb/71/60/bb71600f-0829-6732-92d7-568b70188395/4969d3e5-ea19-4d6c-9403-c42120db0a4f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-indonesian-music/983062953",
+          "searchTerm": "Indonesian Music"
+        },
+        {
+          "title": "Islamic",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/32/ac/5a/32ac5ae3-a41c-0081-e1a7-5be25500b156/bae983e6-fa9f-4138-b0e5-23d32a5fe1ac.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/islamic/1526867390",
+          "searchTerm": "Islamic"
+        },
+        {
+          "title": "J-Hip-Hop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/2f/18/f7/2f18f767-0210-76bb-0f6c-5f805306770a/22df43dc-0a2c-41b8-8398-bd2d8e2a76c5.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/j-hip-hop/1526867946",
+          "searchTerm": "J-Hip-Hop"
+        },
+        {
+          "title": "J-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/e8/94/bb/e894bbc7-c766-ff72-e21d-55f940b8150e/bb664aa6-9608-4f6d-8513-29b7ad7bfd1e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-j-pop/987714244",
+          "searchTerm": "J-Pop"
+        },
+        {
+          "title": "J-Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/e8/d9/83/e8d98305-5784-4d09-58b5-138293d4b58d/3ee32d63-ad8e-4648-9c1f-8fc050d9a412.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/j-rock/1526867643",
+          "searchTerm": "J-Rock"
+        },
+        {
+          "title": "Japanese Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/95/2a/82/952a8231-9c82-4591-9225-b8917dd02f8b/94bcc3f1-0f10-415e-8210-ab0d019a3e7e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/japanese-music/1526867872",
+          "searchTerm": "Japanese Music"
+        },
+        {
+          "title": "K-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/a5/64/1c/a5641c37-3a57-6357-6ad4-105f312bc04b/6241efec-ac1e-4458-b03b-a384fdaa70db.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-k-pop/988658197",
+          "searchTerm": "K-Pop"
+        },
+        {
+          "title": "Kannada",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/07/18/8e/07188ebc-fc84-114a-92c6-d4a24f8110bf/840cd3eb-d67d-4fcb-b6d2-bad92548bf5d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/kannada/1109032628",
+          "searchTerm": "Kannada"
+        },
+        {
+          "title": "Kayōkyoku",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/8b/cf/4f/8bcf4ffd-51b8-6225-0d67-425dcd77f6fa/b24812ea-2c78-4aab-b34e-6bb978f3c7cc.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-kay%C5%8Dkyoku/982346179",
+          "searchTerm": "Kayōkyoku"
+        },
+        {
+          "title": "Malayalam",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/99/28/df/9928dfd5-ea5c-f529-2d1a-87d612a59835/414c4b5f-7adb-46bd-91b2-69e805ccd9e0.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/malayalam/1109031609",
+          "searchTerm": "Malayalam"
+        },
+        {
+          "title": "Malaysian Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/01/2e/4f/012e4f83-fd4b-83f3-dc65-e7627daf60d6/2be4f2cb-e0b1-4c31-a90c-f0e9b4411e5c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-malaysian-music/982346310",
+          "searchTerm": "Malaysian Music"
+        },
+        {
+          "title": "Mandopop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/f0/54/89/f054897b-9767-a78d-1e85-ea87743b2b45/124a374d-bca4-49c8-8f5a-78c651e5d265.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-mandopop/988658199",
+          "searchTerm": "Mandopop"
+        },
+        {
+          "title": "Maskandi & Mbaqanga",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/79/f7/77/79f777a7-5e49-133b-07e0-e9aff14977ec/73e40454-8f5b-40e3-853b-5051439f84aa.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/maskandi-mbaqanga/1496575459",
+          "searchTerm": "Maskandi & Mbaqanga"
+        },
+        {
+          "title": "Mizrahi",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/38/97/d7/3897d70c-d42e-f9b1-f724-38cd1c4455f8/ee8a9e93-6ede-4349-a103-f4fe3facf11e.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-mizrahi/1106112453",
+          "searchTerm": "Mizrahi"
+        },
+        {
+          "title": "MPB",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/d8/93/f8/d893f853-b818-e86a-0b0a-16af4bb38b14/205b5a5b-b0a6-45d4-9f03-8a1e9349213f.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-mpb/982347043",
+          "searchTerm": "MPB"
+        },
+        {
+          "title": "Música Mexicana",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/93/29/56/932956c6-00d9-24d8-308e-e92fcb3b6226/1ae9ea53-93bf-4d42-ba5f-51e32eb71b6d.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-m%C3%BAsica-mexicana/976439544",
+          "searchTerm": "Música Mexicana"
+        },
+        {
+          "title": "Música Tropical",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/53/80/5f/53805f09-806e-8bac-84a9-f7738fdaa8af/4d1134e2-3f29-4deb-b352-939a1be450ce.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-m%C3%BAsica-tropical/976439545",
+          "searchTerm": "Música Tropical"
+        },
+        {
+          "title": "Musique francophone",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/7a/a9/1d/7aa91dc7-bb86-8dd0-f2ee-67c008985efa/ba8dfc0d-18e7-439a-8b38-74196f9363d2.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-musique-francophone/982347512",
+          "searchTerm": "Musique francophone"
+        },
+        {
+          "title": "Original Pilipino Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features116/v4/76/63/5d/76635d22-e3d1-4b5e-7f49-5c87a0e96b98/acdfec6f-a4d2-4b1a-883f-e654f7826979.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-original-pilipino-music/1232062136",
+          "searchTerm": "Original Pilipino Music"
+        },
+        {
+          "title": "Pop Italiano",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/58/93/69/589369b2-f724-77d9-48b8-ef42007c2ae5/a632b295-c311-4b94-b9f9-0076e0c9dcbd.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-pop-italiano/982348865",
+          "searchTerm": "Pop Italiano"
+        },
+        {
+          "title": "Pop Latino",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/14/e7/c2/14e7c279-f8ab-a7fc-9de4-9cc65c3ae93c/86955a47-a629-4af0-9913-363ee24377f8.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-pop-latino/976439549",
+          "searchTerm": "Pop Latino"
+        },
+        {
+          "title": "Punjabi",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/02/04/c2/0204c2ce-e871-72b0-b511-c0ff842f4342/e42e0170-d894-4984-9f7f-614fc87d4d75.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-punjabi/1109031457",
+          "searchTerm": "Punjabi"
+        },
+        {
+          "title": "Rap Italiano",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/59/9f/85/599f853a-b717-a94e-bddb-51256dacddb1/f65c1daa-df49-44ee-a161-401713c129dc.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-rap-italiano/982355372",
+          "searchTerm": "Rap Italiano"
+        },
+        {
+          "title": "Spanish Rock",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/b3/4e/35/b34e3502-9d42-2d39-0dac-741a26cbfbb9/0351dafa-5651-4534-8ffe-67b87c3b00b8.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-spanish-rock/988966543",
+          "searchTerm": "Spanish Rock"
+        },
+        {
+          "title": "Rock y Alternativo",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/52/ad/78/52ad78c5-c4cf-af1b-8240-5c5ba055ba4b/f941fb63-db4e-4ba2-8e67-7dfa29d9155c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-rock-y-alternativo/988965390",
+          "searchTerm": "Rock y Alternativo"
+        },
+        {
+          "title": "Sanat",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/df/f9/1d/dff91d90-b206-5e72-48b2-862e51a83515/5008560c-7412-438c-9726-c13eb8abce6b.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-sanat/982356290",
+          "searchTerm": "Sanat"
+        },
+        {
+          "title": "Schlager",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/e0/f6/90/e0f6907f-b7d6-a9a3-56bf-81aaea1fb138/5963111a-7d84-4823-9831-802bd9d09a46.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/schlager/982307704",
+          "searchTerm": "Schlager"
+        },
+        {
+          "title": "Sertanejo",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/15/8b/b4/158bb43e-fdd5-1478-d599-fe5fba466870/76b5b637-b17a-4e74-a9ca-9ff2dc41f67c.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-sertanejo/982356293",
+          "searchTerm": "Sertanejo"
+        },
+        {
+          "title": "Tamil",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/0e/f6/6f/0ef66fbd-9cc9-7d8c-48c8-61a8421d0993/6e0db58d-e264-4df4-bcd7-9fb28c56a125.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-tamil/982356297",
+          "searchTerm": "Tamil"
+        },
+        {
+          "title": "Telugu",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/b4/7d/32/b47d326d-f7f8-58b7-f41c-49fc39e1cfe0/f73aa276-eac2-4a8d-8150-356c83a41de2.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-telugu/1109030996",
+          "searchTerm": "Telugu"
+        },
+        {
+          "title": "Thai Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features/v4/47/eb/e0/47ebe05d-7dbe-2e01-af2d-d585498270e3/ddcb4725-6ca4-4b29-bc3b-d202763d6437.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/thai-music/982356299",
+          "searchTerm": "Thai Music"
+        },
+        {
+          "title": "⁧T-Pop",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/66/b4/bd/66b4bda7-7b5e-50f9-15cd-9d56144e43ed/4633b319-5726-4d46-a070-c084a835f076.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-t-pop/1708863073",
+          "searchTerm": "⁧T-Pop"
+        },
+        {
+          "title": "Vietnamese Music",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/77/76/6a/77766a56-a42a-5fb7-db20-dd6739cb8901/e5a1cf15-2c3f-4c57-9427-b748dc75eb93.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-vietnamese-music/1708558134",
+          "searchTerm": "Vietnamese Music"
+        },
+        {
+          "title": "Worldwide",
+          "artwork": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/a4/07/b8/a407b844-3c19-2f0e-35fd-b0adc155b19f/80a941b5-234f-46da-a876-f0d9cfd0a2de.png/1200x1200bf.webp",
+          "appleUrl": "https://music.apple.com/us/curator/apple-music-worldwide/976439587",
+          "searchTerm": "Worldwide"
+        }
+      ]
+    }
+  ]
+}

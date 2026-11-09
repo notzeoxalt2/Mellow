@@ -1,17 +1,8 @@
-import type { DiscordPresenceOptions } from '@bitchord/shared/bridge';
 import { APPLE_ORIGINS, useAppleAccess } from '@/data/apple/artistArt';
 import { useAppleSettings } from '@/data/apple/motionArt';
 import { useHostAccess } from '@/extension/useHostAccess';
 import { LYRIC_EXTENSION_ORIGINS } from '@/lyrics/http';
 import { useSpotifySettings } from '@/data/spotify/canvas';
-import {
-  useDiscord,
-  useDiscordConnect,
-  useDiscordDisconnect,
-  useDiscordEnabled,
-  useDiscordOptions,
-  type DiscordStatus,
-} from '@/extension/useDiscord';
 import {
   openSpotifySignIn,
   useRefreshSpotifyAuth,
@@ -19,8 +10,8 @@ import {
   useSpotifyAuth,
   type SpotifyAuthStatus,
 } from '@/extension/useSpotifyAuth';
+import { openYtSignIn, useSetConnected, useYtAuth } from '@/extension/useYtAuth';
 import { settingsUi } from './settingsStyles';
-import { Select } from '@/components/Select';
 
 /** Allowed, or an Allow button that opens the extension's permission page. */
 function HostAccessValue({ access, request }: ReturnType<typeof useHostAccess>) {
@@ -106,49 +97,50 @@ function spotifyText(auth: SpotifyAuthStatus): string {
   return signedIn ? `Signed in as ${user?.name ?? 'your account'}` : 'Couldn’t read your account';
 }
 
-export function DiscordIntegration() {
-  const status = useDiscord();
-  const connect = useDiscordConnect();
-  const disconnect = useDiscordDisconnect();
-  const text = discordText(status);
-  if (status.state !== 'ready' || !status.discord.available) return <span className={settingsUi.value}>{text}</span>;
-  const connected = status.discord.connected;
-  return (
-    <span className={settingsUi.value}>
-      <span title={status.discord.problem ?? undefined}>{text}</span>
-      <button
-        className={settingsUi.inlineButton}
-        onClick={() => (connected ? disconnect.mutate() : connect.mutate())}
-        disabled={connect.isPending || disconnect.isPending}
-      >
-        {connected ? 'Disconnect' : 'Connect'}
-      </button>
-    </span>
-  );
-}
-
-function discordText(status: DiscordStatus): string {
-  if (status.state === 'checking') return 'Checking…';
-  if (status.state === 'unavailable') return 'Not in this build of the extension';
-  const { available, connected, enabled, user, gateway, problem } = status.discord;
-  if (!available) return 'Not in this build of the extension';
-  if (!connected || !user) return 'Not connected';
-  if (!enabled) return `${user.name} · presence off`;
-  if (gateway === 'error') return problem ?? 'Couldn’t connect';
-  if (gateway === 'ready') return `${user.name} · showing what you play`;
-  if (gateway === 'connecting') return `${user.name} · connecting…`;
-  return `${user.name} · on`;
-}
-
-export function Toggle({ label, detail, checked, onChange }: { label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void }) {
+export function Toggle({ label, detail, checked, onChange, disabled = false }: { label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void; disabled?: boolean }) {
   return (
     <label className={settingsUi.controlRow}>
       <span className={settingsUi.rowText}>
         <span>{label}</span>
         {detail && <span className={settingsUi.rowDetail}>{detail}</span>}
       </span>
-      <input type="checkbox" className={settingsUi.switch} checked={checked} onChange={(e) => onChange(e.currentTarget.checked)} />
+      <input type="checkbox" className={settingsUi.switch} checked={checked} disabled={disabled} onChange={(e) => onChange(e.currentTarget.checked)} />
     </label>
+  );
+}
+
+/** Keep both sources available, or pause one without signing out of its account. */
+export function MusicServiceToggles() {
+  const yt = useYtAuth();
+  const ytConnection = useSetConnected();
+  const spotify = useSpotifyAuth();
+  const spotifyConnection = useSetSpotifyConnected();
+  return (
+    <>
+      <Toggle
+        label="Use YouTube Music"
+        detail={
+          yt.state === 'ready' && yt.auth.reauthRequired
+            ? 'On, but the saved sign-in needs repair. Use Reconnect above to restore your library.'
+            : 'Use it for recommendations and library results. Turning this off pauses new reads; current audio keeps playing.'
+        }
+        // The switch is the user's service preference, not a claim that the
+        // credentials are valid. Keep an enabled-but-expired account visibly on.
+        checked={yt.state === 'ready' && yt.auth.connected}
+        disabled={yt.state !== 'ready' || !yt.auth.browserSignedIn || ytConnection.isPending}
+        onChange={(enabled) => {
+          if (enabled && yt.state === 'ready' && !yt.auth.signedIn) openYtSignIn();
+          ytConnection.mutate(enabled);
+        }}
+      />
+      <Toggle
+        label="Use Spotify"
+        detail="Use it for playlists, recommendations and search. Turning this off pauses new reads; current audio keeps playing."
+        checked={spotify.state === 'ready' && spotify.auth.connected && spotify.auth.signedIn}
+        disabled={spotify.state !== 'ready' || !spotify.auth.browserSignedIn || spotifyConnection.isPending}
+        onChange={(enabled) => spotifyConnection.mutate(enabled)}
+      />
+    </>
   );
 }
 
@@ -161,100 +153,9 @@ export function CanvasToggle() {
   return (
     <Toggle
       label="Spotify Canvas"
-      detail="Spotify’s looping clip behind the lyrics. Not on metered connections or with reduced motion."
+      detail="Loop a track’s Spotify Canvas when one is returned. Availability follows Spotify’s country and track rules; off on metered connections or with reduced motion."
       checked={canvas}
       onChange={setCanvas}
     />
-  );
-}
-
-const ACTIVITY_TYPES: { value: DiscordPresenceOptions['activityType']; label: string }[] = [
-  { value: 'listening', label: 'Listening to' },
-  { value: 'playing', label: 'Playing' },
-  { value: 'watching', label: 'Watching' },
-  { value: 'competing', label: 'Competing in' },
-];
-
-const STATUSES: { value: DiscordPresenceOptions['status']; label: string }[] = [
-  { value: 'online', label: 'Online' },
-  { value: 'idle', label: 'Idle' },
-  { value: 'dnd', label: 'Do Not Disturb' },
-  { value: 'invisible', label: 'Invisible' },
-];
-
-/** Discord presence (prompt §7.3): opt-in, with the one-line warning, then how the card reads. */
-export function DiscordSettings() {
-  const status = useDiscord();
-  const setEnabled = useDiscordEnabled();
-  const options = useDiscordOptions((s) => s.options);
-  const set = useDiscordOptions((s) => s.set);
-  if (status.state !== 'ready' || !status.discord.available || !status.discord.connected) return null;
-  const on = status.discord.enabled;
-  return (
-    <>
-      <section className={settingsUi.group}>
-        <Toggle label="Show what you’re playing" checked={on} onChange={(v) => setEnabled.mutate(v)} />
-        {on && (
-          <>
-            <label className={settingsUi.controlRow}>
-              <span>Activity</span>
-              <Select
-                label="Activity"
-                value={options.activityType}
-                options={ACTIVITY_TYPES}
-                onChange={(activityType) => set({ activityType })}
-              />
-            </label>
-            <label className={settingsUi.controlRow}>
-              <span>Name</span>
-              <input
-                className={settingsUi.input}
-                placeholder="BitChord"
-                value={options.activityName}
-                onChange={(e) => set({ activityName: e.currentTarget.value })}
-              />
-            </label>
-            <label className={settingsUi.controlRow}>
-              <span>Status</span>
-              <Select label="Status" value={options.status} options={STATUSES} onChange={(status) => set({ status })} />
-            </label>
-            <Toggle
-              label="Lead with the song"
-              detail="Member lists show the song title instead of the artist."
-              checked={options.useDetails}
-              onChange={(v) => set({ useDetails: v })}
-            />
-            <Toggle label="Listen button" checked={options.button1Visible} onChange={(v) => set({ button1Visible: v })} />
-            {options.button1Visible && (
-              <label className={settingsUi.controlRow}>
-                <span>Listen button text</span>
-                <input
-                  className={settingsUi.input}
-                  placeholder="Listen on YouTube Music"
-                  value={options.button1Text}
-                  onChange={(e) => set({ button1Text: e.currentTarget.value })}
-                />
-              </label>
-            )}
-            <Toggle label="BitChord button" checked={options.button2Visible} onChange={(v) => set({ button2Visible: v })} />
-            {options.button2Visible && (
-              <label className={settingsUi.controlRow}>
-                <span>BitChord button text</span>
-                <input
-                  className={settingsUi.input}
-                  placeholder="Visit BitChord"
-                  value={options.button2Text}
-                  onChange={(e) => set({ button2Text: e.currentTarget.value })}
-                />
-              </label>
-            )}
-          </>
-        )}
-      </section>
-      <p className={settingsUi.footer}>
-        This uses your Discord account’s own token, which Discord’s terms don’t allow. Button text can use {'{song_name}'},{' '}
-        {'{artist_name}'} and {'{album_name}'}.
-      </p>
-    </>
   );
 }

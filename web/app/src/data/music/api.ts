@@ -1,4 +1,4 @@
-import type { YTMusic, YTNodes } from 'youtubei.js/web';
+import type { Innertube, YTMusic, YTNodes } from 'youtubei.js/web';
 import type { Candidate } from '@/playback/queue/builder';
 import { getInnertube, getMusicClient, getSignedInnertube } from '@/playback/youtube/innertube';
 import { isExactArtistMatch, normalizedArtistName } from '@/lib/artistCredits';
@@ -39,16 +39,18 @@ export interface Paged<T> {
   next: (() => Promise<Paged<T>>) | null;
 }
 
-/**
- * YouTube often offers one more page than it has: the continuation comes back
- * empty and YouTube.js throws ("Continuation did not have any content"). That
- * is the end of the list, not a failure; anything else still is one.
- */
+/** YouTube sometimes advertises one extra, empty continuation at the end. */
+function isEmptyContinuation(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).trim().replace(/\.$/, '').toLowerCase();
+  return message === 'continuation did not have any content' || message === 'no continuation contents found';
+}
+
+/** Ignore only YouTube's known empty-page sentinel; surface auth and network failures to the UI. */
 async function orEnd<T>(nextPage: () => Promise<Paged<T>>, empty: T): Promise<Paged<T>> {
   try {
     return await nextPage();
   } catch (error) {
-    if (/did not have any content|no continuation/i.test(String(error))) return { data: empty, next: null };
+    if (isEmptyContinuation(error)) return { data: empty, next: null };
     throw error;
   }
 }
@@ -60,27 +62,132 @@ function homePage(feed: YTMusic.HomeFeed): Paged<Shelf[]> {
   };
 }
 
+async function homeFrom(yt: Innertube): Promise<Paged<Shelf[]>> {
+  const feed = await yt.music.getHomeFeed();
+  let shelves = mapHome(feed);
+  let currentFeed = feed;
+
+  // A continuation often contains most of the personalized shelves.
+  if (currentFeed.has_continuation && shelves.length < 5) {
+    try {
+      const nextFeed = await currentFeed.getContinuation();
+      shelves = [...shelves, ...mapHome(nextFeed)];
+      currentFeed = nextFeed;
+    } catch {}
+  }
+
+  return {
+    data: shelves,
+    next: currentFeed.has_continuation ? () => orEnd(async () => homePage(await currentFeed.getContinuation()), []) : null,
+  };
+}
+
+/** Public catalogue requests prefer the signed session but must still work if it has expired. */
+async function withPublicMusicClient<T>(request: (yt: Innertube) => Promise<T>, isEmpty: (value: T) => boolean): Promise<T> {
+  let preferred: Innertube | undefined;
+  let value: T | undefined;
+  let failure: unknown;
+  try {
+    preferred = await getMusicClient();
+    value = await request(preferred);
+    if (!isEmpty(value)) return value;
+  } catch (error) {
+    failure = error;
+  }
+
+  const anonymous = await getInnertube();
+  if (anonymous === preferred) {
+    if (failure) throw failure;
+    return value as T;
+  }
+  try {
+    return await request(anonymous);
+  } catch (error) {
+    if (failure) throw failure;
+    throw error;
+  }
+}
+
 export async function fetchHome(): Promise<Paged<Shelf[]>> {
-  const yt = await getMusicClient();
-  return homePage(await yt.music.getHomeFeed());
+  let yt: Innertube;
+  try {
+    yt = await getMusicClient();
+    const personalized = await homeFrom(yt);
+    const anonymous = await getInnertube();
+    const general = anonymous === yt ? null : await homeFrom(anonymous).catch(() => null);
+    const primary = personalized.data.length > 0 ? personalized : (general ?? personalized);
+
+    // Keep account-specific shelves intact. Filling a short signed-in feed
+    // with anonymous regional Explore rows can overwhelm the user's taste;
+    // Home continuations still load the rest of their own feed on scroll.
+    if (personalized.data.length > 0) return personalized;
+
+    // Home can legitimately return only a couple of personalized shelves (or
+    // none at all for a fresh session). Fill the first screen with YouTube
+    // Music's Explore shelves so the page remains useful while Home recovers.
+    if (primary.data.length >= 5) return primary;
+    const explore = await yt.music.getExplore().then((feed) => mapShelves(feed.sections)).catch(() => []);
+    const anonymousExplore = explore.length || anonymous === yt
+      ? []
+      : await anonymous.music.getExplore().then((feed) => mapShelves(feed.sections)).catch(() => []);
+    const extras = explore.length ? explore : anonymousExplore;
+    const seen = new Set(primary.data.map((shelf) => `${shelf.title.toLocaleLowerCase()}\u0000${shelf.items[0]?.id ?? ''}`));
+    const merged = [
+      ...primary.data,
+      ...extras.filter((shelf) => {
+        const key = `${shelf.title.toLocaleLowerCase()}\u0000${shelf.items[0]?.id ?? ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }),
+    ];
+    return { data: merged, next: primary.next };
+  } catch (signedError) {
+    const anonymous = await getInnertube();
+    try {
+      const general = await homeFrom(anonymous);
+      if (general.data.length >= 5) return general;
+      const explore = mapShelves((await anonymous.music.getExplore()).sections);
+      const seen = new Set(general.data.map((shelf) => `${shelf.title.toLocaleLowerCase()}\u0000${shelf.items[0]?.id ?? ''}`));
+      const extras = explore.filter((shelf) => {
+        const key = `${shelf.title.toLocaleLowerCase()}\u0000${shelf.items[0]?.id ?? ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      return { data: [...general.data, ...extras], next: general.next };
+    } catch {
+      throw signedError;
+    }
+  }
 }
 
 /** The New page: YouTube Music's Explore, minus its podcast and mood carousels (mappers drop those). */
 export async function fetchExplore(): Promise<Shelf[]> {
-  const yt = await getMusicClient();
-  return mapShelves((await yt.music.getExplore()).sections);
+  return withPublicMusicClient(async (yt) => mapShelves((await yt.music.getExplore()).sections), (shelves) => !shelves.length);
 }
 
 /** Moods & genres, read raw because YouTube.js drops the tiles' colours. */
 export async function fetchCategories(): Promise<CategoryGroup[]> {
-  const yt = await getInnertube();
-  const response = await yt.actions.execute('/browse', { browseId: 'FEmusic_moods_and_genres', client: 'YTMUSIC' });
-  return mapCategories(response.data);
+  const groups = await withPublicMusicClient(async (yt) => {
+    const response = await yt.actions.execute('/browse', { browseId: 'FEmusic_moods_and_genres', client: 'YTMUSIC' });
+    return mapCategories(response.data);
+  }, (groups) => !groups.some((group) => group.categories.length));
+  // A successful HTTP response with an empty/unrecognized renderer tree is
+  // not a valid catalogue. Throw so TanStack retries transient YouTube
+  // responses and keeps any last-good cached catalogue visible during a
+  // background refresh instead of replacing it with an empty page.
+  if (!groups.some((group) => group.categories.length > 0)) {
+    throw new Error('YouTube Music returned no genre categories.');
+  }
+  return groups;
 }
 
 export async function fetchSearch(query: string): Promise<SearchResults> {
-  const yt = await getMusicClient();
-  return mapSearch(await yt.music.search(query));
+  return withPublicMusicClient(
+    async (yt) => mapSearch(await yt.music.search(query)),
+    (result) => !result.top.length && !result.songs.length && !result.artists.length && !result.albums.length && !result.playlists.length && !result.videos.length,
+  );
 }
 
 /** YouTube Music's Songs shelf for [query]: what an import or a match is chosen from. */
@@ -91,14 +198,43 @@ export async function searchSongs(query: string): Promise<Track[]> {
   return mapPlaylistTracks((shelf as { contents?: readonly unknown[] } | undefined)?.contents ?? []);
 }
 
+/** Paged YouTube Music song search. Continuations stay opaque and are pulled only when the user asks for more. */
+type SearchContinuationLike = {
+  contents?: { contents?: readonly unknown[] } | null;
+  has_continuation: boolean;
+  getContinuation: () => Promise<SearchContinuationLike>;
+};
+
+function searchSongsContinuation(page: SearchContinuationLike): Paged<Track[]> {
+  const data = mapPlaylistTracks(page.contents?.contents ?? []);
+  return {
+    data,
+    next: page.has_continuation ? () => orEnd(async () => {
+      const more = await page.getContinuation();
+      return searchSongsContinuation(more);
+    }, []) : null,
+  };
+}
+
+export async function fetchSearchSongs(query: string): Promise<Paged<Track[]>> {
+  return withPublicMusicClient(async (yt) => {
+    const search = await yt.music.search(query, { type: 'song' });
+    return {
+      data: mapPlaylistTracks(search.songs?.contents ?? []),
+      next: search.has_continuation
+        ? () => orEnd(async () => searchSongsContinuation(await search.getContinuation()), [])
+        : null,
+    };
+  }, (page) => page.data.length === 0);
+}
+
 export async function fetchSuggestions(input: string): Promise<Suggestions> {
   const yt = await getInnertube();
   return mapSuggestions(await yt.music.getSearchSuggestions(input));
 }
 
 export async function fetchAlbum(id: string): Promise<AlbumPage> {
-  const yt = await getMusicClient();
-  return mapAlbum(id, await yt.music.getAlbum(id));
+  return withPublicMusicClient(async (yt) => mapAlbum(id, await yt.music.getAlbum(id)), (album) => !album.title && !album.tracks.length && !album.more.length);
 }
 
 /** How many top songs an artist page lists, as on the phone. */
@@ -110,18 +246,19 @@ const ARTIST_TOP_SONGS = 20;
  * fails, the five stand.
  */
 export async function fetchArtist(id: string): Promise<ArtistPage> {
-  const yt = await getMusicClient();
-  const page = mapArtist(id, await yt.music.getArtist(id));
-  const playlistId = page.topSongsSeeAll?.browseId;
-  if (playlistId?.startsWith('VL') && page.topSongs.length < ARTIST_TOP_SONGS) {
-    try {
-      const { page: playlist } = await fetchPlaylist(playlistId);
-      if (playlist.tracks.length > page.topSongs.length) page.topSongs = playlist.tracks.slice(0, ARTIST_TOP_SONGS);
-    } catch {
-      // The landing page's songs are still the right ones, just fewer.
+  return withPublicMusicClient(async (yt) => {
+    const page = mapArtist(id, await yt.music.getArtist(id));
+    const playlistId = page.topSongsSeeAll?.browseId;
+    if (playlistId?.startsWith('VL') && page.topSongs.length < ARTIST_TOP_SONGS) {
+      try {
+        const { page: playlist } = await fetchPlaylist(playlistId);
+        if (playlist.tracks.length > page.topSongs.length) page.topSongs = playlist.tracks.slice(0, ARTIST_TOP_SONGS);
+      } catch {
+        // The landing page's songs are still the right ones, just fewer.
+      }
     }
-  }
-  return page;
+    return page;
+  }, (page) => !page.name && !page.topSongs.length && !page.shelves.length);
 }
 
 function playlistTracks(page: YTMusic.Playlist): Paged<Track[]> {
@@ -133,30 +270,32 @@ function playlistTracks(page: YTMusic.Playlist): Paged<Track[]> {
 
 /** The header and first page of tracks; `more` fetches the rest page by page. */
 export async function fetchPlaylist(id: string): Promise<{ page: PlaylistPage; more: Paged<Track[]>['next'] }> {
-  const yt = await getMusicClient();
-  const playlist = await yt.music.getPlaylist(id);
-  return { page: mapPlaylist(id, playlist), more: playlistTracks(playlist).next };
+  return withPublicMusicClient(async (yt) => {
+    const playlist = await yt.music.getPlaylist(id);
+    return { page: mapPlaylist(id, playlist), more: playlistTracks(playlist).next };
+  }, (result) => !result.page.title && !result.page.tracks.length);
 }
 
 /** See All, moods and genres: whatever the browse id renders as. */
 export async function fetchBrowse({ browseId, params }: BrowseLink): Promise<BrowsePage> {
-  const yt = await getMusicClient();
-  const { YTNodes } = await import('youtubei.js/web');
-  const response = await yt.actions.execute('/browse', {
-    browseId,
-    ...(params && { params }),
-    client: 'YTMUSIC',
-    parse: true,
-  });
-  const memo = response.contents_memo;
-  const sections = [
-    ...(memo?.getType(YTNodes.Grid) ?? []),
-    ...(memo?.getType(YTNodes.MusicCarouselShelf) ?? []),
-    ...(memo?.getType(YTNodes.MusicShelf) ?? []),
-    ...(memo?.getType(YTNodes.MusicPlaylistShelf) ?? []),
-  ];
-  const header = memo?.getType(YTNodes.MusicHeader)?.[0] ?? (response.header as unknown);
-  return mapBrowse({ header, sections }, '');
+  return withPublicMusicClient(async (yt) => {
+    const { YTNodes } = await import('youtubei.js/web');
+    const response = await yt.actions.execute('/browse', {
+      browseId,
+      ...(params && { params }),
+      client: 'YTMUSIC',
+      parse: true,
+    });
+    const memo = response.contents_memo;
+    const sections = [
+      ...(memo?.getType(YTNodes.Grid) ?? []),
+      ...(memo?.getType(YTNodes.MusicCarouselShelf) ?? []),
+      ...(memo?.getType(YTNodes.MusicShelf) ?? []),
+      ...(memo?.getType(YTNodes.MusicPlaylistShelf) ?? []),
+    ];
+    const header = memo?.getType(YTNodes.MusicHeader)?.[0] ?? (response.header as unknown);
+    return mapBrowse({ header, sections }, '');
+  }, (page) => !page.title && !page.shelves.length && !page.grid.length && !page.tracks.length);
 }
 
 // ---- Signed in (prompt §5.3) ------------------------------------------------------
@@ -191,8 +330,12 @@ export async function fetchLibrary(section: LibrarySection): Promise<Paged<Brows
   const lists = [...(memo?.getType(YTNodes.MusicShelf) ?? []), ...(memo?.getType(YTNodes.MusicPlaylistShelf) ?? [])];
   const carousels = memo?.getType(YTNodes.MusicCarouselShelf) ?? [];
   const page = mapBrowse({ sections: [...grids, ...lists, ...carousels] }, title);
-  // History is several lists ("Today", "Yesterday"); the rest is one grid or one list.
-  const token = (grids[0]?.continuation ?? (lists.length === 1 ? lists[0]?.continuation : null)) || null;
+  // A library page may render several shelves (History groups them by day),
+  // but YouTube attaches the next-page token to the shelf that continues.
+  // Follow whichever rendered section actually owns that token.
+  const token = grids.find((grid) => grid.continuation)?.continuation
+    ?? lists.find((list) => list.continuation)?.continuation
+    ?? null;
   return { data: { ...page, title }, next: token ? () => orEnd(() => libraryContinuation(token, title), emptyPage(title)) : null };
 }
 
@@ -201,13 +344,17 @@ const emptyPage = (title: string): BrowsePage => ({ title, shelves: [], grid: []
 async function libraryContinuation(token: string, title: string): Promise<Paged<BrowsePage>> {
   const yt = await getSignedInnertube();
   const response = await yt.actions.execute('/browse', { continuation: token, client: 'YTMUSIC', parse: true });
+  // youtubei.js returns parsed YTNodes here (`gridContinuation` and
+  // `musicShelfContinuation`), not the raw renderer names. Accept both forms
+  // so a YouTube.js parser update cannot silently turn a grid page into an
+  // empty music shelf.
   const contents = response.continuation_contents as unknown as
-    | { type: string; items?: unknown[]; contents?: unknown[]; continuation?: string | null }
+    | { type?: string; items?: readonly unknown[] | null; contents?: readonly unknown[] | null; continuation?: string | null }
     | undefined;
-  const section =
-    contents?.type === 'GridContinuation'
-      ? { type: 'Grid', items: contents.items ?? [] }
-      : { type: 'MusicShelf', contents: contents?.contents ?? [] };
+  const isGrid = contents?.type === 'gridContinuation' || contents?.type === 'GridContinuation';
+  const section = isGrid
+    ? { type: 'Grid', items: contents?.items ?? contents?.contents ?? [] }
+    : { type: 'MusicShelf', contents: contents?.contents ?? [] };
   const next = contents?.continuation || null;
   return {
     data: mapBrowse({ sections: [section] }, title),
@@ -273,6 +420,24 @@ export async function addToPlaylist(playlistId: string, videoId: string): Promis
     actions: [{ action: 'ACTION_ADD_VIDEO', addedVideoId: videoId, dedupeOption: 'DEDUPE_OPTION_SKIP' }],
     client: 'YTMUSIC',
   });
+}
+
+/** Add a batch in one signed request, with YouTube's duplicate-skip behavior. */
+export async function addManyToPlaylist(playlistId: string, videoIds: string[]): Promise<void> {
+  const ids = [...new Set(videoIds.filter(Boolean))];
+  if (!ids.length) return;
+  const yt = await getSignedInnertube();
+  for (let i = 0; i < ids.length; i += 50) {
+    await yt.actions.execute('/browse/edit_playlist', {
+      playlistId: playlistId.replace(/^VL/, ''),
+      actions: ids.slice(i, i + 50).map((addedVideoId) => ({
+        action: 'ACTION_ADD_VIDEO',
+        addedVideoId,
+        dedupeOption: 'DEDUPE_OPTION_SKIP',
+      })),
+      client: 'YTMUSIC',
+    });
+  }
 }
 
 /**

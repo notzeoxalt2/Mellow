@@ -6,10 +6,10 @@ import {
   type BridgeResponse,
   type ParamsOf,
   type ResultOf,
-  type DiscordState,
   type SpotifyAuthState,
   type YtAuthState,
 } from '@bitchord/shared/bridge';
+import { syncToMellowDesktop } from '../../lib/desktopSync';
 
 declare const __SITE_ORIGINS__: string[];
 
@@ -44,7 +44,6 @@ function simpleRow(name: string, detail: string): HTMLLIElement {
 function youtubeRow(state: YtAuthState | null, refresh: (state: YtAuthState) => void): HTMLLIElement {
   if (!state) return simpleRow('YouTube Music', 'Checking…');
   const row = el('li', 'row account');
-  // A grey disc until there's a picture; an <img> without a src can draw a broken-image glyph.
   let avatar: HTMLElement = el('span', 'avatar');
   const who = el('span', 'who');
   let action: HTMLElement;
@@ -60,7 +59,6 @@ function youtubeRow(state: YtAuthState | null, refresh: (state: YtAuthState) => 
     if (state.problem) detail.title = state.problem;
     who.append(el('span', 'title', 'YouTube Music'), detail);
     if (state.connected) {
-      // Signed in, but the account couldn't be read: say why, and offer another try.
       action = el('button', 'action', 'Retry');
       action.onclick = () => void call('yt.authState', { refresh: true }).then(refresh);
     } else {
@@ -88,7 +86,6 @@ function youtubeRow(state: YtAuthState | null, refresh: (state: YtAuthState) => 
   return row;
 }
 
-/** A connected account's picture, or a grey disc. */
 function avatarOf(url: string | null | undefined): HTMLElement {
   if (!url) return el('span', 'avatar');
   const image = el('img', 'avatar');
@@ -98,83 +95,59 @@ function avatarOf(url: string | null | undefined): HTMLElement {
   return image;
 }
 
-function button(text: string, onClick: () => void, title?: string): HTMLElement {
-  const action = el('button', 'action', text);
-  if (title) action.title = title;
-  action.onclick = onClick;
-  return action;
-}
-
-/** Spotify: the browser's open.spotify.com session, as for YouTube. */
-function spotifyRow(state: SpotifyAuthState | null): HTMLLIElement {
+function spotifyRow(state: SpotifyAuthState | null): HTMLElement {
   if (!state) return simpleRow('Spotify', 'Checking…');
   const row = el('li', 'row account');
   const who = el('span', 'who');
   let action: HTMLElement;
+
   if (!state.browserSignedIn) {
     who.append(el('span', 'title', 'Spotify'), el('span', 'detail', 'Not signed in in this browser'));
-    action = button('Sign in', () => void call('spotify.signIn', {}));
-  } else if (!state.connected) {
-    who.append(el('span', 'title', 'Spotify'), el('span', 'detail', 'Disconnected'));
-    action = button('Connect', () => void call('spotify.setConnected', { connected: true }).then(setSpotify));
-  } else if (!state.signedIn) {
-    const detail = el('span', 'detail', 'Couldn’t read your account');
-    if (state.problem) detail.title = state.problem;
-    who.append(el('span', 'title', 'Spotify'), detail);
-    action = button('Retry', () => void call('spotify.authState', { refresh: true }).then(setSpotify));
+    const link = el('a', 'action', 'Sign in');
+    (link as HTMLAnchorElement).href = 'https://open.spotify.com/';
+    (link as HTMLAnchorElement).target = '_blank';
+    action = link;
+  } else if (!state.connected || !state.signedIn) {
+    who.append(el('span', 'title', 'Spotify'), el('span', 'detail', state.connected ? 'Couldn’t mint a token' : 'Disconnected'));
+    action = el('button', 'action', state.connected ? 'Retry' : 'Connect');
+    action.onclick = () => void call('spotify.setConnected', { connected: true }).then(setSpotify);
   } else {
-    who.append(el('span', 'title', state.user?.name ?? 'Spotify'), el('span', 'detail', 'Spotify'));
-    action = button(
-      'Disconnect',
-      () => void call('spotify.setConnected', { connected: false }).then(setSpotify),
-      'Stop using this account in BitChord. You stay signed in to Spotify.',
-    );
+    who.append(el('span', 'title', state.user?.name ?? 'Spotify Account'), el('span', 'detail', 'Connected'));
+    action = el('button', 'action', 'Disconnect');
+    action.onclick = () => void call('spotify.setConnected', { connected: false }).then(setSpotify);
   }
   row.append(avatarOf(state.user?.avatarUrl), who, action);
   return row;
 }
 
-/** Discord: connect on the extension's own page; presence itself is switched on in the web player. */
-function discordRow(state: DiscordState | null): HTMLLIElement | null {
-  if (state && !state.available) return null;
-  if (!state) return simpleRow('Discord', 'Checking…');
+function mellowRow(): HTMLElement {
   const row = el('li', 'row account');
   const who = el('span', 'who');
-  let action: HTMLElement;
-  if (!state.connected || !state.user) {
-    who.append(el('span', 'title', 'Discord'), el('span', 'detail', 'Not connected'));
-    action = button('Connect', () => void call('discord.connect', {}).then(() => window.close()));
-  } else {
-    const detail =
-      state.gateway === 'ready'
-        ? 'Showing what you play'
-        : state.gateway === 'connecting'
-          ? 'Connecting…'
-          : state.gateway === 'error'
-            ? (state.problem ?? 'Couldn’t connect')
-            : state.enabled
-              ? 'On, waiting for a song'
-              : 'Presence off';
-    who.append(el('span', 'title', state.user.name), el('span', 'detail', detail));
-    action = button('Disconnect', () => void call('discord.disconnect', {}).then(setDiscord), 'Forget this Discord account.');
-  }
-  row.append(avatarOf(state.user?.avatarUrl), who, action);
+  who.append(el('span', 'title', 'Mellow Desktop'), el('span', 'detail', mellowStatus));
+
+  const button = el('button', 'action', 'Sync to Mellow');
+  button.onclick = async () => {
+    button.textContent = 'Syncing…';
+    const ok = await syncToMellowDesktop();
+    mellowStatus = ok ? 'Synced successfully!' : 'Mellow not open';
+    render();
+  };
+  row.append(avatarOf(null), who, button);
   return row;
 }
 
 const list = document.getElementById('integrations')!;
 let youtubeState: YtAuthState | null = null;
 let spotifyState: SpotifyAuthState | null = null;
-let discordStateNow: DiscordState | null = null;
+let mellowStatus = 'Checking…';
 
 function render(): void {
   const youtube = youtubeRow(youtubeState, setYoutube) as HTMLLIElement & { problemRow?: HTMLLIElement };
-  const discord = discordRow(discordStateNow);
   list.replaceChildren(
     youtube,
     ...(youtube.problemRow ? [youtube.problemRow] : []),
     spotifyRow(spotifyState),
-    ...(discord ? [discord] : []),
+    mellowRow(),
   );
 }
 
@@ -186,11 +159,6 @@ function setSpotify(state: SpotifyAuthState): void {
   spotifyState = state;
   render();
 }
-function setDiscord(state: DiscordState): void {
-  discordStateNow = state;
-  render();
-}
-
 document.getElementById('version')!.textContent = `v${browser.runtime.getManifest().version}`;
 const site = document.getElementById('site') as HTMLAnchorElement;
 site.href = __SITE_ORIGINS__[0] ?? '#';
@@ -200,4 +168,9 @@ call('yt.authState', {})
   .then(setYoutube)
   .catch(() => list.replaceChildren(simpleRow('YouTube Music', 'Couldn’t read the session')));
 call('spotify.authState', {}).then(setSpotify).catch(() => undefined);
-call('discord.state', {}).then(setDiscord).catch(() => undefined);
+
+// Auto sync to Mellow Desktop when popup is opened
+syncToMellowDesktop().then((ok) => {
+  mellowStatus = ok ? 'Active & Synced' : 'Desktop app not running';
+  render();
+});

@@ -80,6 +80,8 @@ export interface TrackAnalysis {
   /** BitChord: vocal curves over the opening and the end; empty when the model couldn't run. */
   vocals?: VocalWindow[];
   analysisVersion: number;
+  /** Local cache age used only for bounded IndexedDB retention. */
+  cacheStoredAt?: number;
   manualOverrides?: {
     bpm?: number;
     camelot?: CamelotKey;

@@ -11,7 +11,7 @@ import Essentia from 'essentia.js/dist/essentia.js-core.es.js';
 import { fitGrid, normalizeTempo, findDownbeat } from './beatgrid';
 import { energyCurve, detectIntroOutro } from './energy';
 import { toCamelot } from './camelot';
-import { trackBeats, vocalCurve, VOCAL_FPS, type ModelGrid } from './models';
+import type { ModelGrid } from './models';
 import type { BeatSide, LocalGrid, VocalWindow } from './types';
 
 export interface AnalyzeRequest {
@@ -63,11 +63,21 @@ self.onmessage = async (ev: MessageEvent<AnalyzeRequest>) => {
     essentia ??= new Essentia(EssentiaWASM);
     const result = analyze(essentia, samples, sampleRate)!;
 
-    // BitChord: the phone's models. Beat This! replaces essentia's grids
-    // wherever it finds one; essentia's stay as the fallback.
-    // one at a time: a single wasm session runs one inference at once
+    // Keep the optional ONNX runtime out of the worker's startup path. The
+    // analysis request only carries these windows when a model is enabled;
+    // normal analysis should not pay the runtime's download or memory cost.
     const grids: (ModelGrid | null)[] = [];
-    for (const w of beatWindows.slice(0, 2)) grids.push(await trackBeats(w.pcm, w.offsetSec).catch(() => null));
+    if (beatWindows.length || vocalWindows.length) {
+      const models = await import('./models');
+      // BitChord: Beat This! replaces essentia's grids wherever it finds one;
+      // essentia's remain the fallback. One at a time: a single WASM session
+      // runs one inference at once.
+      for (const w of beatWindows.slice(0, 2)) grids.push(await models.trackBeats(w.pcm, w.offsetSec).catch(() => null));
+      for (const w of vocalWindows) {
+        const curve = await models.vocalCurve(w.left, w.right).catch(() => null);
+        if (curve) result.vocals.push({ startSec: w.offsetSec, fps: models.VOCAL_FPS, curve: Array.from(curve) });
+      }
+    }
     const [head = null, tail = null] = grids;
     result.headBeats = head ? beatSide(head) : null;
     result.tailBeats = tail ? beatSide(tail) : (beatWindows.length === 1 ? result.headBeats : null);
@@ -77,10 +87,6 @@ self.onmessage = async (ev: MessageEvent<AnalyzeRequest>) => {
     }
     if (result.tailBeats) result.tailGrid = localGrid(result.tailBeats);
 
-    for (const w of vocalWindows) {
-      const curve = await vocalCurve(w.left, w.right).catch(() => null);
-      if (curve) result.vocals.push({ startSec: w.offsetSec, fps: VOCAL_FPS, curve: Array.from(curve) });
-    }
     postMessage({ type: 'result', fileKey, result } satisfies AnalyzeResponse);
   } catch (e) {
     postMessage({ type: 'error', fileKey, message: String(e) } satisfies AnalyzeResponse);

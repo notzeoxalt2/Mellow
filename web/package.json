@@ -8,12 +8,18 @@
   },
   "scripts": {
     "dev": "pnpm --filter @bitchord/app dev",
+    "dev:desktop": "pnpm --filter @bitchord/desktop dev",
+    "build:desktop": "pnpm --filter @bitchord/app build && pnpm --filter @bitchord/desktop build",
+    "package:desktop": "pnpm --filter @bitchord/app build && pnpm --filter @bitchord/desktop package",
     "dev:ext": "pnpm --filter @bitchord/extension dev",
     "dev:ext:firefox": "pnpm --filter @bitchord/extension dev:firefox",
     "build": "pnpm -r build",
     "build:site": "pnpm --filter @bitchord/extension package && pnpm --filter @bitchord/app build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "fixtures": "node scripts/capture-fixtures.mjs"
+    "fixtures": "node scripts/capture-fixtures.mjs",
+    "storage:audit": "node scripts/audit-storage.mjs",
+    "desktop:smoke": "node scripts/desktop-smoke.mjs",
+    "desktop:qa": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-desktop-qa.ps1"
   }
 }

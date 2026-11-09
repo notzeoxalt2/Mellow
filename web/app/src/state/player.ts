@@ -8,10 +8,10 @@ import { extendStation } from '@/playback/queue/builder';
 import {
   applyJump,
   asEntry,
-  BACK_RESTARTS_AFTER_SEC,
   buildContextQueue,
   buildOneOffQueue,
   playedUserQueueIndices,
+  previousTrackIndex,
   sectionedOrder,
   shuffledStartingOrder,
   shuffledUpcomingOrder,
@@ -21,6 +21,7 @@ import {
   type QueueSource,
 } from '@/playback/queue/timeline';
 import { trackLog } from '@/playback/trackLog';
+import { recordLocalPlay } from '@/state/localHistory';
 import type { LoadedTrack, StreamStats, YouTubeEngine } from '@/playback/youtube/engine';
 import type { AutomixGraph, AutoDJSnapshot } from '@/playback/automix';
 
@@ -126,6 +127,47 @@ function loadSettings(): Settings {
     return DEFAULT_SETTINGS;
   }
 }
+
+const SESSION_KEY = 'mellow:saved_session';
+
+interface SavedSession {
+  queue: QueueEntry[];
+  index: number;
+  nowPlaying: NowPlaying | null;
+}
+
+function loadSession(): Partial<SavedSession> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed.queue) && parsed.queue.length > 0) {
+      return {
+        queue: parsed.queue,
+        index: typeof parsed.index === 'number' ? parsed.index : 0,
+        nowPlaying: parsed.nowPlaying || null,
+      };
+    }
+  } catch {}
+  return {};
+}
+
+function saveSession(state: { queue: QueueEntry[]; index: number; nowPlaying: NowPlaying | null }) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!state.queue || state.queue.length === 0) return;
+    localStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({
+        queue: state.queue.slice(0, 100),
+        index: Math.max(0, state.index),
+        nowPlaying: state.nowPlaying,
+      }),
+    );
+  } catch {}
+}
+
 
 function saveSettings(state: Settings) {
   const { shuffle, repeat, autoplay, volume, muted, crossfadeSec, automix, automixBars, showNerdStats } = state;
@@ -368,6 +410,9 @@ function syncAutomix() {
 }
 
 function extensionReady(): boolean {
+  if (typeof window !== 'undefined' && (window as any).electronAPI?.isDesktop) {
+    return true;
+  }
   const detected = queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey);
   return !!detected?.info.capabilities.includes('yt');
 }
@@ -417,11 +462,15 @@ let loadToken = 0;
 /** Canonical positions of the queue before shuffle, for turning it off again. */
 let canonical: Map<string, number> | null = null;
 
+const savedSession = loadSession();
+const initialSettings = loadSettings();
+let lastAudibleVolume = initialSettings.volume > 0 ? initialSettings.volume : DEFAULT_SETTINGS.volume;
+
 export const usePlayer = create<PlayerState>()((set, get) => ({
-  ...loadSettings(),
-  queue: [],
-  index: -1,
-  nowPlaying: null,
+  ...initialSettings,
+  queue: savedSession.queue ?? [],
+  index: savedSession.index ?? -1,
+  nowPlaying: savedSession.nowPlaying ?? null,
   status: 'idle',
   error: null,
   deck: 0,
@@ -430,6 +479,12 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
 
   playTracks(tracks, startIndex, source) {
     if (!tracks.length) return;
+    const requested = tracks[startIndex];
+    const current = get().nowPlaying;
+    if (requested && current?.videoId === requested.videoId) {
+      if (get().status !== 'playing' && get().status !== 'buffering') get().togglePlay();
+      return;
+    }
     const { queue, index, shuffle } = get();
     const built = buildContextQueue(queue, index, tracks, startIndex, source);
     if (shuffle) {
@@ -438,17 +493,24 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       void startAt(0);
     } else {
       canonical = null;
-      set({ queue: built.timeline });
-      void startAt(built.startIndex);
+      const history = index >= 0 ? queue.slice(Math.max(0, index - 49), index + 1) : [];
+      set({ queue: [...history, ...built.timeline] });
+      void startAt(history.length + built.startIndex);
     }
     intent();
   },
 
   playTrack(track, source) {
+    const current = get().nowPlaying;
+    if (current?.videoId === track.videoId) {
+      if (get().status !== 'playing' && get().status !== 'buffering') get().togglePlay();
+      return;
+    }
     const { queue, index } = get();
     canonical = null;
-    set({ queue: buildOneOffQueue(queue, index, track, source) });
-    void startAt(0);
+    const history = index >= 0 ? queue.slice(Math.max(0, index - 49), index + 1) : [];
+    set({ queue: [...history, ...buildOneOffQueue(queue, index, track, source)] });
+    void startAt(history.length);
     intent();
   },
 
@@ -520,11 +582,10 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
 
   previous() {
     const { index, queue, repeat } = get();
-    const audio = getAudio();
-    if (audio && audio.currentTime > BACK_RESTARTS_AFTER_SEC) return get().seek(0);
-    if (index > 0) void startAt(index - 1);
-    else if (repeat === 'all' && queue.length > 1) void startAt(queue.length - 1);
-    else return get().seek(0);
+    const target = previousTrackIndex(index, queue.length, repeat);
+    if (target === null) return;
+    if (target === index) return get().seek(0);
+    void startAt(target);
     intent();
   },
 
@@ -602,13 +663,24 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   setVolume(volume) {
-    set({ volume: Math.min(1, Math.max(0, volume)), muted: false });
+    const nextVolume = Math.min(1, Math.max(0, volume));
+    if (nextVolume > 0) lastAudibleVolume = nextVolume;
+    set({ volume: nextVolume, muted: false });
     applyVolumes();
     saveSettings(get());
   },
 
   toggleMute() {
-    set({ muted: !get().muted });
+    const { muted, volume } = get();
+    if (muted || volume === 0) {
+      // A zero slider value is acoustically muted even if the explicit mute
+      // flag is off. Restore the last audible level so the speaker button can
+      // always bring sound back.
+      set({ volume: volume === 0 ? lastAudibleVolume : volume, muted: false });
+    } else {
+      lastAudibleVolume = volume;
+      set({ muted: true });
+    }
     applyVolumes();
     saveSettings(get());
   },
@@ -667,6 +739,39 @@ function insertUser(tracks: Track[], source: QueueSource | null, isNext: boolean
 // ---- Loading and moving through the queue -------------------------------------------
 
 /** Loads queue[at] into the deck in front and plays it. `auto` marks a move the player made on its own. */
+
+async function resolvePlayableVideoId(entry: QueueEntry, index?: number): Promise<string> {
+  let videoId = entry.track.videoId;
+  if (videoId && videoId.startsWith('spotify:')) {
+    try {
+      const { matchToYouTube } = await import('@/data/spotify/api');
+      const spTrack = {
+        id: videoId.replace(/^spotify:/, ''),
+        title: entry.track.title,
+        artist: entry.track.artists.map((a) => a.name).join(', '),
+        album: entry.track.album?.name ?? null,
+        durationMs: (entry.track.durationSec ?? 0) * 1000,
+        imageUrl: entry.track.thumbnail,
+      };
+      const matched = await matchToYouTube(spTrack);
+      if (matched && matched.videoId && !matched.videoId.startsWith('spotify:')) {
+        videoId = matched.videoId;
+        entry.track = matched;
+        if (typeof index === 'number') {
+          const q = usePlayer.getState().queue;
+          if (q[index]) {
+            q[index].track = matched;
+            usePlayer.setState({ queue: [...q] });
+          }
+        }
+      }
+    } catch (err) {
+      trackLog.w(`Failed to match spotify track: ${entry.track.title}`, String(err));
+    }
+  }
+  return videoId;
+}
+
 async function startAt(at: number, { startSec = 0, auto = false, autoplay = true } = {}): Promise<void> {
   const state = usePlayer.getState();
   const entry = state.queue[at];
@@ -692,7 +797,8 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     all[1 - active]!.engine.stop().catch(() => {});
     deck.gain = 1;
     applyVolumes();
-    const track = await deck.engine.load(entry.track.videoId, { startSec, autoplay });
+    const playId = await resolvePlayableVideoId(entry, at);
+    const track = await deck.engine.load(playId, { startSec, autoplay });
     if (token !== loadToken) return;
     applyTrack(track, entry.track);
     if (!autoplay) usePlayer.setState({ status: 'paused' });
@@ -913,8 +1019,8 @@ function maybeCrossfade() {
   applyVolumes();
   trackLog.i(`crossfading into the next track over ${Math.round(remaining)}s`, entry.track.videoId);
 
-  back.engine
-    .load(entry.track.videoId, { autoplay: true })
+  resolvePlayableVideoId(entry, plan.index).then((playId) => back.engine
+    .load(playId, { autoplay: true }))
     .then((track) => {
       if (!fade || fade.token !== token || !decks) return;
       fade.pending = false;
@@ -972,6 +1078,39 @@ function applyTrack(track: LoadedTrack, from?: Track) {
   };
   usePlayer.setState({ nowPlaying, error: null });
   updateMediaSession(nowPlaying);
+  if (from) {
+    recordLocalPlay(from);
+  } else {
+    recordLocalPlay({
+      videoId: nowPlaying.videoId,
+      title: nowPlaying.title,
+      artists: [{ name: nowPlaying.artist, id: null }],
+      album: null,
+      durationSec: nowPlaying.durationSec,
+      explicit: false,
+      thumbnail: nowPlaying.artworkUrl,
+      index: null,
+      plays: null,
+    });
+  }
+  saveSession({ queue: usePlayer.getState().queue, index: usePlayer.getState().index, nowPlaying });
+  if (typeof window !== 'undefined' && window.electronAPI?.updateNowPlaying) {
+    // The mini-player can receive a track before AppShell has finished applying
+    // the saved palette. Keep that brief startup window on Mellow's own violet
+    // brand instead of flashing Spotify green.
+    const accent = document.documentElement.style.getPropertyValue('--theme-accent') || '#9b55f5';
+    const accentGlow = document.documentElement.style.getPropertyValue('--theme-accent-glow') || 'rgba(155, 85, 245, 0.34)';
+    window.electronAPI.updateNowPlaying({
+      videoId: nowPlaying.videoId,
+      title: nowPlaying.title,
+      artist: nowPlaying.artist,
+      artworkUrl: nowPlaying.artworkUrl,
+      durationSec: nowPlaying.durationSec,
+      status: usePlayer.getState().status,
+      accent,
+      accentGlow,
+    });
+  }
   followVideo();
 }
 
@@ -992,11 +1131,15 @@ export function onTrackEnded(listener: () => void): () => void {
 /** The elements' own events are the source of truth for play state; only the deck in front speaks. */
 function bindElement(deck: Deck, n: number) {
   const element = deck.audio;
+  let lastMiniPositionSent = 0;
   const inFront = () => active === n;
   const set = (status: PlayerStatus) => {
     if (!inFront() || holding) return;
     if (usePlayer.getState().status === 'error' && status !== 'playing') return;
     usePlayer.setState({ status });
+    if (typeof window !== 'undefined' && window.electronAPI?.updatePlaybackStatus) {
+      window.electronAPI.updatePlaybackStatus(status);
+    }
   };
   element.addEventListener('playing', () => set('playing'));
   element.addEventListener('pause', () => {
@@ -1020,6 +1163,11 @@ function bindElement(deck: Deck, n: number) {
     if (!inFront()) return;
     maybeCrossfade();
     ensureAutoplay();
+    const now = performance.now();
+    if (now - lastMiniPositionSent >= 750 && typeof window !== 'undefined') {
+      lastMiniPositionSent = now;
+      window.electronAPI?.updatePlaybackPosition?.(element.currentTime, element.duration || usePlayer.getState().nowPlaying?.durationSec || 0);
+    }
   });
   for (const event of ['durationchange', 'ratechange', 'seeked'] as const) {
     element.addEventListener(event, () => {

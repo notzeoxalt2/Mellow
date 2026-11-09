@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ListEnd, ListPlus, ListStart, MoreHorizontal, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, EyeOff, ListEnd, ListPlus, ListStart, MoreHorizontal, Star } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator, type MenuPlacement } from '@/components/Menu';
 import {
@@ -76,7 +76,7 @@ function AccountItems({ track, onClose, onPlaylists }: { track: Track; onClose: 
   );
 }
 
-function TrackMenuItems({ track, onClose }: { track: Track; onClose: () => void }) {
+function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onClose: () => void; onNotInterested?: () => void }) {
   const [view, setView] = useState<'main' | 'playlists'>('main');
   const signedIn = useSignedIn();
   if (view === 'playlists') {
@@ -91,6 +91,14 @@ function TrackMenuItems({ track, onClose }: { track: Track; onClose: () => void 
       <MenuItem icon={<ListEnd size={15} />} onSelect={() => (onClose(), addToQueue([track]))}>
         Add to Queue
       </MenuItem>
+      {onNotInterested && (
+        <>
+          <MenuSeparator />
+          <MenuItem icon={<EyeOff size={15} />} onSelect={() => { onClose(); onNotInterested(); }}>
+            Not interested
+          </MenuItem>
+        </>
+      )}
       {signedIn && <AccountItems track={track} onClose={onClose} onPlaylists={() => setView('playlists')} />}
     </>
   );
@@ -105,6 +113,7 @@ export function TrackMenu({
   className,
   placement,
   onOpenChange,
+  onNotInterested,
 }: {
   track: Track;
   className?: string;
@@ -112,6 +121,8 @@ export function TrackMenu({
   placement?: MenuPlacement;
   /** Told when the menu opens and closes; most mounts don't need to know. */
   onOpenChange?: (open: boolean) => void;
+  /** Local recommendation dismissal; this does not send feedback to a music service. */
+  onNotInterested?: () => void;
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = useCallback(() => setAnchor(null), []);
@@ -136,7 +147,7 @@ export function TrackMenu({
       </button>
       {anchor && (
         <Menu anchor={anchor} placement={placement} onClose={close} label={track.title}>
-          <TrackMenuItems track={track} onClose={close} />
+          <TrackMenuItems track={track} onClose={close} onNotInterested={onNotInterested} />
         </Menu>
       )}
     </>

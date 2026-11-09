@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import type { DetectedExtension, SpotifyAuthState } from '@bitchord/shared/bridge';
 import { queryClient } from '@/lib/queryClient';
-import { extensionQueryKey, useExtension } from './useExtension';
+import { extensionQueryKey, getActiveExtension, useExtension } from './useExtension';
 
 /**
  * The browser's Spotify session as the extension reports it (prompt §7.1):
@@ -15,7 +15,7 @@ export const spotifyAuthQueryKey = ['spotify', 'auth'] as const;
 const SIGNED_OUT: SpotifyAuthState = { browserSignedIn: false, connected: true, signedIn: false, user: null, problem: null };
 
 function detected(): DetectedExtension | null {
-  return queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey) ?? null;
+  return getActiveExtension();
 }
 
 const supported = (extension: DetectedExtension | null) => !!extension?.info.capabilities.includes('spotify');

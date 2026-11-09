@@ -33,8 +33,13 @@ export interface QueueEntry {
   source: QueueSource | null;
 }
 
-/** Past this point in a track, back restarts it instead of going to the previous one (QueueSections.kt). */
-export const BACK_RESTARTS_AFTER_SEC = 10;
+/** The track Back targets; restart the current track only when there is no earlier queue item. */
+export function previousTrackIndex(currentIndex: number, queueLength: number, repeat: 'off' | 'all' | 'one'): number | null {
+  if (currentIndex < 0 || currentIndex >= queueLength || queueLength === 0) return null;
+  if (currentIndex > 0) return currentIndex - 1;
+  if (repeat === 'all' && queueLength > 1) return queueLength - 1;
+  return currentIndex;
+}
 
 let counter = 0;
 const newEntryId = () => `${Date.now().toString(36)}-${(counter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`;

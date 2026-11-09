@@ -25,6 +25,7 @@ import {
   fetchPlaylist,
   fetchPlaylistOptions,
   fetchSearch,
+  fetchSearchSongs,
   fetchSuggestions,
   setListSaved,
   setTrackLiked,
@@ -57,7 +58,7 @@ type HomePageParam = (() => Promise<Paged<Shelf[]>>) | null;
 export const homeQuery = () =>
   infiniteQueryOptions({
     queryKey: ['music', 'home'],
-    queryFn: ({ pageParam }: { pageParam: HomePageParam }) => (pageParam ? pageParam() : fetchHome()),
+    queryFn: ({ pageParam }: { pageParam: HomePageParam }) => pageParam ? pageParam() : fetchHome(),
     initialPageParam: null as HomePageParam,
     getNextPageParam: (last) => last.next ?? undefined,
     staleTime: STALE,
@@ -88,6 +89,15 @@ export const playlistQuery = (id: string) =>
 /** True once the extension has answered; queries wait on it. */
 export function useYouTubeReady(): { ready: boolean; missing: boolean } {
   const extension = useExtension();
+  const auth = useYtAuth();
+  const isDesktop = typeof window !== 'undefined' && !!(window as any).electronAPI?.isDesktop;
+  if (isDesktop) {
+    // Public browse/search pages have an anonymous Innertube fallback. Gate
+    // only private library hooks on the signed session; using `connected`
+    // here made Home, Search, New, and Categories render as empty when the
+    // account cookie expired or the user had not signed in yet.
+    return { ready: true, missing: false };
+  }
   return {
     ready: extension.state === 'present' && extension.extension.info.capabilities.includes('yt'),
     missing: extension.state === 'missing',
@@ -114,9 +124,20 @@ export function useSearch(query: string) {
   const { ready } = useYouTubeReady();
   return useQuery({ ...searchQuery(query), enabled: ready && query.trim().length > 0 });
 }
+export function useSearchSongs(query: string) {
+  const { ready } = useYouTubeReady();
+  return useInfiniteQuery({
+    queryKey: ['music', 'search', 'songs', query],
+    queryFn: ({ pageParam }: { pageParam: (() => Promise<Paged<Track[]>>) | null }) => pageParam ? pageParam() : fetchSearchSongs(query),
+    initialPageParam: null as (() => Promise<Paged<Track[]>>) | null,
+    getNextPageParam: (last) => last.next ?? undefined,
+    enabled: ready && query.trim().length > 0,
+    staleTime: STALE,
+  });
+}
 export function useBrowse(link: BrowseLink) {
   const { ready } = useYouTubeReady();
-  return useQuery({ ...browseQuery(link), enabled: ready });
+  return useQuery({ ...browseQuery(link), enabled: ready && !!link.browseId });
 }
 export function useHome() {
   const { ready } = useYouTubeReady();

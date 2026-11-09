@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import type { DetectedExtension, YtAuthState } from '@bitchord/shared/bridge';
 import { queryClient } from '@/lib/queryClient';
-import { extensionQueryKey, useExtension } from './useExtension';
+import { extensionQueryKey, getActiveExtension, useExtension } from './useExtension';
 
 /**
  * Who YouTube requests act as (prompt §5.3). The extension owns the session;
@@ -13,11 +13,12 @@ import { extensionQueryKey, useExtension } from './useExtension';
  */
 
 export const ytAuthQueryKey = ['yt', 'auth'] as const;
+const YOUTUBE_SIGN_IN_URL = 'https://accounts.google.com/ServiceLogin?service=youtube&continue=https://music.youtube.com/';
 
 const SIGNED_OUT: YtAuthState = { browserSignedIn: false, connected: true, signedIn: false, accounts: [], active: null, problem: null };
 
 function detected(): DetectedExtension | null {
-  return queryClient.getQueryData<DetectedExtension | null>(extensionQueryKey) ?? null;
+  return getActiveExtension();
 }
 
 function supportsAuth(extension: DetectedExtension | null): boolean {
@@ -27,6 +28,13 @@ function supportsAuth(extension: DetectedExtension | null): boolean {
 /** The current state, for code outside React (the music API, the player). */
 export function ytAuthSnapshot(): YtAuthState {
   return queryClient.getQueryData<YtAuthState>(ytAuthQueryKey) ?? SIGNED_OUT;
+}
+
+/** Opens the account session that the desktop bridge or browser extension will sync. */
+export function openYtSignIn(): void {
+  if (typeof window === 'undefined') return;
+  if (window.electronAPI?.isDesktop) void window.electronAPI.openGoogleLogin?.();
+  else window.open(YOUTUBE_SIGN_IN_URL, '_blank', 'noreferrer');
 }
 
 /** A key for "who is asking", which changes whenever the answers YouTube gives would. */

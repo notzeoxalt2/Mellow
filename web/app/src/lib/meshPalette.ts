@@ -6,6 +6,7 @@ export type Rgb = [number, number, number];
 export const GRID = 4;
 
 const cache = new Map<string, Rgb[]>();
+const CACHE_LIMIT = 64;
 
 /**
  * Pushes a cell's colour toward something white text stands on: a little more
@@ -61,9 +62,15 @@ async function measure(url: string): Promise<Rgb[]> {
 
 export function meshPalette(url: string): Promise<Rgb[]> {
   const known = cache.get(url);
-  if (known) return Promise.resolve(known);
+  if (known) {
+    cache.delete(url);
+    cache.set(url, known);
+    return Promise.resolve(known);
+  }
   return measure(url).then((cells) => {
+    cache.delete(url);
     cache.set(url, cells);
+    if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value!);
     return cells;
   });
 }

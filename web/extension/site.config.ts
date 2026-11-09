@@ -19,7 +19,7 @@ const DEV_ORIGIN = 'http://localhost:5173';
  */
 export const SITE_ORIGINS: string[] = (
   process.env.BITCHORD_SITE_ORIGINS ??
-  [PRODUCTION_ORIGIN, PAGES_ORIGIN, ...(process.env.BITCHORD_STORE_BUILD === '1' ? [] : [DEV_ORIGIN])].join(',')
+  [PRODUCTION_ORIGIN, PAGES_ORIGIN, ...(process.env.BITCHORD_STORE_BUILD === '1' ? [] : [DEV_ORIGIN]), 'http://127.0.0.1:41838'].join(',')
 )
   .split(',')
   .map((o) => o.trim().replace(/\/+$/, ''))

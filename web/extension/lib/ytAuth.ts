@@ -1,5 +1,8 @@
 import type { YtAccount, YtAuthState, YtChannel } from '@bitchord/shared/bridge';
+import { selectYouTubeSigningCookie } from '@bitchord/shared';
+import { mapConcurrent } from './asyncPool';
 import { installExtensionFetchRule } from './rules';
+import { YtSessionGate } from './ytSessionGate';
 
 /**
  * YouTube Music sign-in (prompt §5.3): the user's own browser session, used
@@ -22,13 +25,18 @@ const SIGNING_COOKIES = ['SAPISID', '__Secure-3PAPISID', '__Secure-1PAPISID'];
 const SESSION_COOKIES = new Set([...SIGNING_COOKIES, 'SID', '__Secure-1PSID', '__Secure-3PSID']);
 
 /** Any recent WEB_REMIX version is accepted for the account endpoints (Innertube.kt keeps a fallback the same way). */
-const WEB_REMIX_VERSION = '1.20251006.03.00';
+// Keep this as a fallback only. YouTube rejects account endpoints sent with
+// an old WEB_REMIX version, so webSessionIndex refreshes it from YTM's own
+// bootstrap HTML before we make account calls.
+let webRemixVersion = '1.20261027.10.00';
 /**
  * How many `X-Goog-AuthUser` indices are tried. Google allows ten logins per
  * browser, and the live ones needn't be contiguous: the user's jar had 1, 2
  * and 4 signed in, with 0 and 3 expired (account_menu answers 403 for those).
  */
 const MAX_LOGINS = 10;
+/** Keep reconnects gentle: a valid login can trigger a second channel-list request. */
+const LOGIN_PROBE_CONCURRENCY = 2;
 /** Accounts rarely change; a cookie change clears this at once anyway. */
 const ACCOUNTS_TTL_MS = 10 * 60_000;
 
@@ -54,11 +62,15 @@ async function savePrefs(change: Partial<Prefs>): Promise<void> {
 // ---- Signing --------------------------------------------------------------------
 
 async function signingSecret(): Promise<string | null> {
-  for (const name of SIGNING_COOKIES) {
-    const cookie = await browser.cookies.get({ url: `${MUSIC_ORIGIN}/`, name }).catch(() => null);
-    if (cookie?.value) return cookie.value;
-  }
-  return null;
+  // Google may scope the active signing cookie to www.youtube.com rather than
+  // music.youtube.com. Keep both origin snapshots separate for requests, but
+  // use the same preferred-cookie selection as desktop sync so auth state and
+  // signed API requests agree about whether a browser session exists.
+  const [musicCookies, youtubeCookies] = await Promise.all([
+    browser.cookies.getAll({ url: `${MUSIC_ORIGIN}/` }).catch(() => []),
+    browser.cookies.getAll({ url: 'https://www.youtube.com/' }).catch(() => []),
+  ]);
+  return selectYouTubeSigningCookie(musicCookies, youtubeCookies)?.value ?? null;
 }
 
 /** `SAPISIDHASH <seconds>_<sha1(seconds + " " + secret + " " + origin)>`, as DesktopYouTubeAuth.sapisidHash. */
@@ -119,10 +131,10 @@ async function musicApi(endpoint: string, identity: Identity): Promise<unknown> 
       headers: {
         'Content-Type': 'application/json',
         'X-Youtube-Client-Name': '67',
-        'X-Youtube-Client-Version': WEB_REMIX_VERSION,
+        'X-Youtube-Client-Version': webRemixVersion,
       },
       body: JSON.stringify({
-        context: { client: { clientName: 'WEB_REMIX', clientVersion: WEB_REMIX_VERSION, hl: 'en', gl: 'US' }, user: {} },
+        context: { client: { clientName: 'WEB_REMIX', clientVersion: webRemixVersion, hl: 'en', gl: 'US' }, user: {} },
       }),
     },
     identity,
@@ -274,6 +286,8 @@ async function webSessionIndex(): Promise<string | null> {
   try {
     const response = await signedFetch(`${MUSIC_ORIGIN}/`, { headers: { Accept: 'text/html' } }, { authUser: '0', pageId: null });
     const html = await response.text();
+    const version = /"INNERTUBE_CLIENT_VERSION":"(1\.\d{8}\.\d{2}\.\d{2})"/.exec(html)?.[1];
+    if (version) webRemixVersion = version;
     return /"SESSION_INDEX":"?(\d+)/.exec(html)?.[1] ?? null;
   } catch {
     return null;
@@ -282,10 +296,18 @@ async function webSessionIndex(): Promise<string | null> {
 
 async function readAccounts(): Promise<{ list: StoredAccount[]; webIndex: string | null }> {
   problem = null;
-  const [results, webIndex] = await Promise.all([
-    Promise.all(Array.from({ length: MAX_LOGINS }, (_, i) => readLogin(String(i)))),
-    webSessionIndex(),
-  ]);
+  // Read the live page first: it provides both the selected login index and
+  // the WEB_REMIX version that its account endpoints accept. Running the
+  // login scan in parallel used to send every request with a stale version.
+  const webIndex = await webSessionIndex();
+  // Start with the account YouTube Music itself selected. Keep the remaining
+  // indices in a small pool: firing ten signed requests together can look like
+  // an auth burst, and each valid login can immediately issue accounts_list.
+  const indices = Array.from({ length: MAX_LOGINS }, (_, i) => String(i));
+  const orderedIndices = webIndex && indices.includes(webIndex)
+    ? [webIndex, ...indices.filter((index) => index !== webIndex)]
+    : indices;
+  const results = await mapConcurrent(orderedIndices, LOGIN_PROBE_CONCURRENCY, readLogin);
   const list: StoredAccount[] = [];
   const seen = new Set<string>();
   for (const { account } of results) {
@@ -296,7 +318,8 @@ async function readAccounts(): Promise<{ list: StoredAccount[]; webIndex: string
     list.push(account);
   }
   if (!list.length) {
-    problem = results[Number(webIndex ?? 0)]?.why ?? results[0]?.why ?? 'no signed-in Google account found';
+    const preferredIndex = webIndex ? orderedIndices.indexOf(webIndex) : 0;
+    problem = results[preferredIndex]?.why ?? results[0]?.why ?? 'no signed-in Google account found';
     console.warn(`BitChord: no YouTube account found: ${problem}`);
   }
   return { list, webIndex };
@@ -312,6 +335,7 @@ interface Accounts {
 
 let cache: (Accounts & { at: number }) | null = null;
 let reading: Promise<Accounts> | null = null;
+const sessionGate = new YtSessionGate();
 
 async function accounts(refresh: boolean): Promise<Accounts> {
   if (!refresh && cache && Date.now() - cache.at < ACCOUNTS_TTL_MS) return cache;
@@ -327,6 +351,13 @@ async function accounts(refresh: boolean): Promise<Accounts> {
 /** Forgets the account list, after a sign-in or sign-out in the browser. */
 export function invalidateAccounts(): void {
   cache = null;
+  sessionGate.invalidate();
+}
+
+/** A signed InnerTube request returned 401; wait for a browser session change before retrying it. */
+export function markSessionRejected(): void {
+  cache = null;
+  sessionGate.markRejected();
 }
 
 export function isSessionCookie(cookie: { name: string; domain: string }): boolean {
@@ -354,6 +385,22 @@ export async function authState(refresh = false): Promise<YtAuthState> {
   if (!browserSignedIn || !prefs.connected) {
     return { browserSignedIn, connected: prefs.connected, signedIn: false, accounts: [], active: null, problem: null };
   }
+  // A signed request can be rejected transiently (or become valid again after
+  // YouTube refreshes its session state) without a cookie value changing.
+  // An explicit refresh from the app must therefore probe the live account
+  // endpoints again instead of returning the sticky rejection below.
+  if (sessionGate.recoverForRefresh(refresh)) cache = null;
+  if (sessionGate.rejected) {
+    return {
+      browserSignedIn: true,
+      connected: true,
+      signedIn: false,
+      accounts: [],
+      active: null,
+      problem: 'YouTube Music rejected this browser session. Sign in again from the account menu.',
+      reauthRequired: true,
+    };
+  }
   const read = await accounts(refresh);
   const { list } = read;
   const active = chooseChannel(read, prefs.selectedChannelId);
@@ -370,7 +417,7 @@ export async function authState(refresh = false): Promise<YtAuthState> {
 /** The identity signed requests use right now, or null when they can't be made. */
 export async function activeIdentity(): Promise<Identity | null> {
   const prefs = await loadPrefs();
-  if (!prefs.connected || (await signingSecret()) === null) return null;
+  if (!prefs.connected || sessionGate.rejected || (await signingSecret()) === null) return null;
   const active = chooseChannel(await accounts(false), prefs.selectedChannelId);
   return active && { authUser: active.authUser, pageId: active.pageId };
 }

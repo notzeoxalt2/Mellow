@@ -6,6 +6,7 @@ import type { ArtistRef, Track } from '@/data/music/types';
 import { usePlayer } from '@/state/player';
 import { Artwork } from './Artwork';
 import { ExplicitBadge } from './ExplicitBadge';
+import { EqualizerBars } from './EqualizerBars';
 import { albumHref, artistHref, formatDuration } from './links';
 import { playList, playTrack, type ListContext } from './play';
 import { TrackMenu } from './TrackMenu';
@@ -114,20 +115,19 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
             <>
               <Artwork src={track.thumbnail ?? fallbackArtwork ?? null} displayWidth={40} radius="var(--radius-artwork-small)" />
               {current && (
-                // The playing row's marker: a still play glyph over the artwork (or where the number was).
                 <span
-                  className="absolute inset-0 grid place-items-center rounded-artwork-sm bg-[rgb(0_0_0/0.45)] text-white group-hover/row:invisible"
+                  className="absolute inset-0 grid place-items-center rounded-artwork-sm bg-black/60 text-(--theme-accent) group-hover/row:invisible"
                   aria-label="Now playing"
                 >
-                  <PlayIcon size={18} />
+                  <EqualizerBars size={16} playing={playing} />
                 </span>
               )}
             </>
           ) : (
             <span className="type-body text-secondary group-hover/row:invisible">
               {current ? (
-                <span className="grid place-items-center text-primary group-hover/row:invisible" aria-label="Now playing">
-                  <PlayIcon size={14} />
+                <span className="grid place-items-center text-(--theme-accent) group-hover/row:invisible" aria-label="Now playing">
+                  <EqualizerBars size={14} playing={playing} />
                 </span>
               ) : (
                 (track.index ?? position)
@@ -140,6 +140,10 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
             }`}
             aria-label={playing ? `Pause ${track.title}` : `Play ${track.title}`}
             onClick={onPlay}
+            // The artwork button already handles each click. Prevent a double
+            // click there from also firing the row's double-click action and
+            // toggling transport a third time.
+            onDoubleClick={(event) => event.stopPropagation()}
             disabled={!!unavailable}
           >
             {playing ? <PauseIcon size={variant === 'playlist' ? 18 : 16} /> : <PlayIcon size={variant === 'playlist' ? 18 : 16} />}
@@ -149,7 +153,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
           className={`flex min-w-0 flex-col ${dimmed} group-data-[unavailable=matching]/row:animate-matching motion-reduce:group-data-[unavailable=matching]/row:animate-none`}
         >
           <div className="flex min-w-0 items-center">
-            <span className="truncate type-body text-primary">{track.title}</span>
+            <span className={`truncate type-body ${current ? 'text-(--theme-accent) font-semibold' : 'text-primary'}`}>{track.title}</span>
             {track.explicit && <ExplicitBadge />}
           </div>
           {variant === 'album' && track.artists.length > 0 && (

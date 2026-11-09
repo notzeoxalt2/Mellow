@@ -2,20 +2,32 @@ import { useEffect } from 'react';
 import type { ArtworkColor } from './artworkColor';
 
 /**
- * Tints the whole scrolling page with the artwork's colour while a detail
- * page is open, as Apple's album and playlist pages do (report §3,
- * `has-theme-override`). The text colours that sit on it are switched in
- * tokens.css by `data-tint`.
+ * Tints the top ambient hero region of detail pages with the artwork's color.
+ * The app permanently maintains dark mode readability.
  */
-export function usePageTint(color: ArtworkColor | null) {
+export function usePageTint(color: { background: string; dark?: boolean; accent?: string } | null) {
   useEffect(() => {
     const page = document.getElementById('scrollable-page');
-    if (!page || !color) return;
-    page.style.setProperty('--page-tint', color.background);
-    page.dataset.tint = color.dark ? 'dark' : 'light';
+    const root = document.documentElement;
+    if (!color) return;
+
+    root.style.setProperty('--page-tint', color.background);
+    if (color.accent) {
+      root.style.setProperty('--page-accent', color.accent);
+    }
+    root.dataset.tint = 'dark';
+    if (page) {
+      page.style.setProperty('--page-tint', color.background);
+      page.dataset.tint = 'dark';
+    }
     return () => {
-      page.style.removeProperty('--page-tint');
-      delete page.dataset.tint;
+      root.style.removeProperty('--page-tint');
+      root.style.removeProperty('--page-accent');
+      delete root.dataset.tint;
+      if (page) {
+        page.style.removeProperty('--page-tint');
+        delete page.dataset.tint;
+      }
     };
   }, [color]);
 }

@@ -47,14 +47,21 @@ const WAVES = ["m34.864 29.959c0.70647 0.49868 1.7246 0.35323 2.3271-0.47787 1.6
  * Apple's speaker: the body, then three waves, each hidden below its level
  * (the first at silence, the next two under a third and two thirds).
  */
-export function VolumeIcon({ level, size = 24, ...props }: IconProps & { level: number }) {
+export function VolumeIcon({ level, size = 24, muted = level === 0, ...props }: IconProps & { level: number; muted?: boolean }) {
   const shown = level === 0 ? 0 : level < 1 / 3 ? 1 : level < 2 / 3 ? 2 : 3;
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="currentColor" aria-hidden="true" {...props}>
       <path transform="translate(2,11.149)" d={SPEAKER} />
-      {WAVES.map((d, i) => (
-        <path key={i} transform="translate(2,11.149)" d={d} opacity={i < shown ? 1 : 0.25} />
+      {!muted && level > 0 && WAVES.slice(0, shown).map((d, i) => (
+        <path key={i} transform="translate(2,11.149)" d={d} />
       ))}
+      {muted && (
+        <>
+          {/* A light keyline keeps the mute mark legible over tiny glass controls. */}
+          <path d="m20 17 29 30m0-30L20 47" fill="none" stroke="#111218" strokeWidth="13" strokeLinecap="round" />
+          <path d="m20 17 29 30m0-30L20 47" fill="none" stroke="#ff7580" strokeWidth="7" strokeLinecap="round" />
+        </>
+      )}
     </svg>
   );
 }

@@ -134,20 +134,3 @@ export async function installSpotifyFetchRule(): Promise<void> {
     })),
   });
 }
-
-/** Discord's REST API, as its own web client sees it (the extension's requests only). */
-const DISCORD_RULE_ID = 400;
-
-export async function installDiscordFetchRule(): Promise<void> {
-  await browser.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: [DISCORD_RULE_ID],
-    addRules: [
-      {
-        id: DISCORD_RULE_ID,
-        priority: 1,
-        condition: { urlFilter: '||discord.com/api/', tabIds: [-1], resourceTypes: ['xmlhttprequest'] },
-        action: { type: 'modifyHeaders', requestHeaders: impersonate('https://discord.com').slice(0, 2) },
-      },
-    ],
-  });
-}

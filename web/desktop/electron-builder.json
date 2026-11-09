@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.mellow.music",
+  "productName": "Mellow",
+  "electronVersion": "44.7.0",
+  "artifactName": "Mellow-Setup-${version}.${ext}",
+  "directories": {
+    "output": "E:/AntiGravity/BitChord/web/release/installer"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "E:/AntiGravity/BitChord/web/desktop/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Mellow",
+    "uninstallDisplayName": "Mellow"
+  }
+}

@@ -3,8 +3,12 @@ import { config } from '@/config';
 import { useExtension } from './useExtension';
 
 /** Where a published zip is served: the site's downloads folder, its name escaped (it has spaces and brackets). */
+export function publishedManifestUrl(baseHref = location.href): string {
+  return new URL(config.extensionManifestUrl, baseHref).toString();
+}
+
 export function downloadUrl(name: string): string {
-  return new URL(encodeURIComponent(name), new URL(config.extensionManifestUrl, location.origin)).toString();
+  return new URL(encodeURIComponent(name), publishedManifestUrl()).toString();
 }
 
 /** What `pnpm package` last published next to the zips (web/extension/scripts/publish-to-site.mjs). */
@@ -31,7 +35,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 async function fetchPublished(): Promise<PublishedExtension | null> {
-  const response = await fetch(config.extensionManifestUrl, { cache: 'no-store' });
+  const response = await fetch(publishedManifestUrl(), { cache: 'no-store' });
   if (!response.ok) return null;
   const body = (await response.json()) as Partial<PublishedExtension>;
   return typeof body.version === 'string' && body.files ? (body as PublishedExtension) : null;

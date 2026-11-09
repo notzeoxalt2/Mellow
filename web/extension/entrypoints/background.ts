@@ -10,12 +10,12 @@ import {
   type BridgeResponse,
   type Capability,
 } from '@bitchord/shared/bridge';
-import * as discord from '../lib/discord';
 import { grantedOrigins, lyricsFetch, requestOrigins } from '../lib/lyricsFetch';
 import { installRules } from '../lib/rules';
-import { authState, invalidateAccounts, isSessionCookie, selectChannel, setConnected } from '../lib/ytAuth';
+import { activeIdentity, authState, invalidateAccounts, isSessionCookie, markSessionRejected, selectChannel, setConnected } from '../lib/ytAuth';
 import * as spotify from '../lib/spotify';
 import { ytFetch } from '../lib/ytFetch';
+import { syncToMellowDesktop } from '../lib/desktopSync';
 
 declare const __SITE_ORIGINS__: string[];
 
@@ -23,8 +23,8 @@ declare const __SITE_ORIGINS__: string[];
 const ALLOWED_ORIGINS = new Set(__SITE_ORIGINS__);
 const OWN_ORIGIN = new URL(browser.runtime.getURL('/')).origin;
 
-/** Grows as each phase lands its methods; Discord only in builds that include it. */
-const CAPABILITIES: Capability[] = ['yt', 'yt.auth', 'yt.stats', 'lyrics', 'spotify', ...(discord.AVAILABLE ? (['discord'] as const) : [])];
+/** Capabilities available from this extension build. */
+const CAPABILITIES: Capability[] = ['yt', 'yt.auth', 'yt.stats', 'lyrics', 'spotify'];
 
 function originOf(sender: Browser.runtime.MessageSender): string | null {
   if (sender.origin) return sender.origin;
@@ -53,6 +53,13 @@ function failure(id: string, error: unknown): BridgeResponse {
   return errorResponse(id, code, error instanceof Error ? error.message : String(error));
 }
 
+function isYouTubeAuthFailure(error: unknown): boolean {
+  const known = (error as { code?: string } | null)?.code;
+  if (known === 'unauthenticated') return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /\bHTTP 401\b|\bunauthori[sz]ed\b|not signed in to YouTube/i.test(message);
+}
+
 async function handle(request: BridgeRequest): Promise<BridgeResponse> {
   if (request.protocol !== BRIDGE_PROTOCOL) {
     return errorResponse(
@@ -70,8 +77,23 @@ async function handle(request: BridgeRequest): Promise<BridgeResponse> {
           browser: import.meta.env.FIREFOX ? 'firefox' : 'chromium',
           capabilities: CAPABILITIES,
         });
-      case 'yt.fetch':
-        return okResponse<'yt.fetch'>(request.id, await ytFetch((request as BridgeRequest<'yt.fetch'>).params));
+      case 'yt.fetch': {
+        const params = (request as BridgeRequest<'yt.fetch'>).params;
+        try {
+          const response = await ytFetch(params);
+          if (params.auth && response.status === 401) {
+            markSessionRejected();
+            broadcast({ event: 'yt.authState', data: await authState() });
+          }
+          return okResponse<'yt.fetch'>(request.id, response);
+        } catch (error) {
+          if (params.auth && isYouTubeAuthFailure(error)) {
+            markSessionRejected();
+            broadcast({ event: 'yt.authState', data: await authState() });
+          }
+          throw error;
+        }
+      }
       case 'yt.authState':
         return okResponse<'yt.authState'>(
           request.id,
@@ -122,32 +144,21 @@ async function handle(request: BridgeRequest): Promise<BridgeResponse> {
           await spotify.playlistInfo((request as BridgeRequest<'spotify.playlist'>).params.playlistId),
         );
       case 'spotify.searchTracks':
-        return okResponse<'spotify.searchTracks'>(
+        {
+          const { query, offset } = (request as BridgeRequest<'spotify.searchTracks'>).params;
+          return okResponse<'spotify.searchTracks'>(request.id, await spotify.searchTracks(query, offset ?? 0));
+        }
+      case 'spotify.categories':
+        return okResponse<'spotify.categories'>(request.id, await spotify.categories());
+      case 'spotify.categoryPlaylists':
+        return okResponse<'spotify.categoryPlaylists'>(
           request.id,
-          await spotify.searchTracks((request as BridgeRequest<'spotify.searchTracks'>).params.query),
+          await spotify.categoryPlaylists((request as BridgeRequest<'spotify.categoryPlaylists'>).params.categoryId),
         );
       case 'spotify.canvas':
         return okResponse<'spotify.canvas'>(request.id, {
           url: await spotify.canvas((request as BridgeRequest<'spotify.canvas'>).params.trackId),
         });
-      case 'discord.state':
-        return okResponse<'discord.state'>(request.id, await discord.discordState());
-      case 'discord.connect':
-        if (!discord.AVAILABLE) return errorResponse(request.id, 'unsupported', 'This build of the extension leaves Discord out.');
-        await discord.openConnectPage();
-        return okResponse<'discord.connect'>(request.id, {});
-      case 'discord.disconnect':
-        return okResponse<'discord.disconnect'>(request.id, await discord.disconnect());
-      case 'discord.setEnabled':
-        return okResponse<'discord.setEnabled'>(
-          request.id,
-          await discord.setEnabled((request as BridgeRequest<'discord.setEnabled'>).params.enabled === true),
-        );
-      case 'discord.presence': {
-        const { track, options } = (request as BridgeRequest<'discord.presence'>).params;
-        await discord.setPresence(track, options);
-        return okResponse<'discord.presence'>(request.id, {});
-      }
       default:
         return errorResponse(request.id, 'unsupported', `${request.method} isn't available in this version of the extension.`);
     }
@@ -198,13 +209,8 @@ function acceptPort(port: Browser.runtime.Port): void {
   ports.add(port);
   port.onDisconnect.addListener(() => {
     ports.delete(port);
-    // A hidden tab's port can drop and come back; only a lasting silence means the player is gone.
-    clearTimeout(lastPortTimer);
-    if (!ports.size) lastPortTimer = setTimeout(() => !ports.size && discord.allPagesClosed(), 30_000);
   });
 }
-
-let lastPortTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** A sign-in or sign-out elsewhere in the browser: re-read the accounts and tell the open pages. */
 let cookieTimer: ReturnType<typeof setTimeout> | undefined;
@@ -218,6 +224,7 @@ function onCookieChanged({ cookie }: Browser.cookies.CookieChangeInfo): void {
         .authState()
         .then((data) => broadcast({ event: 'spotify.authState', data }))
         .catch((error: unknown) => console.warn('BitChord: reading the Spotify session failed', error));
+      void syncToMellowDesktop();
     }, 1000);
     return;
   }
@@ -229,14 +236,17 @@ function onCookieChanged({ cookie }: Browser.cookies.CookieChangeInfo): void {
     authState(true)
       .then((data) => broadcast({ event: 'yt.authState', data }))
       .catch((error: unknown) => console.warn('BitChord: reading the YouTube session failed', error));
+    void syncToMellowDesktop();
   }, 1000);
 }
 
 export default defineBackground(() => {
   // Dynamic rules persist, but are rewritten on every install and startup so
   // an update that changes them never leaves stale ones behind.
-  const refreshRules = () =>
-    installRules(__SITE_ORIGINS__).catch((error: unknown) => console.error('BitChord: installing rules failed', error));
+  const refreshRules = () => {
+    void syncToMellowDesktop();
+    return installRules(__SITE_ORIGINS__).catch((error: unknown) => console.error('BitChord: installing rules failed', error));
+  };
   browser.runtime.onInstalled.addListener(refreshRules);
   browser.runtime.onStartup.addListener(refreshRules);
 
@@ -258,10 +268,7 @@ export default defineBackground(() => {
 
   browser.cookies.onChanged.addListener(onCookieChanged);
 
-  // Discord's account is written by the connect page as well as here.
-  discord.onDiscordState((data) => broadcast({ event: 'discord.state', data }));
-  browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local' || !Object.keys(changes).some((key) => key.startsWith('discord.'))) return;
-    void discord.discordState().then((data) => broadcast({ event: 'discord.state', data }));
-  });
+  // Attempt initial sync
+  setTimeout(() => void syncToMellowDesktop(), 2000);
+  setInterval(() => void syncToMellowDesktop(), 30_000);
 });

@@ -14,8 +14,8 @@ import { nextVolumeFromWheel } from './wheelVolume';
  * `--volume-gap` on the row where the speaker is a different size.
  */
 const slider = [
-  'absolute top-1/2 right-[var(--volume-gap,33px)] mx-0 mb-0 -mt-2 block h-4 w-24 cursor-pointer appearance-none bg-transparent',
-  'pointer-events-none translate-x-2 opacity-0 transition-[opacity,translate]',
+  'absolute top-1/2 right-[var(--volume-gap,33px)] z-20 mx-0 mb-0 -mt-2 block h-5 w-24 cursor-pointer appearance-none rounded-full border border-white/10 bg-[#111218]/95 px-1 shadow-[0_4px_14px_rgba(0,0,0,.45)] backdrop-blur-md',
+  'pointer-events-none translate-x-2 opacity-0 transition-[opacity,translate] duration-200',
   'data-open:pointer-events-auto data-open:translate-none data-open:opacity-100',
   '[&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-[2px] [&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,var(--systemPrimary)_var(--fill),var(--systemQuaternary)_var(--fill))]',
   '[&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-[2px] [&::-moz-range-track]:bg-[linear-gradient(to_right,var(--systemPrimary)_var(--fill),var(--systemQuaternary)_var(--fill))]',
@@ -72,6 +72,11 @@ export function VolumeControl({ open, onOpen, className, iconSize = 20 }: Volume
   const setVolume = usePlayer((s) => s.setVolume);
   const toggleMute = usePlayer((s) => s.toggleMute);
   const level = muted ? 0 : volume;
+  const effectivelyMuted = level === 0;
+  const restorePercent = Math.round((muted ? volume : 0) * 100);
+  const volumeLabel = effectivelyMuted
+    ? `Muted in Mellow${restorePercent ? ` · restore ${restorePercent}%` : ''} · click to unmute`
+    : `Mellow output ${Math.round(level * 100)}% · click to mute · if silent, check Windows Volume Mixer`;
   const wheelRef = useVolumeWheel(onOpen);
   return (
     <span ref={wheelRef}>
@@ -89,14 +94,20 @@ export function VolumeControl({ open, onOpen, className, iconSize = 20 }: Volume
         onChange={(e) => setVolume(Number(e.currentTarget.value))}
       />
       <button
-        className={className}
-        aria-label={muted ? 'Unmute' : 'Mute'}
-        aria-pressed={muted}
+        className={`${className} aria-pressed:bg-red-500/15 aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-red-400/40 aria-pressed:drop-shadow-[0_0_5px_rgba(255,102,114,0.55)]`}
+        aria-label={volumeLabel}
+        aria-pressed={effectivelyMuted}
+        title={volumeLabel}
         onClick={toggleMute}
         onPointerEnter={onOpen}
         onFocus={onOpen}
       >
-        <VolumeIcon level={level} size={iconSize} />
+        <VolumeIcon
+          level={level}
+          muted={effectivelyMuted}
+          size={iconSize}
+          style={effectivelyMuted ? { color: '#fff' } : undefined}
+        />
       </button>
     </span>
   );

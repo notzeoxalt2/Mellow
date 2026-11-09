@@ -34,6 +34,19 @@ export function fetchSpotifyPlaylistInfo(playlistId: string) {
   return bridge().call('spotify.playlist', { playlistId }, { timeoutMs: 30_000 });
 }
 
+export async function fetchSpotifyHomeSections(): Promise<{
+  madeForYou: SpotifyPlaylist[];
+  recents: SpotifyPlaylist[];
+  topMixes: SpotifyPlaylist[];
+  sections: { title: string; playlists: SpotifyPlaylist[] }[];
+}> {
+  try {
+    return await bridge().call('spotify.homeSections', {}, { timeoutMs: 15_000 });
+  } catch {
+    return { madeForYou: [], recents: [], topMixes: [], sections: [] };
+  }
+}
+
 /** Every track of a playlist; [onPage] gets the running list after each page, so a long one fills in. */
 export async function fetchSpotifyTracks(playlistId: string, onPage: (soFar: SpotifyTrack[], total: number) => void): Promise<SpotifyTrack[]> {
   const out: SpotifyTrack[] = [];
@@ -45,6 +58,12 @@ export async function fetchSpotifyTracks(playlistId: string, onPage: (soFar: Spo
     if (page.raw === 0 || offset >= page.total) break;
   }
   return out;
+}
+
+/** Read only the first page for lightweight Home blends; never crawl a full library just to build a shelf. */
+export async function fetchSpotifyTrackPage(playlistId: string, offset = 0): Promise<SpotifyTrack[]> {
+  const page = await bridge().call('spotify.tracks', { playlistId, offset }, { timeoutMs: 20_000 });
+  return page.items;
 }
 
 /** A Spotify row as a list row, before its YouTube Music version is known. */
@@ -74,6 +93,7 @@ export function candidateOf(track: Track): MatchCandidate {
 }
 
 const matched = new Map<string, Track | null>();
+const MATCH_CACHE_LIMIT = 256;
 
 /**
  * The YouTube Music song that is [track], or null if there is none:
@@ -93,7 +113,9 @@ export async function matchToYouTube(track: SpotifyTrack): Promise<Track | null>
   const scored = best(candidates.map((c) => ({ ...candidateOf(c), track: c })), target);
   const found = scored?.track ?? candidates[0] ?? null;
   const result = found && { ...found, thumbnail: found.thumbnail ?? track.imageUrl };
+  matched.delete(track.id);
   matched.set(track.id, result);
+  if (matched.size > MATCH_CACHE_LIMIT) matched.delete(matched.keys().next().value!);
   return result;
 }
 

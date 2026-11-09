@@ -20,11 +20,18 @@ export const useAppleSettings = create<{
   persist(
     (set) => ({
       artistArt: true,
-      motion: true,
+      motion: false,
       setArtistArt: (artistArt) => set({ artistArt }),
       setMotion: (motion) => set({ motion }),
     }),
-    { name: 'bitchord:apple', version: 1 },
+    {
+      name: 'bitchord:apple',
+      version: 2,
+      migrate: (persisted: unknown) => {
+        const state = persisted && typeof persisted === 'object' ? (persisted as { artistArt?: boolean }) : {};
+        return { artistArt: state.artistArt ?? true, motion: false };
+      },
+    },
   ),
 );
 

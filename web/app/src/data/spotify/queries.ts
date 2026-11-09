@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
-import type { SpotifyTrack } from '@bitchord/shared/bridge';
+import type { SpotifyCategory, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
 import type { Track } from '@/data/music/types';
 import { useSpotifyAuth, useSpotifySignedIn } from '@/extension/useSpotifyAuth';
-import { fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack } from './api';
+import { fetchSpotifyHomeSections, fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack } from './api';
 
 export function useSpotifyPlaylists() {
   const signedIn = useSpotifySignedIn();
@@ -25,6 +25,81 @@ export function useSpotifyPlaylistInfo(playlistId: string) {
   });
 }
 
+export function useSpotifyHomeSections() {
+  const signedIn = useSpotifySignedIn();
+  return useQuery({
+    queryKey: ['spotify', 'data', 'homeSections'],
+    queryFn: fetchSpotifyHomeSections,
+    enabled: signedIn,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSpotifyCategories(enabled = true) {
+  const signedIn = useSpotifySignedIn();
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+  return useQuery({
+    queryKey: ['spotify', 'browse', 'categories'],
+    queryFn: async (): Promise<SpotifyCategory[]> => {
+      const { getBridge } = await import('@/extension/bridge');
+      const b = getBridge();
+      return b ? b.call('spotify.categories', {}) : [];
+    },
+    enabled: enabled && (signedIn || isDesktop),
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useSpotifyCategoryPlaylists(categoryId: string, enabled = true) {
+  const signedIn = useSpotifySignedIn();
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+  return useQuery({
+    queryKey: ['spotify', 'browse', 'category', categoryId],
+    queryFn: async (): Promise<SpotifyPlaylist[]> => {
+      const { getBridge } = await import('@/extension/bridge');
+      const b = getBridge();
+      return b ? b.call('spotify.categoryPlaylists', { categoryId }) : [];
+    },
+    enabled: enabled && !!categoryId && (signedIn || isDesktop),
+    staleTime: 15 * 60_000,
+  });
+}
+
+export function useSpotifySearch(query: string) {
+  const signedIn = useSpotifySignedIn();
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+  return useInfiniteQuery({
+    queryKey: ['spotify', 'search', query],
+    queryFn: async ({ pageParam }): Promise<Track[]> => {
+      try {
+        const { getBridge } = await import('@/extension/bridge');
+        const b = getBridge();
+        if (!b) return [];
+        const hits = await b.call('spotify.searchTracks', { query, offset: pageParam });
+        if (!Array.isArray(hits)) return [];
+        return hits.map((hit: SpotifyTrack) => ({
+          videoId: `spotify:${hit.id}`,
+          title: hit.title,
+          artists: [{ name: hit.artist, id: null }],
+          album: hit.album ? { name: hit.album, id: null } : null,
+          durationSec: Math.round((hit.durationMs || 0) / 1000),
+          thumbnail: hit.imageUrl,
+          explicit: false,
+          index: null,
+          plays: null,
+        }));
+      } catch {
+        return [];
+      }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _pages, lastOffset) => lastPage.length === 10 ? lastOffset + 10 : undefined,
+    enabled: (signedIn || isDesktop) && query.trim().length > 0,
+    staleTime: 60_000,
+  });
+}
+
+
 /** How many tracks are looked up on YouTube Music at once (MainViewModel.SPOTIFY_MATCH_PARALLELISM). */
 const MATCH_PARALLELISM = 6;
 
@@ -33,6 +108,8 @@ export interface SpotifyRows {
   error: unknown;
   /** Spotify's rows, each replaced by its YouTube Music song as the matches arrive. */
   rows: Track[];
+  /** Original Spotify tracks in the same order as rows, for safe cross-service sync. */
+  source: SpotifyTrack[];
   total: number;
   /** How many rows still wait on a match. */
   matching: number;
@@ -47,7 +124,7 @@ export interface SpotifyRows {
  * looking and resumes where it stopped.
  */
 class PlaylistJob {
-  state: SpotifyRows = { status: 'loading', error: null, rows: [], total: 0, matching: 0 };
+  state: SpotifyRows = { status: 'loading', error: null, rows: [], source: [], total: 0, matching: 0 };
   private source: SpotifyTrack[] = [];
   private readonly listeners = new Set<() => void>();
   private fetching = false;
@@ -80,7 +157,7 @@ class PlaylistJob {
         this.source = soFar;
         // Rows already matched keep their match; new ones join as pending.
         const rows = soFar.map((t, i) => this.state.rows[i] ?? pendingTrack(t));
-        this.emit({ rows, total });
+        this.emit({ rows, source: [...soFar], total });
         this.pump();
       })
         .then(() => this.emit({ status: 'ready' }))

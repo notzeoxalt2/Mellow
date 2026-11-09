@@ -7,21 +7,22 @@ import type { QueueSource } from '@/playback/queue/timeline';
 import { browseHref } from './links';
 import { CircleLockup, SquareLockup, TrackLockup, VideoLockup } from './Lockups';
 import { playList } from './play';
+import { DeferredMount } from './DeferredMount';
 
 // Arrow buttons (report §2): 28×52 glass pills, only ≥1000px, shown on shelf hover.
 const arrow =
   'absolute top-1/2 z-3 hidden h-13 w-7 -translate-y-1/2 place-items-center rounded-pill bg-thin-material text-secondary opacity-0 transition-[opacity,background-color,color] duration-(--duration-arrow) ease-linear [backdrop-filter:saturate(180%)_blur(60px)] hover:text-primary disabled:pointer-events-none lg:grid lg:enabled:group-hover/shelf:opacity-100';
 
-function renderItem(shelf: Shelf, item: MusicItem): ReactNode {
+function renderItem(shelf: Shelf, item: MusicItem, allowNotInterested: boolean): ReactNode {
   switch (shelf.layout) {
     case 'tracks':
-      return <TrackLockup item={item} />;
+      return <TrackLockup item={item} allowNotInterested={allowNotInterested} />;
     case 'video':
-      return <VideoLockup item={item} />;
+      return <VideoLockup item={item} allowNotInterested={allowNotInterested} />;
     case 'circle':
       return <CircleLockup item={item} />;
     default:
-      return <SquareLockup item={item} />;
+      return <SquareLockup item={item} allowNotInterested={allowNotInterested} />;
   }
 }
 
@@ -132,13 +133,13 @@ export function TrackShelf({ title, to, tracks, source }: { title: string; to?: 
 }
 
 /** A titled horizontal shelf (report §2): grid columns per breakpoint, scroll-snap, hover arrows. */
-export function ShelfView({ shelf }: { shelf: Shelf }) {
+export function ShelfView({ shelf, allowNotInterested = false }: { shelf: Shelf; allowNotInterested?: boolean }) {
   return (
     <section className={shelfSection} aria-label={shelf.title}>
       <ShelfTitle title={shelf.title} to={shelf.seeAll ? browseHref(shelf.seeAll) : null} />
       <ShelfScroller key={shelf.items.length} kind={shelf.layout}>
         {shelf.items.map((item, i) => (
-          <li key={`${item.id}-${i}`}>{renderItem(shelf, item)}</li>
+          <li key={`${item.id}-${i}`}>{renderItem(shelf, item, allowNotInterested)}</li>
         ))}
       </ShelfScroller>
     </section>
@@ -146,12 +147,37 @@ export function ShelfView({ shelf }: { shelf: Shelf }) {
 }
 
 /** Shelves in order, each its own section. */
-export function Shelves({ shelves }: { shelves: Shelf[] }) {
+export function Shelves({ shelves, allowNotInterested = false }: { shelves: Shelf[]; allowNotInterested?: boolean }) {
   return (
     <>
       {shelves.map((shelf, i) => (
-        <ShelfView key={`${shelf.title}-${i}`} shelf={shelf} />
+        <DeferredMount
+          key={`${shelf.title}-${i}`}
+          placeholder={<ShelfPlaceholder title={shelf.title} kind={shelf.layout} />}
+        >
+          <ShelfView shelf={shelf} allowNotInterested={allowNotInterested} />
+        </DeferredMount>
       ))}
     </>
+  );
+}
+
+/** Keeps the scroll feed's height while cards and their artwork stay unmounted. */
+function ShelfPlaceholder({ title, kind }: { title: string; kind: ShelfKind }) {
+  const minHeight: Record<ShelfKind, number> = {
+    tracks: 310,
+    horizontal: 390,
+    editorial: 350,
+    square: 330,
+    video: 330,
+    circle: 310,
+  };
+
+  return (
+    <section className={shelfSection} aria-hidden="true" style={{ minHeight: minHeight[kind] }}>
+      <div className={shelfHeader}>
+        <h2 className="type-title-2-emphasized text-primary/80">{title}</h2>
+      </div>
+    </section>
   );
 }

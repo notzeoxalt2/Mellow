@@ -8,7 +8,14 @@ import { fetchCanvas } from './api';
 
 /** Spotify settings kept by this page: whether to show Canvas at all. */
 export const useSpotifySettings = create<{ canvas: boolean; setCanvas: (on: boolean) => void }>()(
-  persist((set) => ({ canvas: true, setCanvas: (canvas) => set({ canvas }) }), { name: 'bitchord:spotify', version: 1 }),
+  persist(
+    (set) => ({ canvas: false, setCanvas: (canvas) => set({ canvas }) }),
+    {
+      name: 'bitchord:spotify',
+      version: 2,
+      migrate: () => ({ canvas: false }),
+    },
+  ),
 );
 
 const reducedMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;

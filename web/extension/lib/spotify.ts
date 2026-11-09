@@ -1,4 +1,4 @@
-import type { SpotifyAuthState, SpotifyPage, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
+import type { SpotifyAuthState, SpotifyCategory, SpotifyPage, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
 import { installSpotifyFetchRule } from './rules';
 
 /**
@@ -531,11 +531,11 @@ export async function playlistInfo(playlistId: string): Promise<{ name: string; 
   };
 }
 
-export async function searchTracks(query: string): Promise<SpotifyTrack[]> {
+export async function searchTracks(query: string, offset = 0): Promise<SpotifyTrack[]> {
   return parseSearchTracks(
     await gql('searchTracks', {
       searchTerm: query,
-      offset: 0,
+      offset: Math.max(0, offset),
       limit: 10,
       numberOfTopResults: 5,
       includeAudiobooks: false,
@@ -545,9 +545,66 @@ export async function searchTracks(query: string): Promise<SpotifyTrack[]> {
   );
 }
 
+/** Spotify Browse taxonomy and artwork, kept behind the extension bridge so the page never handles tokens. */
+export async function categories(): Promise<SpotifyCategory[]> {
+  const token = await accessToken();
+  const response = await fetch('https://api.spotify.com/v1/browse/categories?limit=50&country=US&locale=en_US', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Spotify categories failed (${response.status})`);
+  const data = await response.json() as { categories?: { items?: { id?: string; name?: string; icons?: { url?: string }[] }[] } };
+  return (data.categories?.items ?? [])
+    .filter((item): item is { id: string; name: string; icons?: { url?: string }[] } => !!item.id && !!item.name)
+    .map((item) => ({ id: item.id, name: item.name, imageUrl: item.icons?.find((icon) => !!icon.url)?.url ?? null }));
+}
+
+/** Playlists Spotify currently assigns to one Browse category. */
+export async function categoryPlaylists(categoryId: string): Promise<SpotifyPlaylist[]> {
+  const token = await accessToken();
+  const response = await fetch(`https://api.spotify.com/v1/browse/categories/${encodeURIComponent(categoryId)}/playlists?limit=50&country=US`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(`Spotify category playlists failed (${response.status})`);
+  const data = await response.json() as { playlists?: { items?: { id?: string; name?: string; owner?: { display_name?: string }; images?: { url?: string }[] }[] } };
+  return (data.playlists?.items ?? [])
+    .filter((item): item is { id: string; name: string; owner?: { display_name?: string }; images?: { url?: string }[] } => !!item.id && !!item.name)
+    .map((item) => ({ id: item.id, name: item.name, owner: item.owner?.display_name ?? 'Spotify', imageUrl: item.images?.find((image) => !!image.url)?.url ?? null }));
+}
+
 /** A track's canvas by Spotify id. Signed in only: anonymous tokens are shown none. */
 export async function canvas(trackId: string): Promise<string | null> {
-  return parseCanvas(await gql('canvas', { trackUri: `spotify:track:${trackId}` }));
+  const trackUri = trackId.startsWith('spotify:track:') ? trackId : `spotify:track:${trackId}`;
+  try {
+    const url = parseCanvas(await gql('canvas', { trackUri }));
+    if (url) return url;
+  } catch {
+    // The web player's Pathfinder query can be unavailable while its Canvas
+    // cache endpoint still serves a clip. Try the same fallback as desktop.
+  }
+
+  try {
+    const bearer = await accessToken();
+    const uri = new TextEncoder().encode(trackUri);
+    // Canvas requests contain short Spotify URIs, so each protobuf field's
+    // varint length is a single byte.
+    const trackMessage = new Uint8Array([0x0a, uri.length, ...uri]);
+    const request = new Uint8Array([0x0a, trackMessage.length, ...trackMessage]);
+    const response = await fetch('https://spclient.wg.spotify.com/canvaz-cache/v0/canvases', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${bearer.token}`,
+        'User-Agent': 'Spotify/9.0.34.593 iOS/18.4 (iPhone15,3)',
+        'Content-Type': 'application/protobuf',
+        Accept: 'application/protobuf',
+      },
+      body: request,
+    });
+    if (!response.ok) return null;
+    const payload = new TextDecoder('latin1').decode(await response.arrayBuffer());
+    return payload.match(/https:\/\/[^"'\s\x00-\x1f]+\.cnvs\.mp4/)?.[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ---- Sign-in state ---------------------------------------------------------------
