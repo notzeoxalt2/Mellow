@@ -1098,15 +1098,18 @@ function applyTrack(track: LoadedTrack, from?: Track) {
     // The mini-player can receive a track before AppShell has finished applying
     // the saved palette. Keep that brief startup window on Mellow's own violet
     // brand instead of flashing Spotify green.
-    const accent = document.documentElement.style.getPropertyValue('--theme-accent') || '#9b55f5';
-    const accentGlow = document.documentElement.style.getPropertyValue('--theme-accent-glow') || 'rgba(155, 85, 245, 0.34)';
+    const accent = document.documentElement.style.getPropertyValue('--theme-accent') || '#ff5271';
+    const accentGlow = document.documentElement.style.getPropertyValue('--theme-accent-glow') || 'rgba(255, 82, 113, 0.34)';
+    const playerState = usePlayer.getState();
+    const currentQueueTrack = playerState.queue[playerState.index]?.track;
     window.electronAPI.updateNowPlaying({
       videoId: nowPlaying.videoId,
       title: nowPlaying.title,
       artist: nowPlaying.artist,
+      album: currentQueueTrack?.album?.name || '',
       artworkUrl: nowPlaying.artworkUrl,
       durationSec: nowPlaying.durationSec,
-      status: usePlayer.getState().status,
+      status: playerState.status,
       accent,
       accentGlow,
     });

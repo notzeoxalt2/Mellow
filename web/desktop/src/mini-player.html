@@ -5,243 +5,614 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mellow Mini Player</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      color-scheme: dark;
-      --accent: #c4b5fd;
-      --muted: #a6a7b2;
+      --accent: #ff5271;
+      --accent-hover: #ff3357;
+      --card-bg: #ffffff;
+      --card-border: rgba(0, 0, 0, 0.07);
+      --text-main: #181a22;
+      --text-sub: #8d909c;
+      --text-time: #9699a6;
+      --track-bg: #e6e8ee;
+      --btn-color: #1a1c22;
+      --btn-hover: #000000;
+      --btn-bg-hover: rgba(0, 0, 0, 0.05);
+      --shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.05);
     }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    html[data-theme="dark"] {
+      --card-bg: #14161e;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f5f6f9;
+      --text-sub: #9295a3;
+      --text-time: #7e8290;
+      --track-bg: rgba(255, 255, 255, 0.12);
+      --btn-color: #f0f1f5;
+      --btn-hover: #ffffff;
+      --btn-bg-hover: rgba(255, 255, 255, 0.08);
+      --shadow: 0 22px 54px -10px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    }
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme="light"]) {
+        --card-bg: #14161e;
+        --card-border: rgba(255, 255, 255, 0.08);
+        --text-main: #f5f6f9;
+        --text-sub: #9295a3;
+        --text-time: #7e8290;
+        --track-bg: rgba(255, 255, 255, 0.12);
+        --btn-color: #f0f1f5;
+        --btn-hover: #ffffff;
+        --btn-bg-hover: rgba(255, 255, 255, 0.08);
+        --shadow: 0 22px 54px -10px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.07);
+      }
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
     body {
       display: grid;
       place-items: center;
-      padding: 6px;
-      background: transparent;
-      color: #f7f7fa;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      -webkit-font-smoothing: antialiased;
+      padding: 5px;
     }
-    .player {
+    .card {
       position: relative;
-      isolation: isolate;
-      overflow: hidden;
       width: 100%;
       height: 100%;
-      min-width: 0;
-      display: grid;
-      grid-template-columns: 58px minmax(72px, 1fr) auto;
-      align-items: center;
-      gap: 11px;
-      padding: 9px 13px;
-      border: 1px solid rgba(255,255,255,.19);
-      border-radius: 20px;
-      background: linear-gradient(110deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%), linear-gradient(180deg, rgba(24,25,31,.76), rgba(12,13,18,.88));
-      -webkit-backdrop-filter: blur(26px) saturate(1.5);
-      backdrop-filter: blur(26px) saturate(1.5);
-      box-shadow: 0 14px 34px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.10), inset 0 0 0 1px rgba(0,0,0,.18);
+      display: flex;
+      flex-direction: row;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
       -webkit-app-region: drag;
       cursor: grab;
-      transition: border-color .24s ease, background-color .24s ease, box-shadow .24s ease;
+      transition: background-color .24s ease, border-color .24s ease, box-shadow .24s ease;
     }
-    .player:active { cursor: grabbing; }
-    .player::before {
-      content: "";
-      position: absolute;
-      z-index: 0;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(100deg, rgba(12,13,18,.34), rgba(12,13,18,.56) 52%, rgba(12,13,18,.68));
-      pointer-events: none;
-    }
-    .player > :not(.ambient-art) { position: relative; z-index: 1; }
-    .ambient-art {
-      position: absolute;
-      z-index: -1;
-      inset: -28px;
-      width: calc(100% + 56px);
-      height: calc(100% + 56px);
-      object-fit: cover;
-      filter: blur(24px) saturate(1.08) brightness(.58);
-      opacity: .16;
-      transform: scale(1.08);
-      pointer-events: none;
-      transition: opacity .24s ease;
-    }
-    .player[data-playing="true"] { border-color: color-mix(in srgb, var(--accent) 40%, rgba(255,255,255,.22)); }
-    .player[data-playing="true"] .ambient-art { opacity: .24; }
-    .player[data-playing="false"] .ambient-art { opacity: .08; }
-    .player:hover { border-color: color-mix(in srgb, var(--accent) 48%, rgba(255,255,255,.28)); box-shadow: 0 16px 38px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.12); }
-    .progress {
-      position: absolute;
-      z-index: 2;
-      right: 13px;
-      bottom: 0;
-      left: 13px;
-      width: calc(100% - 26px);
-      height: 3px;
-      padding: 0;
-      appearance: none;
-      border: 0;
-      border-radius: 0 0 99px 99px;
-      background: linear-gradient(to right, var(--accent) var(--progress, 0%), rgba(255,255,255,.2) var(--progress, 0%));
-      opacity: .68;
-      cursor: pointer;
+    .card:active { cursor: grabbing; }
+
+    /* Left Artwork Section */
+    .art-wrap {
+      position: relative;
+      width: 132px;
+      height: 100%;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: #1c1e26;
+      border-radius: 20px 0 0 20px;
       -webkit-app-region: no-drag;
-      transition: height .16s ease, opacity .16s ease;
+      cursor: pointer;
     }
-    .player:hover .progress, .progress:focus-visible { height: 6px; opacity: 1; }
-    .progress::-webkit-slider-thumb {
-      width: 9px;
-      height: 9px;
-      appearance: none;
-      border: 1px solid rgba(255,255,255,.72);
-      border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 1px 5px rgba(0,0,0,.38);
-      opacity: 0;
-      transition: opacity .16s ease;
-    }
-    .player:hover .progress::-webkit-slider-thumb, .progress:focus-visible::-webkit-slider-thumb { opacity: 1; }
-    .progress::-moz-range-thumb {
-      width: 8px;
-      height: 8px;
-      border: 1px solid rgba(255,255,255,.72);
-      border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 1px 5px rgba(0,0,0,.38);
-      opacity: 0;
-    }
-    .player:hover .progress::-moz-range-thumb, .progress:focus-visible::-moz-range-thumb { opacity: 1; }
     .art {
-      display: block;
-      width: 58px;
-      height: 58px;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      border-radius: 11px;
-      background: #282832;
-      box-shadow: 0 3px 12px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.12);
-      -webkit-app-region: no-drag;
-      cursor: pointer;
+      display: block;
+      transition: transform .3s ease;
     }
-    .info { min-width: 0; display: grid; gap: 4px; padding-right: 34px; }
-    .title, .artist { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .title { font-size: 13px; font-weight: 650; letter-spacing: -.015em; text-shadow: 0 1px 8px rgba(0,0,0,.45); }
-    .artist { color: var(--muted); font-size: 11.5px; text-shadow: 0 1px 8px rgba(0,0,0,.45); }
-    .transport, .window-actions { display: flex; align-items: center; -webkit-app-region: no-drag; }
-    .transport { gap: 4px; }
-    .player > .window-actions {
+    .art-wrap:hover .art {
+      transform: scale(1.03);
+    }
+    .art-overlay {
       position: absolute;
-      z-index: 4;
-      top: 5px;
-      right: 7px;
-      gap: 0;
-    }
-    button {
-      width: 32px;
-      height: 34px;
-      padding: 0;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.22);
+      opacity: 0;
       display: grid;
       place-items: center;
-      border: 0;
-      border-radius: 50%;
-      color: #e7e7ec;
+      color: #fff;
+      transition: opacity .2s ease;
+    }
+    .art-wrap:hover .art-overlay {
+      opacity: 1;
+    }
+
+    /* Right Details & Controls Section */
+    .body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 13px 19px 12px 19px;
+    }
+
+    /* Top Row: Title + Heart on left, Window Actions on right */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+    }
+    .title-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+      -webkit-app-region: no-drag;
+    }
+    .title {
+      font-size: 17.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.015em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.25;
+    }
+    .heart-btn {
+      flex-shrink: 0;
       background: transparent;
+      border: 0;
+      padding: 2px;
+      color: var(--accent);
       cursor: pointer;
-      transition: background-color .16s ease, color .16s ease, transform .16s ease;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      transition: transform .18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .15s ease;
+      -webkit-app-region: no-drag;
     }
-    button:hover { color: #fff; background: rgba(255,255,255,.10); }
-    button:active { transform: scale(.92); }
-    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .play { width: 38px; height: 38px; color: #111218; background: #f4f4f7; }
-    .play:hover { color: #000; background: #fff; }
-    .window-actions button { width: 28px; height: 30px; color: #a9aab3; border-radius: 8px; }
-    @media (max-width: 430px) {
-      .player { grid-template-columns: 50px minmax(60px,1fr) auto; gap: 8px; padding: 8px; }
-      .art { width: 50px; height: 50px; border-radius: 9px; }
-      .transport { gap: 0; }
-      .transport button { width: 30px; height: 32px; }
-      .transport .play { width: 36px; height: 36px; }
-      .window-actions button { width: 24px; height: 24px; }
+    .heart-btn:hover {
+      transform: scale(1.2);
     }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+    .heart-btn:active {
+      transform: scale(0.88);
+    }
+    .heart-pop {
+      animation: heartPulse .32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes heartPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.35); }
+      100% { transform: scale(1); }
+    }
+
+    .window-actions {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      -webkit-app-region: no-drag;
+    }
+    .action-btn {
+      width: 25px;
+      height: 25px;
+      border: 0;
+      background: transparent;
+      color: var(--text-sub);
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: color .15s ease, background-color .15s ease, transform .15s ease;
+    }
+    .action-btn:hover {
+      color: var(--text-main);
+      background: var(--btn-bg-hover);
+    }
+    .action-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* Subtitle Row */
+    .subtitle {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+      line-height: 1.2;
+    }
+
+    /* Scrubber Section */
+    .progress-section {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-top: 5px;
+      margin-bottom: 2px;
+      -webkit-app-region: no-drag;
+    }
+    .timestamps {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-time);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+    .progress-bar-wrap {
+      position: relative;
+      width: 100%;
+      height: 12px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .progress-slider {
+      position: relative;
+      width: 100%;
+      height: 3.5px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: linear-gradient(to right, var(--accent) var(--progress, 0%), var(--track-bg) var(--progress, 0%));
+      border-radius: 999px;
+      border: 0;
+      padding: 0;
+      outline: none;
+      cursor: pointer;
+      transition: height .15s ease;
+    }
+    .progress-bar-wrap:hover .progress-slider {
+      height: 5px;
+    }
+    .progress-slider::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 9.5px;
+      height: 9.5px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    .progress-bar-wrap:hover .progress-slider::-webkit-slider-thumb {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .progress-slider::-moz-range-thumb {
+      width: 9.5px;
+      height: 9.5px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.32);
+      border: 0;
+      opacity: 0;
+      transition: opacity .15s ease;
+    }
+    .progress-bar-wrap:hover .progress-slider::-moz-range-thumb {
+      opacity: 1;
+    }
+
+    /* Bottom Row Controls */
+    .controls-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      height: 34px;
+      margin-top: 1px;
+      -webkit-app-region: no-drag;
+    }
+    .vol-btn {
+      width: 30px;
+      height: 30px;
+      border: 0;
+      background: transparent;
+      color: var(--btn-color);
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: color .15s ease, background-color .15s ease, transform .15s ease;
+    }
+    .vol-btn:hover {
+      color: var(--btn-hover);
+      background: var(--btn-bg-hover);
+    }
+    .vol-btn:active {
+      transform: scale(0.9);
+    }
+
+    .transport-group {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .ctrl-btn {
+      width: 32px;
+      height: 32px;
+      border: 0;
+      background: transparent;
+      color: var(--btn-color);
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: color .15s ease, background-color .15s ease, transform .15s ease;
+    }
+    .ctrl-btn:hover {
+      color: var(--btn-hover);
+      background: var(--btn-bg-hover);
+    }
+    .ctrl-btn:active {
+      transform: scale(0.9);
+    }
+
+    .play-btn {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      background: transparent;
+      color: var(--btn-color);
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: color .15s ease, background-color .15s ease, transform .15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .play-btn:hover {
+      color: var(--btn-hover);
+      background: var(--btn-bg-hover);
+      transform: scale(1.08);
+    }
+    .play-btn:active {
+      transform: scale(0.92);
+    }
   </style>
 </head>
 <body>
-  <main class="player" aria-label="Mellow mini player">
-    <img id="ambientArt" class="ambient-art" alt="" aria-hidden="true" hidden>
-    <img id="artwork" class="art" src="icon.png" alt="Album artwork">
-    <div class="info">
-      <div id="title" class="title">Mellow</div>
-      <div id="artist" class="artist">Ready to play</div>
+  <main class="card" aria-label="Mellow Mini Player">
+    <!-- Left Full-Bleed Artwork -->
+    <div id="artWrap" class="art-wrap" title="Click to open Mellow">
+      <img id="artwork" class="art" src="icon.png" alt="Album Art">
+      <div class="art-overlay">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </div>
     </div>
-    <div class="transport" aria-label="Playback controls">
-      <button id="prevBtn" title="Previous" aria-label="Previous track">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-      </button>
-      <button id="playBtn" class="play" title="Play" aria-label="Play">
-        <svg id="playIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="pauseIcon" hidden width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>
-      </button>
-      <button id="nextBtn" title="Next" aria-label="Next track">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="m6 18 8.5-6L6 6zm10-12v12h2V6z"/></svg>
-      </button>
+
+    <!-- Right Content & Transport -->
+    <div class="body">
+      <!-- Top Row: Title + Heart on left, Window Actions on right -->
+      <div class="header">
+        <div class="title-box">
+          <span id="title" class="title">Mellow</span>
+          <button id="heartBtn" class="heart-btn" title="Favorite" aria-label="Favorite">
+            <svg id="heartIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="window-actions">
+          <button id="themeBtn" class="action-btn" title="Toggle Light / Dark mode" aria-label="Toggle theme">
+            <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+          <button id="restoreBtn" class="action-btn" title="Restore Mellow" aria-label="Open main window">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </button>
+          <button id="closeBtn" class="action-btn" title="Close mini player" aria-label="Close">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Second Row: Subtitle (Album - Artist) -->
+      <div id="subtitle" class="subtitle">Ready to play</div>
+
+      <!-- Third Row: Scrubber & Timestamps -->
+      <div class="progress-section">
+        <div class="timestamps">
+          <span id="elapsed">00:00</span>
+          <span id="remaining">-0:00</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <input id="progress" class="progress-slider" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek in track">
+        </div>
+      </div>
+
+      <!-- Bottom Row: Volume on left, Centered Transport Controls -->
+      <div class="controls-row">
+        <!-- Volume / Mute Button -->
+        <button id="volBtn" class="vol-btn" title="Mute / Unmute" aria-label="Volume">
+          <svg id="volIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg id="muteIcon" hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <!-- Transport Controls -->
+        <div class="transport-group">
+          <!-- Previous Track -->
+          <button id="prevBtn" class="ctrl-btn" title="Previous" aria-label="Previous track">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 5.5h2.4v13H6zm3.6 6.5 9 6.5V5.5z"/>
+            </svg>
+          </button>
+
+          <!-- Play / Pause -->
+          <button id="playBtn" class="play-btn" title="Play" aria-label="Play">
+            <svg id="playIcon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg id="pauseIcon" hidden width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="3.8" height="16" rx="1.9"/>
+              <rect x="14.2" y="4" width="3.8" height="16" rx="1.9"/>
+            </svg>
+          </button>
+
+          <!-- Next Track -->
+          <button id="nextBtn" class="ctrl-btn" title="Next" aria-label="Next track">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+              <path d="m5.4 18.5 9-6.5-9-6.5zm10.2-13H18v13h-2.4z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="window-actions" aria-label="Window controls">
-      <button id="restoreBtn" title="Open Mellow" aria-label="Open main window">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>
-      </button>
-      <button id="closeBtn" title="Close mini player" aria-label="Close mini player">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m18 6-12 12M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <input id="progress" class="progress" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek in track">
   </main>
+
   <script>
     const mini = window.mellowMiniPlayer;
-    const player = document.querySelector('.player');
     const artwork = document.getElementById('artwork');
-    const ambientArt = document.getElementById('ambientArt');
+    const artWrap = document.getElementById('artWrap');
     const title = document.getElementById('title');
-    const artist = document.getElementById('artist');
+    const subtitle = document.getElementById('subtitle');
     const playIcon = document.getElementById('playIcon');
     const pauseIcon = document.getElementById('pauseIcon');
+    const playBtn = document.getElementById('playBtn');
     const progress = document.getElementById('progress');
+    const elapsed = document.getElementById('elapsed');
+    const remaining = document.getElementById('remaining');
+    const volBtn = document.getElementById('volBtn');
+    const volIcon = document.getElementById('volIcon');
+    const muteIcon = document.getElementById('muteIcon');
+    const heartBtn = document.getElementById('heartBtn');
+    const heartIcon = document.getElementById('heartIcon');
+    const themeBtn = document.getElementById('themeBtn');
+
     let seeking = false;
+    let trackDuration = 0;
+    let isMuted = false;
+    let isFavorited = true; // Default coral filled heart like the mockup
+
+    // Format timestamps: elapsed as '00:27', remaining as '-4:00'
+    function formatElapsed(sec) {
+      if (!Number.isFinite(sec) || sec < 0) return '00:00';
+      const s = Math.floor(sec);
+      const m = Math.floor(s / 60);
+      const rem = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+    }
+
+    function formatRemaining(sec) {
+      if (!Number.isFinite(sec) || sec < 0) return '-0:00';
+      const s = Math.floor(sec);
+      const m = Math.floor(s / 60);
+      const rem = s % 60;
+      return `-${m}:${String(rem).padStart(2, '0')}`;
+    }
+
+    // Theme Toggle (Porcelain Light vs Obsidian Dark)
+    const savedTheme = localStorage.getItem('mellow-mini-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    themeBtn.onclick = () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('mellow-mini-theme', next);
+    };
+
+    // Controls
     document.getElementById('prevBtn').onclick = () => mini?.action('prev');
     document.getElementById('playBtn').onclick = () => mini?.action('togglePlay');
     document.getElementById('nextBtn').onclick = () => mini?.action('next');
     document.getElementById('restoreBtn').onclick = () => mini?.restore();
     document.getElementById('closeBtn').onclick = () => mini?.close();
-    artwork.onclick = () => mini?.restore();
+    artWrap.onclick = () => mini?.restore();
+
+    volBtn.onclick = () => {
+      isMuted = !isMuted;
+      mini?.action('toggleMute');
+      volIcon.hidden = isMuted;
+      muteIcon.hidden = !isMuted;
+    };
+
+    heartBtn.onclick = () => {
+      isFavorited = !isFavorited;
+      mini?.action('toggleFavorite');
+      heartBtn.style.color = isFavorited ? 'var(--accent)' : 'var(--text-sub)';
+      heartBtn.classList.remove('heart-pop');
+      void heartBtn.offsetWidth; // trigger reflow
+      heartBtn.classList.add('heart-pop');
+    };
+
+    // Scrubber
     progress.onpointerdown = () => { seeking = true; };
-    progress.oninput = () => progress.style.setProperty('--progress', `${Number(progress.value) / 10}%`);
+    progress.oninput = () => {
+      const ratio = Number(progress.value) / 1000;
+      progress.style.setProperty('--progress', `${ratio * 100}%`);
+      if (trackDuration > 0) {
+        const cur = ratio * trackDuration;
+        elapsed.textContent = formatElapsed(cur);
+        remaining.textContent = formatRemaining(Math.max(0, trackDuration - cur));
+      }
+    };
     progress.onchange = () => {
       mini?.seek(Number(progress.value) / 1000);
       seeking = false;
     };
+
+    // State sync from Mellow
     mini?.onUpdate((state) => {
       title.textContent = state.title || 'Mellow';
-      artist.textContent = state.artist || 'Ready to play';
+      
+      // Subtitle formatting: album - artist or artist
+      if (state.album && state.artist) {
+        subtitle.textContent = `${state.album} - ${state.artist}`;
+      } else {
+        subtitle.textContent = state.artist || 'Ready to play';
+      }
+
       if (state.artworkUrl && artwork.src !== state.artworkUrl) {
         artwork.src = state.artworkUrl;
-        ambientArt.src = state.artworkUrl;
       }
-      ambientArt.hidden = !state.artworkUrl;
-      if (state.accent) document.documentElement.style.setProperty('--accent', state.accent);
-      if (state.accentGlow) document.documentElement.style.setProperty('--accent-glow', state.accentGlow);
-      const duration = Math.max(0, Number(state.durationSec) || 0);
-      const position = Math.max(0, Math.min(duration, Number(state.positionSec) || 0));
+
+      // Track duration and position
+      trackDuration = Math.max(0, Number(state.durationSec) || 0);
+      const position = Math.max(0, Math.min(trackDuration, Number(state.positionSec) || 0));
+
       if (!seeking) {
-        progress.value = duration > 0 ? String(Math.round(position / duration * 1000)) : '0';
-        progress.style.setProperty('--progress', `${duration > 0 ? position / duration * 100 : 0}%`);
-        progress.disabled = duration <= 0;
+        progress.value = trackDuration > 0 ? String(Math.round((position / trackDuration) * 1000)) : '0';
+        progress.style.setProperty('--progress', `${trackDuration > 0 ? (position / trackDuration) * 100 : 0}%`);
+        progress.disabled = trackDuration <= 0;
+
+        elapsed.textContent = formatElapsed(position);
+        const rem = Math.max(0, trackDuration - position);
+        remaining.textContent = formatRemaining(rem);
       }
+
+      // Playback status
       const playing = state.status === 'playing' || state.status === 'buffering';
-      player.dataset.playing = String(playing);
       playIcon.hidden = playing;
       pauseIcon.hidden = !playing;
-      document.getElementById('playBtn').setAttribute('aria-label', playing ? 'Pause' : 'Play');
-      document.getElementById('playBtn').title = playing ? 'Pause' : 'Play';
+      playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+      playBtn.title = playing ? 'Pause' : 'Play';
+
+      // Accent color sync
+      if (state.accent && /^#[0-9a-fA-F]{6}$/.test(state.accent)) {
+        document.documentElement.style.setProperty('--accent', state.accent);
+      }
     });
   </script>
 </body>

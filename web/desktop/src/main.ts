@@ -927,6 +927,7 @@ let currentTrackState = {
   videoId: '',
   title: '',
   artist: '',
+  album: '',
   artworkUrl: '',
   status: 'paused',
   positionSec: 0,
@@ -938,9 +939,9 @@ function getMiniPlayerBounds() {
     ? mainWindow.getBounds()
     : screen.getPrimaryDisplay().workArea;
   const { workArea } = screen.getDisplayMatching(anchorBounds);
-  const width = 424;
-  const height = 108;
-  const margin = 18;
+  const width = 488;
+  const height = 142;
+  const margin = 20;
 
   return {
     x: Math.max(workArea.x + margin, workArea.x + workArea.width - width - margin),

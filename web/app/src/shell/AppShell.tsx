@@ -31,6 +31,9 @@ const FullScreenPlayer = lazy(() => import('./FullScreenPlayer').then((m) => ({ 
  * The app frame (report §1): glass sidebar, the scrolling page, the floating
  * player pill, the side panel, and the bottom band when there is one.
  */
+import { queryClient } from '@/lib/queryClient';
+import { setTrackLiked } from '@/data/music/api';
+
 export function AppShell() {
   useKeyboardShortcuts();
   // Listen Together: pick a party back up after a reload, and keep the player in step with it.
@@ -50,6 +53,16 @@ export function AppShell() {
       if (action === 'togglePlay') player.togglePlay();
       else if (action === 'next' || action === 'nexttrack') player.next();
       else if (action === 'prev' || action === 'previous' || action === 'previoustrack') player.previous();
+      else if (action === 'toggleMute') player.toggleMute();
+      else if (action === 'toggleFavorite') {
+        const videoId = player.nowPlaying?.videoId;
+        if (videoId) {
+          const current = queryClient.getQueryData<string>(['music', 'like', videoId]);
+          const liked = current === 'LIKE';
+          queryClient.setQueryData(['music', 'like', videoId], liked ? 'INDIFFERENT' : 'LIKE');
+          void setTrackLiked(videoId, !liked);
+        }
+      }
       else if (action.startsWith('seek:')) {
         const ratio = Number(action.slice(5));
         const durationSec = player.nowPlaying?.durationSec ?? 0;

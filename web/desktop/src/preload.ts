@@ -66,7 +66,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 /** The floating player gets only the four controls it needs, not Node access. */
 contextBridge.exposeInMainWorld('mellowMiniPlayer', {
-  action: (action: 'prev' | 'togglePlay' | 'next') => ipcRenderer.send('mini-player-action', action),
+  action: (action: string) => ipcRenderer.send('mini-player-action', action),
   seek: (ratio: number) => ipcRenderer.send('mini-player-seek', ratio),
   restore: () => ipcRenderer.send('mini-player-restore'),
   close: () => ipcRenderer.send('mini-player-close'),
