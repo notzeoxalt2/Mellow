@@ -75,9 +75,10 @@ async function packageApp() {
   copyDirSync(appDistDir, path.join(appTargetDir, 'app/dist'));
 
   // 7. Write packaged app package.json
+  const desktopPkg = JSON.parse(fs.readFileSync(path.join(desktopDir, 'package.json'), 'utf8'));
   const appPackageJson = {
     name: "mellow-desktop",
-    version: "1.0.0",
+    version: desktopPkg.version || "1.1.0",
     main: "dist/main.js",
     type: "module",
     description: "Mellow Music Player"

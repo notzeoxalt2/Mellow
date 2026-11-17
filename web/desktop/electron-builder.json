@@ -4,17 +4,24 @@
   "productName": "Mellow",
   "electronVersion": "44.7.0",
   "artifactName": "Mellow-Setup-${version}.${ext}",
+  "extraMetadata": {
+    "version": "1.1.0"
+  },
   "directories": {
-    "output": "E:/AntiGravity/BitChord/web/release/installer"
+    "output": "release/installer"
   },
   "win": {
     "target": [
       {
         "target": "nsis",
         "arch": ["x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64"]
       }
     ],
-    "icon": "E:/AntiGravity/BitChord/web/desktop/icon.ico"
+    "icon": "desktop/icon.ico"
   },
   "nsis": {
     "oneClick": false,

@@ -984,7 +984,7 @@ ipcMain.handle('bitchord-bridge-call', async (_, request) => {
     switch (method) {
       case 'ping':
         return success({
-          version: '1.0.0-mellow',
+          version: '1.1.0-mellow',
           protocol: 1,
           browser: 'mellow-desktop',
           capabilities: ['yt', 'yt.auth', 'yt.stats', 'addon', 'lyrics', 'spotify'],

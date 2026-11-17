@@ -48,6 +48,7 @@ jobs:
           files: |
             web/release/installer/Mellow-Setup-*.exe
             web/release/installer/Mellow-Setup-*.exe.blockmap
+            web/release/installer/Mellow-Setup-*.zip
             web/release/installer/Mellow-win32-x64-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

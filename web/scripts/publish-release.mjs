@@ -4,21 +4,22 @@ import https from 'node:https';
 
 const OWNER = 'notzeoxalt2';
 const REPO = 'Mellow';
-const TAG = 'v1.0.0';
-const RELEASE_NAME = 'Mellow v1.0.0';
-const RELEASE_NOTES = `## Mellow v1.0.0 — Official Windows Release
+const TAG = 'v1.1.0';
+const RELEASE_NAME = 'Mellow v1.1.0';
+const RELEASE_NOTES = `## Mellow v1.1.0 — Official Windows Release
 
 ### Features & Highlights
-- **Unified Music Player**: Stream seamlessly from YouTube Music and Spotify.
-- **Dynamic Ambient Theme**: Real-time background tinting from artwork colors, matching active playlists.
-- **Editorial Artist View**: Full-bleed hero banner, live in-page catalog search, combined play/shuffle pill, and latest release spotlight.
-- **Interactive Live Settings**: Real-time preview screen showcasing atmosphere glow, glass blur, and theme palettes before toggling.
-- **Direct Background Auto-Update**: Silent background installer download with seamless 1-click update restart.
-- **Refined Desktop Experience**: Frameless window with smooth top-region dragging, clean overlay scrollbars, and taskbar thumbar controls.
+- **Peak Apple Music Aesthetics**: Pure editorial layout, authentic floating glass player pill, transparent Apple-style volume slider, and frameless mode pills.
+- **Dual-Sync Playlists & Favorites**: Creating playlists or favoriting tracks instantly syncs across both YouTube Music and Spotify.
+- **Realistic Apple Music Discord RPC**: Displays "Listening to Apple Music" with live progress timeline, album art, track and artist on Discord.
+- **Official Music Video Playback**: Any song or Spotify match can resolve and stream its official music video in full screen.
+- **WebGL Gaussian Mesh Ambient Glow**: Smooth Gaussian shader with dithering matching the web player, eliminating corner cutoffs.
+- **Logo Music Beat Pulse**: Rhythmically pulses the wave mark in the sidebar to the beat of the song.
+- **Simplified Settings**: Restored clean grouped Apple/macOS settings cards.
 
 ### Downloads
-- **Windows Installer**: \`Mellow-Setup-1.0.0.exe\` (Recommended)
-- **Portable Zip**: \`Mellow-win32-x64-v1.0.0.zip\`
+- **Windows Installer**: \`Mellow-Setup-1.1.0.exe\` (Recommended)
+- **Portable Zip**: \`Mellow-win32-x64-v1.1.0.zip\`
 `;
 
 const token = process.env.GITHUB_TOKEN || process.argv[2];
@@ -31,10 +32,13 @@ if (!token) {
 }
 
 const installerDir = path.resolve('web/release/installer');
-const filesToUpload = [
-  path.join(installerDir, 'Mellow-Setup-1.0.0.exe'),
-  path.join(installerDir, 'Mellow-win32-x64-v1.0.0.zip'),
+const possibleFiles = [
+  path.join(installerDir, 'Mellow-Setup-1.1.0.exe'),
+  path.join(installerDir, 'Mellow-Setup-1.1.0.exe.blockmap'),
+  path.join(installerDir, 'Mellow-Setup-1.1.0.zip'),
+  path.join(installerDir, 'Mellow-win32-x64-v1.1.0.zip'),
 ];
+const filesToUpload = possibleFiles.filter(f => fs.existsSync(f));
 
 async function apiRequest(endpoint, method = 'GET', data = null) {
   return new Promise((resolve, reject) => {
