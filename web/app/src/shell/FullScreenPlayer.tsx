@@ -191,6 +191,32 @@ export function FullScreenPlayer() {
       return window.electronAPI.onMaximizeChange?.(setIsDesktopMaximized);
     }
   }, [isDesktop]);
+  const [resolvingVideo, setResolvingVideo] = useState(false);
+  const handleToggleOrFindVideo = async () => {
+    if (video) {
+      if (theater) setPanel('lyrics');
+      else setPanel(null);
+      return;
+    }
+    if (!nowPlaying) return;
+    setResolvingVideo(true);
+    try {
+      const { fetchSearch } = await import('@/data/music/api');
+      const query = `${nowPlaying.title} ${nowPlaying.artist} official video`;
+      const search = await fetchSearch(query);
+      const videoHit = search.videos?.[0] || search.top.find((item) => item.kind === 'video');
+      if (videoHit && videoHit.id) {
+        const { playTrack } = await import('@/components/music/play');
+        playTrack(videoHit);
+        setPanel(null);
+      }
+    } catch (e) {
+      console.warn('Failed to resolve official video:', e);
+    } finally {
+      setResolvingVideo(false);
+    }
+  };
+
   const close = useRef<HTMLButtonElement>(null);
   // Whether this player put the page in the browser's full screen, so closing it leaves it again.
   const enteredBrowserFullScreen = useRef(false);
@@ -287,7 +313,22 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
       {!theater && fullScreenPlayerAmbient && (
-        <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
+        canvas && !canvasDisabled ? (
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <video
+              key={canvas}
+              src={canvas}
+              playsInline
+              loop
+              muted
+              autoPlay
+              className="size-full object-cover scale-125 blur-[75px] saturate-[180%] brightness-110 opacity-75 transition-opacity duration-700"
+            />
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
+        ) : (
+          <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
+        )
       )}
       {theater && (
         <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in bg-black">
@@ -300,6 +341,21 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       </button>
       {/* Top right clean window controls (matches minimalist full screen design) */}
       <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-2">
+        {/* Toggle or find official music video */}
+        <button
+          type="button"
+          className={`h-8 px-3.5 cursor-pointer rounded-full text-xs font-medium flex items-center gap-1.5 transition-all backdrop-blur-md shadow-sm border border-white/10 active:scale-95 ${
+            theater
+              ? 'bg-(--theme-accent)/40 text-white border-(--theme-accent)/50'
+              : 'bg-white/10 hover:bg-white/15 text-white/85 hover:text-white'
+          }`}
+          onClick={handleToggleOrFindVideo}
+          title={video ? (theater ? 'Exit theater video' : 'Full theater video') : 'Find & stream official music video'}
+        >
+          <Film size={13} className={resolvingVideo ? 'animate-spin' : ''} />
+          <span>{resolvingVideo ? 'Finding…' : theater ? '✕ Exit Video' : video ? '🎬 Video' : '🎬 Official Video'}</span>
+        </button>
+
         {/* 1-click toggle between Default Clean Dark (low CPU) and Ambient Artwork Blur */}
         {!theater && (
           <button
@@ -398,19 +454,6 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
                 playing={playing}
               />
             ) : null}
-            {canvas && (
-              <button
-                className="absolute right-3 bottom-3 z-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-md text-[11px] font-medium text-white border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md"
-                title={canvasDisabled ? "Enable animated video canvas" : "Switch to static thumbnail artwork"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleCanvasMode();
-                }}
-              >
-                <Film size={12} className={canvasDisabled ? "text-white/40" : "text-[#c084fc]"} />
-                <span>{canvasDisabled ? "Canvas: Off" : "Canvas: On"}</span>
-              </button>
-            )}
             {video && !theater && <VideoSurface className="absolute inset-0" />}
           </div>
 

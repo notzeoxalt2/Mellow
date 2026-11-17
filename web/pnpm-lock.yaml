@@ -272,6 +272,9 @@ importers:
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
+      resedit:
+        specifier: ^3.1.1
+        version: 3.1.1
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -1635,6 +1638,10 @@ packages:
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
+  pe-library@2.0.3:
+    resolution: {integrity: sha512-+iR+uRyBpBfhnxgP2ia1hh1rQ2Gu+TzCV75E0nSql/pWGQw/BwY2QUaOWX8/qIsrQiqVdYaOIIYRfrBuRu4PXw==}
+    engines: {node: '>=20'}
+
   perfect-debounce@2.1.0:
     resolution: {integrity: sha512-LjgdTytVFXeUgtHZr9WYViYSM/g8MkcTPYDlPa3cDqMirHjKiSZPYd6DoL7pK8AJQr+uWkQvCjHNdiMqsrJs+g==}
 
@@ -1712,6 +1719,10 @@ packages:
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
     engines: {node: '>=0.10.0'}
+
+  resedit@3.1.1:
+    resolution: {integrity: sha512-YP6HNcXm2VIZN9Fl2iq8En3RpEfBFtKY2lKd1HLpnwjokr6nk39pnTO5Eby8OeQVjhRI4qZeUt4brWf43K/EGg==}
+    engines: {node: '>=20'}
 
   rolldown@1.2.14:
     resolution: {integrity: sha512-eTBTTqMR6uHKLgcUqpJP8ntzDI6V4LYA8negAMBEI7gkgVvOdrx6VsvS2Ym+83KhOPdLCHWJu0w7UQFJZhHKNw==}
@@ -3027,6 +3038,8 @@ snapshots:
 
   pathe@2.0.3: {}
 
+  pe-library@2.0.3: {}
+
   perfect-debounce@2.1.0: {}
 
   picocolors@1.1.1: {}
@@ -3106,6 +3119,10 @@ snapshots:
   readdirp@5.1.1: {}
 
   require-directory@2.1.1: {}
+
+  resedit@3.1.1:
+    dependencies:
+      pe-library: 2.0.3
 
   rolldown@1.2.14:
     dependencies:

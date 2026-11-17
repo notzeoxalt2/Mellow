@@ -139,11 +139,17 @@ async function packageApp() {
   // 9. Patch Mellow.exe PE resources with official icon using resedit
   console.log('Embedding official Mellow icon into executable...');
   try {
-    const reseditPath = path.resolve(
-      rootDir,
-      'node_modules/.pnpm/resedit@1.7.2/node_modules/resedit'
-    );
-    const resedit = require(reseditPath);
+    let resedit;
+    try {
+      resedit = require('resedit');
+    } catch {
+      const pnpmDir = path.join(rootDir, 'node_modules/.pnpm');
+      const match = fs.existsSync(pnpmDir) ? fs.readdirSync(pnpmDir).find((d) => d.startsWith('resedit@')) : null;
+      if (match) {
+        resedit = require(path.join(pnpmDir, match, 'node_modules/resedit'));
+      }
+    }
+    if (!resedit) throw new Error('resedit module could not be loaded');
     const exe = resedit.NtExecutable.from(fs.readFileSync(newExe));
     const res = resedit.NtExecutableResource.from(exe);
     const iconFile = resedit.Data.IconFile.from(fs.readFileSync(icoSrc));

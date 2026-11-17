@@ -276,7 +276,7 @@ export default function HomePage() {
           )}
 
           {/* Spotify Made For You */}
-          {spotifySignedIn && spotifyHome.data?.sections?.length ? spotifyHome.data.sections.map((section) => (
+          {spotifySignedIn && spotifyHome.data?.sections?.length ? spotifyHome.data.sections.filter((s) => s.playlists.length >= 2).map((section) => (
             <DeferredSpotifyShelf key={section.title} title={section.title} playlists={section.playlists} />
           )) : spotifySignedIn && ((spotifyHome.data?.madeForYou && spotifyHome.data.madeForYou.length > 0) || spotifyMixes.length > 0) && (
             <DeferredSpotifyShelf

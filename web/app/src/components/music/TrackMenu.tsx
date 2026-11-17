@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, EyeOff, ListEnd, ListPlus, ListStart, MoreHorizontal, Plus, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, EyeOff, Film, ListEnd, ListPlus, ListStart, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator, type MenuPlacement } from '@/components/Menu';
 import {
@@ -172,6 +172,27 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
       </MenuItem>
       <MenuItem icon={<ListEnd size={15} />} onSelect={() => (onClose(), addToQueue([track]))}>
         Add to Queue
+      </MenuItem>
+      <MenuItem
+        icon={<Film size={15} />}
+        onSelect={async () => {
+          onClose();
+          try {
+            const { fetchSearch } = await import('@/data/music/api');
+            const { playTrack } = await import('@/components/music/play');
+            const artistName = track.artists.map((a) => a.name).join(' ');
+            const query = `${track.title} ${artistName} official video`;
+            const search = await fetchSearch(query);
+            const videoHit = search.videos?.[0] || search.top.find((item) => item.kind === 'video');
+            if (videoHit && videoHit.id) {
+              playTrack(videoHit);
+            }
+          } catch (e) {
+            console.warn('Failed to find official video:', e);
+          }
+        }}
+      >
+        Play Official Video
       </MenuItem>
       {onNotInterested && (
         <>

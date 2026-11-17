@@ -1,7 +1,7 @@
-import { ChevronRight, Sparkles, Users } from 'lucide-react';
+import { ArrowDownCircle, CheckCircle2, ChevronRight, RefreshCw, Sparkles, Users } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
-import { SiApplemusic, SiDiscord, SiSpotify, SiYoutubemusic } from 'react-icons/si';
+import { SiApplemusic, SiSpotify, SiYoutubemusic } from 'react-icons/si';
 import { PageHeader } from '@/components/PageHeader';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { Select } from '@/components/Select';
@@ -51,6 +51,47 @@ function LinkRow({ to, icon, title, value }: { to: string; icon?: ReactNode; tit
   );
 }
 
+function RangeControl({
+  label,
+  detail,
+  value,
+  min,
+  max,
+  suffix = '%',
+  onChange,
+}: {
+  label: string;
+  detail?: string;
+  value: number;
+  min: number;
+  max: number;
+  suffix?: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className={settingsUi.controlRow}>
+      <span className={settingsUi.rowText}>
+        <span>{label}</span>
+        {detail && <span className={settingsUi.rowDetail}>{detail}</span>}
+      </span>
+      <span className="flex w-[210px] flex-none items-center gap-3">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(event) => onChange(Number(event.currentTarget.value))}
+          className="min-w-0 flex-1 cursor-pointer accent-(--theme-accent)"
+          aria-label={label}
+        />
+        <output className="w-12 text-right type-callout tabular-nums text-secondary">
+          {value}{suffix}
+        </output>
+      </span>
+    </label>
+  );
+}
+
 function youtubeText(auth: ReturnType<typeof useYtAuth>): string {
   if (auth.state === 'checking') return 'Checking…';
   if (auth.state === 'unavailable') return 'Needs the extension';
@@ -58,6 +99,156 @@ function youtubeText(auth: ReturnType<typeof useYtAuth>): string {
   if (!browserSignedIn) return 'Not signed in';
   if (!connected) return 'Disconnected';
   return active ? active.name : 'Signed in';
+}
+
+function DesktopUpdatesSection() {
+  const [checking, setChecking] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'up-to-date' | 'update-available' | 'downloading' | 'downloaded' | 'error'>('idle');
+  const [updateInfo, setUpdateInfo] = useState<any | null>(null);
+  const [progress, setProgress] = useState({ percent: 0, transferred: 0, total: 0 });
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+
+  useEffect(() => {
+    if (!isDesktop || !window.electronAPI) return;
+
+    const unsubAvail = window.electronAPI.onUpdateAvailable?.((info) => {
+      setUpdateInfo(info);
+      setStatus('update-available');
+    });
+
+    const unsubProg = window.electronAPI.onUpdateProgress?.((prog) => {
+      setProgress(prog);
+      setStatus('downloading');
+    });
+
+    const unsubDone = window.electronAPI.onUpdateDownloaded?.(() => {
+      setStatus('downloaded');
+    });
+
+    return () => {
+      unsubAvail?.();
+      unsubProg?.();
+      unsubDone?.();
+    };
+  }, [isDesktop]);
+
+  if (!isDesktop) return null;
+
+  const handleCheck = async () => {
+    if (!window.electronAPI?.checkForUpdates) return;
+    setChecking(true);
+    setErrorMsg('');
+    try {
+      const res = await window.electronAPI.checkForUpdates();
+      setChecking(false);
+      if (res.available) {
+        setUpdateInfo(res);
+        setStatus('update-available');
+      } else {
+        setStatus('up-to-date');
+      }
+    } catch (e: any) {
+      setChecking(false);
+      setStatus('error');
+      setErrorMsg(e.message || 'Failed to check for updates');
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!window.electronAPI?.downloadUpdate || !updateInfo?.assetUrl) return;
+    setStatus('downloading');
+    setErrorMsg('');
+    const res = await window.electronAPI.downloadUpdate(updateInfo.assetUrl);
+    if (!res.ok) {
+      setStatus('error');
+      setErrorMsg(res.error || 'Failed to download installer');
+    }
+  };
+
+  return (
+    <>
+      <h2 className={settingsUi.sectionHeader}>Mellow Desktop Updates</h2>
+      <section className={settingsUi.group}>
+        <div className={settingsUi.row}>
+          <div className={settingsUi.rowText}>
+            <span>Desktop Version</span>
+            <span className={settingsUi.rowDetail}>Mellow v1.1.0 for Windows</span>
+          </div>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer"
+            onClick={handleCheck}
+            disabled={checking || status === 'downloading'}
+          >
+            <RefreshCw size={12} className={checking ? 'animate-spin' : ''} />
+            <span>{checking ? 'Checking…' : 'Check for Updates'}</span>
+          </button>
+        </div>
+
+        {status === 'up-to-date' && (
+          <div className={`${settingsUi.row} text-green-400 gap-2`}>
+            <CheckCircle2 size={16} />
+            <span className="text-xs">Mellow is up to date! You are running the latest version.</span>
+          </div>
+        )}
+
+        {status === 'update-available' && (
+          <div className={`${settingsUi.row} flex-col items-start gap-2 py-3 bg-white/[0.04]`}>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-xs font-semibold text-white">Update Available: {updateInfo?.version || 'Newer version'}</span>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-3 py-1 rounded-full bg-(--theme-accent) hover:brightness-110 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
+                onClick={handleDownload}
+              >
+                <ArrowDownCircle size={13} />
+                <span>Download & Install</span>
+              </button>
+            </div>
+            {updateInfo?.notes && (
+              <p className="text-[11px] text-secondary max-h-24 overflow-y-auto w-full whitespace-pre-wrap">{updateInfo.notes}</p>
+            )}
+          </div>
+        )}
+
+        {status === 'downloading' && (
+          <div className={`${settingsUi.row} flex-col items-start gap-1.5 py-3 bg-white/[0.04]`}>
+            <div className="flex justify-between w-full text-xs">
+              <span>Downloading update…</span>
+              <span>{Math.round(progress.percent)}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-(--theme-accent) transition-all duration-200"
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {status === 'downloaded' && (
+          <div className={`${settingsUi.row} justify-between items-center py-3 bg-green-500/10`}>
+            <span className="text-xs text-green-400 font-medium">Update downloaded! Restart to apply.</span>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-full bg-green-600 hover:bg-green-500 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
+              onClick={() => window.electronAPI?.quitAndInstallUpdate?.()}
+            >
+              Restart & Update
+            </button>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className={`${settingsUi.row} text-red-400 text-xs`}>
+            <span>{errorMsg}</span>
+          </div>
+        )}
+      </section>
+    </>
+  );
 }
 
 export default function SettingsPage() {
@@ -125,12 +316,12 @@ export default function SettingsPage() {
               to="/extension"
               icon={<Glyph Icon={MdOutlineExtension} color="#636366" />}
               title="BitChord Extension"
-              value={present ? `v${extension.extension.info.version}` : 'Not installed'}
+              value={present ? `v${(extension as any)?.extension?.info?.version ?? '1.1.0'}` : 'Not installed'}
             />
           )}
         </section>
 
-        {/* ---- 2. Appearance & Ambient Glow ---- */}
+        {/* ---- 2. Appearance, Ambient Glow & Sliders ---- */}
         <h2 className={settingsUi.sectionHeader}>Appearance & Ambient Glow</h2>
         <section className={settingsUi.group}>
           <Toggle
@@ -139,27 +330,41 @@ export default function SettingsPage() {
             checked={appearance.fullScreenPlayerAmbient}
             onChange={(on) => update({ fullScreenPlayerAmbient: on })}
           />
-          <Toggle
+          <RangeControl
+            label="Artwork Glow"
+            detail="Spreads album artwork colors across the player and backdrops."
+            value={appearance.artworkGlow}
+            min={0}
+            max={100}
+            onChange={(artworkGlow) => update({ artworkGlow })}
+          />
+          <RangeControl
+            label="Sidebar Glow"
+            detail="Ambient lighting behind the navigation sidebar."
+            value={appearance.sidebarGlowStrength}
+            min={0}
+            max={100}
+            onChange={(sidebarGlowStrength) => update({ sidebarGlowStrength })}
+          />
+          <RangeControl
             label="Player Bar Glow"
             detail="Subtle dynamic glow under the floating glass player pill."
-            checked={appearance.playerBarGlow}
-            onChange={(on) => update({ playerBarGlow: on })}
+            value={appearance.playerBarGlowStrength}
+            min={0}
+            max={100}
+            onChange={(playerBarGlowStrength) => update({ playerBarGlowStrength })}
           />
-          {appearance.playerBarGlow && (
-            <label className={settingsUi.controlRow}>
-              <span>Glow Intensity ({appearance.playerBarGlowStrength}%)</span>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                value={appearance.playerBarGlowStrength}
-                onChange={(e) => update({ playerBarGlowStrength: Number(e.target.value) })}
-                className="h-1.5 w-36 accent-(--theme-accent) cursor-pointer"
-              />
-            </label>
-          )}
+          <RangeControl
+            label="Glass Blur"
+            detail="Frosted glass blur intensity for header and floating controls."
+            value={appearance.glassBlur}
+            min={0}
+            max={36}
+            suffix="px"
+            onChange={(glassBlur) => update({ glassBlur })}
+          />
           <Toggle
-            label="Music Beat Sync"
+            label="Auto Beat Sync"
             detail="Gently pulses the logo and glow in rhythm with the music."
             checked={appearance.musicBeatSync}
             onChange={(on) => update({ musicBeatSync: on })}
@@ -268,6 +473,9 @@ export default function SettingsPage() {
             {present || isDesktop ? <LyricSourcesAccess /> : <span className={settingsUi.value}>Needs the extension</span>}
           </div>
         </section>
+
+        {/* ---- 7. Desktop Updates ---- */}
+        <DesktopUpdatesSection />
       </div>
 
       {lyrics && (

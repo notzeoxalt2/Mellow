@@ -8,6 +8,7 @@ import { PrefetchLink } from '@/components/PrefetchLink';
 import { config } from '@/config';
 import { useExtension } from '@/extension/useExtension';
 import { isMobileBrowser } from '@/lib/platform';
+import { useCanvas } from '@/data/spotify/canvas';
 import { useUi } from '@/state/ui';
 import { usePlayer } from '@/state/player';
 import { useArtworkColor } from '@/lib/artworkColor';
@@ -88,6 +89,7 @@ export function AppShell() {
 
   const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
   const nowPlaying = usePlayer((s) => s.nowPlaying);
+  const canvas = useCanvas();
   const playColor = useArtworkColor(nowPlaying?.artworkUrl);
   const [appearance, setAppearance] = useState(readAppearancePreferences);
   const [updateReady, setUpdateReady] = useState(false);
@@ -264,19 +266,35 @@ export function AppShell() {
               >
                 {/* This layer is blurred by 44px; a smaller decode saves memory without visible detail loss. */}
                 {!appearance.lowResourceMode && (
-                  <img
-                    key={nowPlaying.artworkUrl}
-                    src={sizedArtwork(nowPlaying.artworkUrl, 640)}
-                    alt=""
-                    className="absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[44px] saturate-[1.5] brightness-125 will-change-transform"
-                    style={{
-                      opacity: 'clamp(0, calc(var(--artwork-glow-art-opacity, 0.728) * var(--music-beat-opacity, 1)), 1)',
-                      transform: 'scale(var(--music-beat-scale, 1))',
-                      transformOrigin: 'center top',
-                    }}
-                    referrerPolicy="no-referrer"
-                    decoding="async"
-                  />
+                  canvas ? (
+                    <video
+                      key={canvas}
+                      src={canvas}
+                      playsInline
+                      loop
+                      muted
+                      autoPlay
+                      className="absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[50px] saturate-[1.6] brightness-110 will-change-transform"
+                      style={{
+                        opacity: 'clamp(0, calc(var(--artwork-glow-art-opacity, 0.728) * var(--music-beat-opacity, 1)), 1)',
+                        transformOrigin: 'center top',
+                      }}
+                    />
+                  ) : (
+                    <img
+                      key={nowPlaying.artworkUrl}
+                      src={sizedArtwork(nowPlaying.artworkUrl, 640)}
+                      alt=""
+                      className="absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[44px] saturate-[1.5] brightness-125 will-change-transform"
+                      style={{
+                        opacity: 'clamp(0, calc(var(--artwork-glow-art-opacity, 0.728) * var(--music-beat-opacity, 1)), 1)',
+                        transform: 'scale(var(--music-beat-scale, 1))',
+                        transformOrigin: 'center top',
+                      }}
+                      referrerPolicy="no-referrer"
+                      decoding="async"
+                    />
+                  )
                 )}
                 <div
                   className="absolute inset-0 will-change-transform"

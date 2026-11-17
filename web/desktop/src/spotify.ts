@@ -448,7 +448,9 @@ export async function fetchHomeSections(spDc: string): Promise<{
           const uri = d.uri || '';
           // Home also contains artist, album, podcast and video cards. The
           // playlist shelf can only open Spotify playlist URIs.
-          if (!uri.startsWith('spotify:playlist:')) return null;
+          const isPlaylist = uri.startsWith('spotify:playlist:');
+          const isAlbum = uri.startsWith('spotify:album:');
+          if (!isPlaylist && !isAlbum) return null;
           const id = uri.split(':').pop() || d.id || '';
           if (!id) return null;
           const image =
@@ -458,8 +460,8 @@ export async function fetchHomeSections(spDc: string): Promise<{
             null;
           return {
             id,
-            name: d.name || 'Spotify Playlist',
-            owner: d.ownerV2?.data?.name || d.artists?.items?.[0]?.profile?.name || 'Spotify',
+            name: d.name || (isAlbum ? 'Spotify Album' : 'Spotify Playlist'),
+            owner: d.ownerV2?.data?.name || d.artists?.items?.[0]?.profile?.name || (isAlbum ? 'Album' : 'Spotify'),
             imageUrl: image,
           };
         })
@@ -480,7 +482,7 @@ export async function fetchHomeSections(spDc: string): Promise<{
         title: String(section.data?.title?.transformedLabel || section.data?.title?.text || section.data?.title || '').trim(),
         playlists: parseSectionItems(section),
       }))
-      .filter((section: { title: string; playlists: SpotifyPlaylist[] }) => section.title && section.playlists.length > 0);
+      .filter((section: { title: string; playlists: SpotifyPlaylist[] }) => section.title && section.playlists.length >= 3);
 
     const s0 = sections[0];
     const madeFor = sections.find((s: any) => /made for/i.test(getTitle(s)));

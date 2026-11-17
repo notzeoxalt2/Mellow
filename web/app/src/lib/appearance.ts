@@ -82,7 +82,7 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   playerBarGlowStrength: 70,
   sidebarGlow: true,
   sidebarGlowStrength: 60,
-  musicBeatSync: true,
+  musicBeatSync: false,
   musicBeatStrength: 75,
   appleMusicRpc: true,
   dualSync: true,

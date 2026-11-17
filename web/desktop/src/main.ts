@@ -71,6 +71,8 @@ const __dirname = path.dirname(__filename);
 
 function getAppIcon(): string {
   const candidates = [
+    path.join(path.dirname(process.execPath), 'icon.ico'),
+    path.join(path.dirname(process.execPath), 'icon.png'),
     path.join(__dirname, 'icon.ico'),
     path.join(__dirname, 'icon.png'),
     path.join(__dirname, '../icon.ico'),
@@ -728,6 +730,7 @@ function updateThumbarButtons(isPlaying: boolean) {
 
 function createMainWindow() {
   const appIcon = getAppIcon();
+  const iconImage = appIcon ? nativeImage.createFromPath(appIcon) : undefined;
 
   mainWindow = new BrowserWindow({
     width: 1320,
@@ -736,7 +739,7 @@ function createMainWindow() {
     minHeight: 640,
     frame: false,
     title: 'Mellow',
-    icon: appIcon || undefined,
+    icon: (iconImage && !iconImage.isEmpty()) ? iconImage : (appIcon || undefined),
     backgroundColor: '#0c0d12',
     show: false,
     webPreferences: {

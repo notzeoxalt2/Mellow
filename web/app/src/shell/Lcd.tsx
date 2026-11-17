@@ -1,5 +1,5 @@
 import { Maximize2 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { LogoMark } from '@/components/icons/LogoMark';
 import { ExplicitBadge } from '@/components/music/ExplicitBadge';
@@ -13,7 +13,7 @@ import { usePlayer } from '@/state/player';
 import { useUi } from '@/state/ui';
 import { useHasVideo } from '@/state/video';
 import { useCanvas } from '@/data/spotify/canvas';
-import { useAnimatedArtworkEnabled } from '@/lib/appearance';
+import { readAppearancePreferences, useAnimatedArtworkEnabled } from '@/lib/appearance';
 import { CanvasArtwork } from '@/components/music/CanvasArtwork';
 import { albumPageFor, artistPageFor } from './nowPlayingLinks';
 import { MixWindowHighlight } from './NerdStats';
@@ -109,6 +109,13 @@ export function Lcd() {
   const video = useHasVideo(nowPlaying?.videoId);
   const canvas = useCanvas();
   const animatedArtworkEnabled = useAnimatedArtworkEnabled();
+  const [appearance, setAppearance] = useState(readAppearancePreferences);
+
+  useEffect(() => {
+    const onAppChange = () => setAppearance(readAppearancePreferences());
+    window.addEventListener('mellow:appearance-changed', onAppChange);
+    return () => window.removeEventListener('mellow:appearance-changed', onAppChange);
+  }, []);
 
   if (!nowPlaying) {
     return (
@@ -126,14 +133,16 @@ export function Lcd() {
     >
       {/* As Apple's: the artwork opens the full-screen player, with an expand glyph on hover. */}
       <div className="relative">
-        <div
-          className="pointer-events-none absolute -inset-1.5 -z-1 rounded-lg blur-[7px] transition-all duration-300"
-          style={{
-            background: 'var(--ambient-glow-tint, var(--theme-accent, #9b55f5))',
-            opacity: status === 'playing' || status === 'buffering' ? 0.85 : 0.35,
-          }}
-          aria-hidden="true"
-        />
+        {appearance.artworkGlow > 0 && (
+          <div
+            className="pointer-events-none absolute -inset-1 -z-1 rounded-lg blur-[5px] transition-all duration-300"
+            style={{
+              background: 'var(--ambient-glow-tint, var(--theme-accent))',
+              opacity: status === 'playing' || status === 'buffering' ? ((appearance.artworkGlow / 100) * 0.22) : 0,
+            }}
+            aria-hidden="true"
+          />
+        )}
         <button
           // A music video plays here in small, at 16:9.
           className={`group/art relative block h-[34px] overflow-hidden rounded-[6px] bg-joe p-0 transition-[filter,opacity] ${video ? 'w-[60px] bg-black' : 'w-[34px]'}`}
