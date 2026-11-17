@@ -62,11 +62,6 @@ async function build() {
     fs.copyFileSync(png, path.join(distDir, 'icon.png'));
   }
 
-  // Copy mini-player.html to dist
-  const miniHtml = path.join(__dirname, 'src/mini-player.html');
-  if (fs.existsSync(miniHtml)) {
-    fs.copyFileSync(miniHtml, path.join(distDir, 'mini-player.html'));
-  }
 
   // Copy thumbar icons to dist
   for (const name of ['thumbar-prev.png', 'thumbar-play.png', 'thumbar-pause.png', 'thumbar-next.png']) {

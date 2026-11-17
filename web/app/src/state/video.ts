@@ -52,7 +52,8 @@ export function setVideoQuality(quality: VideoQuality): void {
 }
 
 /** Whether [videoId]'s picture is ready to show. */
-export const useHasVideo = (videoId: string | null | undefined) => useVideo((s) => !!videoId && s.videoId === videoId);
+export const useHasVideo = (videoId: string | null | undefined) =>
+  useVideo((s) => !!videoId && (s.videoId === videoId || (!!s.videoId && s.heights.length > 0)));
 
 /** How a height is named on screen: the marketing name where there is one, the height otherwise. */
 export function qualityLabel(height: number): string {

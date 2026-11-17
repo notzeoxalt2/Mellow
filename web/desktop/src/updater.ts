@@ -230,12 +230,33 @@ export function setupAutoUpdater(mainWindow: BrowserWindow): void {
     });
   }
 
-  // Automatic silent check 8 seconds after app launch
-  setTimeout(async () => {
+  // Automatic silent check and DIRECT background auto-download
+  const performAutoUpdateCheck = async () => {
     if (!activeWindow || activeWindow.isDestroyed()) return;
-    const info = await checkForUpdates();
-    if (info.available && activeWindow && !activeWindow.isDestroyed()) {
-      activeWindow.webContents.send('app-update-available', info);
+    try {
+      const info = await checkForUpdates();
+      if (info.available && activeWindow && !activeWindow.isDestroyed()) {
+        activeWindow.webContents.send('app-update-available', info);
+        // Direct auto-download in background: no manual clicking required!
+        if (info.assetUrl) {
+          console.log(`[Updater] New update found (v${info.latestVersion}). Auto-downloading in background...`);
+          const dest = await downloadUpdate(info.assetUrl, (percent, transferred, total) => {
+            if (activeWindow && !activeWindow.isDestroyed()) {
+              activeWindow.webContents.send('app-update-progress', { percent, transferred, total });
+            }
+          });
+          console.log(`[Updater] Update downloaded to ${dest}. Ready to install.`);
+          if (activeWindow && !activeWindow.isDestroyed()) {
+            activeWindow.webContents.send('app-update-downloaded', { installerPath: dest, version: info.latestVersion });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[Updater] Background auto-update check error:', err.message);
     }
-  }, 8000);
+  };
+
+  // Run check 6 seconds after launch, and periodically every 2 hours
+  setTimeout(performAutoUpdateCheck, 6000);
+  setInterval(performAutoUpdateCheck, 2 * 60 * 60 * 1000);
 }

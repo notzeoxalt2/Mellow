@@ -14,6 +14,7 @@ import { useArtworkColor } from '@/lib/artworkColor';
 import { sizedArtwork } from '@/lib/artwork';
 import { applyThemeAccent, getActiveThemeId, getThemeById, initTheme, isDynamicAccentSyncEnabled } from '@/lib/themeManager';
 import { applyAppearancePreferences, readAppearancePreferences } from '@/lib/appearance';
+import { startMusicBeatSync, stopMusicBeatSync } from '@/lib/musicBeat';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { AppTitleBar } from './AppTitleBar';
 import { Banner, bannerButtonClass } from './Banner';
@@ -54,6 +55,14 @@ export function AppShell() {
       else if (action === 'next' || action === 'nexttrack') player.next();
       else if (action === 'prev' || action === 'previous' || action === 'previoustrack') player.previous();
       else if (action === 'toggleMute') player.toggleMute();
+      else if (action === 'toggleShuffle') player.toggleShuffle();
+      else if (action === 'cycleRepeat') player.cycleRepeat();
+      else if (action.startsWith('playQueueIndex:')) {
+        const offset = parseInt(action.slice('playQueueIndex:'.length), 10);
+        if (Number.isFinite(offset) && player.index + 1 + offset < player.queue.length) {
+          player.playTracks(player.queue.map((q) => q.track), player.index + 1 + offset, { title: 'Queue', type: 'other' });
+        }
+      }
       else if (action === 'toggleFavorite') {
         const videoId = player.nowPlaying?.videoId;
         if (videoId) {
@@ -81,7 +90,26 @@ export function AppShell() {
   const nowPlaying = usePlayer((s) => s.nowPlaying);
   const playColor = useArtworkColor(nowPlaying?.artworkUrl);
   const [appearance, setAppearance] = useState(readAppearancePreferences);
+  const [updateReady, setUpdateReady] = useState(false);
   const glowColorMode = appearance.glowColorMode;
+
+  useEffect(() => {
+    if (!isDesktop || !window.electronAPI?.onUpdateDownloaded) return;
+    return window.electronAPI.onUpdateDownloaded(() => {
+      setUpdateReady(true);
+    });
+  }, [isDesktop]);
+
+  const isPlaying = usePlayer((s) => s.status === 'playing');
+
+  useEffect(() => {
+    if (isPlaying && appearance.musicBeatSync) {
+      startMusicBeatSync();
+    } else {
+      stopMusicBeatSync();
+    }
+    return () => stopMusicBeatSync();
+  }, [isPlaying, appearance.musicBeatSync, appearance.musicBeatStrength]);
 
   useEffect(() => {
     initTheme();
@@ -137,15 +165,26 @@ export function AppShell() {
       // Keep the desktop mini-player's ring in step with artwork analysis and
       // appearance changes, even when the current track itself did not change.
       if (isDesktop && nowPlaying && window.electronAPI?.updateNowPlaying) {
+        const playerState = usePlayer.getState();
+        const upcomingQueue = playerState.queue.slice(playerState.index + 1, playerState.index + 8).map((entry) => ({
+          videoId: entry.track.videoId,
+          title: entry.track.title,
+          artist: entry.track.artists?.map((a) => a.name).join(', ') || '',
+          thumbnail: entry.track.thumbnail,
+          durationSec: entry.track.durationSec || 0,
+        }));
         window.electronAPI.updateNowPlaying({
           videoId: nowPlaying.videoId,
           title: nowPlaying.title,
           artist: nowPlaying.artist,
           artworkUrl: nowPlaying.artworkUrl,
           durationSec: nowPlaying.durationSec,
-          status: usePlayer.getState().status,
+          status: playerState.status,
+          shuffle: playerState.shuffle,
+          repeat: playerState.repeat,
           accent,
           accentGlow,
+          upcomingQueue,
         });
       }
     };
@@ -155,7 +194,23 @@ export function AppShell() {
   }, [appearance.customGlowColor, appearance.windowsAccentSync, glowColorMode, isDesktop, nowPlaying, playColor]);
 
   let banner = null;
-  if (mobile) {
+  if (updateReady) {
+    banner = (
+      <Banner
+        title="Mellow Update Ready"
+        detail="A new version was automatically downloaded in the background."
+        action={
+          <button
+            type="button"
+            className={bannerButtonClass}
+            onClick={() => window.electronAPI?.quitAndInstallUpdate?.()}
+          >
+            Restart & Update
+          </button>
+        }
+      />
+    );
+  } else if (mobile) {
     banner = (
       <Banner
         title="BitChord is better in the app."
@@ -200,23 +255,41 @@ export function AppShell() {
           {/* Clears the floating player bar with generous breathing room */}
           <div className="relative min-h-full pb-36">
             {appearance.artworkBackdrop && sidePanel !== 'now-playing' && appearance.artworkGlow > 0 && nowPlaying?.artworkUrl && (
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] overflow-hidden" aria-hidden="true">
-                {/* This layer is blurred by 48px; a smaller decode saves memory without visible detail loss. */}
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+                style={{
+                  height: `${Math.max(540, Math.round(620 * (appearance.ambientSpread / 100)))}px`,
+                }}
+                aria-hidden="true"
+              >
+                {/* This layer is blurred by 44px; a smaller decode saves memory without visible detail loss. */}
                 {!appearance.lowResourceMode && (
                   <img
                     key={nowPlaying.artworkUrl}
                     src={sizedArtwork(nowPlaying.artworkUrl, 640)}
                     alt=""
-                    className="absolute inset-[-56px] size-[calc(100%+112px)] object-cover blur-[48px] saturate-[1.12] transition-opacity duration-300 ease-out"
-                    style={{ opacity: 'var(--artwork-glow-art-opacity, 0.2016)' }}
+                    className="absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[44px] saturate-[1.5] brightness-125 will-change-transform"
+                    style={{
+                      opacity: 'clamp(0, calc(var(--artwork-glow-art-opacity, 0.728) * var(--music-beat-opacity, 1)), 1)',
+                      transform: 'scale(var(--music-beat-scale, 1))',
+                      transformOrigin: 'center top',
+                    }}
                     referrerPolicy="no-referrer"
                     decoding="async"
                   />
                 )}
-                <div className="absolute inset-0 transition-opacity duration-300 ease-out" aria-hidden="true" style={{ opacity: 'var(--artwork-glow-bloom-opacity, 0.2268)' }}>
+                <div
+                  className="absolute inset-0 will-change-transform"
+                  aria-hidden="true"
+                  style={{
+                    opacity: 'clamp(0, calc(var(--artwork-glow-bloom-opacity, 0.78) * var(--music-beat-opacity, 1)), 1)',
+                    transform: 'scale(var(--music-beat-scale, 1))',
+                    transformOrigin: 'center top',
+                  }}
+                >
                   <div className="mellow-ambient-bloom absolute inset-0" />
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0c0d12]/55 via-[#0c0d12]/65 to-[#0c0d12]" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,13,18,0.12)_0%,rgba(12,13,18,0.28)_50%,rgba(12,13,18,0.82)_84%,#0c0d12_100%)]" />
               </div>
             )}
             {/* Album, playlist, and artist pages softly carry their own artwork colour into the page. */}

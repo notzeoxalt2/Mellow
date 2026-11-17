@@ -36,6 +36,7 @@ import { MixWindowHighlight, NerdStats } from './NerdStats';
 import { useScrubber } from './useScrubber';
 import { VideoQuality } from './VideoQuality';
 import { fadeForVolume, VolumeControl } from './VolumeControl';
+import { MeshBackdrop } from './MeshBackdrop';
 
 function useBrowserFullScreen(): boolean {
   return useSyncExternalStore(
@@ -285,18 +286,8 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       onKeyDown={wake}
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
-      {!theater && nowPlaying.artworkUrl && fullScreenPlayerAmbient && (
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#171419]" aria-hidden="true">
-          <img
-            src={sizedArtwork(nowPlaying.artworkUrl, 1600)}
-            alt=""
-            className="absolute -inset-[9%] size-[118%] object-cover saturate-[0.88]"
-            style={{ filter: 'blur(var(--fullscreen-ambient-blur, 82px))' }}
-            referrerPolicy="no-referrer"
-            decoding="async"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(115deg,rgb(12_12_15/0.30),rgb(12_12_15/0.24)_48%,rgb(12_12_15/0.40))]" />
-        </div>
+      {!theater && fullScreenPlayerAmbient && (
+        <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
       )}
       {theater && (
         <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in bg-black">
@@ -307,60 +298,45 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       <button ref={close} className={closeCorner} aria-label="Close" title="Close player" onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
         <X size={20} />
       </button>
-      {/* Top right window & video controls */}
+      {/* Top right clean window controls (matches minimalist full screen design) */}
       <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-2">
-        {(video || videoPreviewEnabled) && <VideoQuality />}
-        <button
-          className={`${chromeButton} size-8 cursor-pointer bg-black/25 text-white/80 backdrop-blur-md hover:bg-black/45 hover:text-white aria-pressed:bg-white/15 aria-pressed:text-white`}
-          aria-label={lowResourceMode
-            ? 'Video preview is paused in Gaming mode'
-            : videoPreviewEnabled ? 'Turn video preview off; keep music playing' : 'Turn video preview on'}
-          title={lowResourceMode
-            ? 'Video preview is paused in Gaming mode'
-            : videoPreviewEnabled ? 'Turn video preview off; keep music playing' : 'Turn video preview on'}
-          aria-pressed={videoPreviewEnabled}
-          disabled={lowResourceMode}
-          onClick={() => {
-            const current = readAppearancePreferences();
-            updateAppearancePreferences({ playMusicVideos: !current.playMusicVideos });
-          }}
-        >
-          {videoPreviewEnabled ? <Video size={17} /> : <VideoOff size={17} />}
-        </button>
+        {/* 1-click toggle between Default Clean Dark (low CPU) and Ambient Artwork Blur */}
+        {!theater && (
+          <button
+            type="button"
+            className="h-8 px-3.5 cursor-pointer rounded-full text-xs font-medium flex items-center gap-1.5 transition-all bg-white/10 hover:bg-white/15 active:scale-95 text-white/85 hover:text-white backdrop-blur-md shadow-sm border border-white/10"
+            onClick={() => {
+              updateAppearancePreferences({ fullScreenPlayerAmbient: !fullScreenPlayerAmbient });
+            }}
+            title={fullScreenPlayerAmbient ? 'Switch to Clean Dark mode' : 'Switch to Ambient Artwork mode'}
+          >
+            {fullScreenPlayerAmbient ? '✦ Ambient' : '☾ Clean Dark'}
+          </button>
+        )}
+        {video && <VideoQuality />}
         {(document.fullscreenEnabled || isDesktop) && (
           <button
-            className={`${chromeButton} size-8 cursor-pointer bg-black/25 text-white/80 backdrop-blur-md hover:bg-black/45 hover:text-white`}
+            className={`${chromeButton} size-9 cursor-pointer rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors`}
             aria-label={isDesktop ? (isDesktopMaximized ? 'Restore window' : 'Maximize window') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
             title={isDesktop ? (isDesktopMaximized ? 'Restore' : 'Maximize') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
             onClick={toggleBrowserFullScreen}
           >
-            {(isDesktop ? isDesktopMaximized : browserFullScreen) ? <Minimize size={17} /> : <Maximize size={17} />}
-          </button>
-        )}
-        {isDesktop && (
-          <button
-            type="button"
-            className={`${chromeButton} size-8 cursor-pointer bg-black/25 text-white/80 backdrop-blur-md hover:bg-black/45 hover:text-white`}
-            aria-label="Minimize window"
-            title="Minimize"
-            onClick={() => window.electronAPI?.minimize?.()}
-          >
-            <Minus size={15} />
+            {(isDesktop ? isDesktopMaximized : browserFullScreen) ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
         )}
       </div>
 
       {/* Apple's grid areas "controls lyrics": the artwork column, then the lyrics. */}
       <div
-        className={`relative z-1 ${
+        className={
           theater
-            ? `absolute inset-x-0 bottom-0 flex justify-center bg-[linear-gradient(to_top,rgb(0_0_0/0.72),rgb(0_0_0/0.35)_55%,transparent)] px-6 pt-32 pb-16 transition-opacity duration-300${hidden}`
-            : `grid h-full items-center justify-center gap-x-[clamp(48px,7vw,144px)] px-[clamp(24px,9vw,144px)] py-16 max-md:px-6 max-md:pb-18 ${
+            ? `absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-black/85 via-black/40 to-transparent px-6 pt-24 pb-14 transition-opacity duration-300${hidden}`
+            : `relative z-1 grid h-full items-center justify-center gap-x-[clamp(48px,7vw,144px)] px-[clamp(24px,9vw,144px)] py-16 max-md:px-6 max-md:pb-18 ${
                 column
                   ? 'grid-cols-[var(--art)_minmax(0,38vw)] max-md:grid-cols-[minmax(0,1fr)] max-md:grid-rows-[minmax(0,1fr)_auto] max-md:items-stretch max-md:gap-y-4'
                   : 'grid-cols-[var(--art)]'
               }`
-        }`}
+        }
         data-lyrics={column || undefined}
       >
         <section
@@ -371,22 +347,31 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         >
           {/* Shrinks a touch while paused, as Apple's does. Beside a column, a music video plays here at 16:9. */}
           <div
-            className={`relative w-(--art) rounded-[10px] transition-[scale] duration-450 ease-[cubic-bezier(0.34,1.3,0.64,1)] motion-reduce:transition-none${
+            className={`relative w-(--art) rounded-[10px] transition-[scale] duration-450 ease-[cubic-bezier(0.34,1.3,0.64,1)] motion-reduce:transition-none will-change-transform${
               video ? ' aspect-video overflow-hidden bg-black' : ' aspect-square'
             }${playing ? '' : ' scale-92'}${column ? ' max-md:hidden' : ''}${theater ? ' hidden' : ''}`}
+            style={playing ? { transform: 'scale(var(--music-beat-card-scale, 1))' } : undefined}
           >
             {nowPlaying.artworkUrl && (
               <>
-                <img
-                  key={`glow-${nowPlaying.artworkUrl}`}
-                  // The radiosity glow: a small copy, blurred and saturated, behind the artwork.
-                  className={`${artworkLayer} -z-1 translate-y-2 scale-96 blur-[20px] saturate-200 data-loaded:opacity-[var(--fullscreen-artwork-glow-opacity,0.1764)]`}
-                  src={sizedArtwork(nowPlaying.artworkUrl, 60)}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  decoding="async"
-                  onLoad={(e) => e.currentTarget.setAttribute('data-loaded', '')}
-                />
+                <div
+                  className="pointer-events-none absolute inset-0 -z-1 translate-y-2 will-change-transform"
+                  style={{
+                    transform: 'scale(var(--music-beat-scale, 1))',
+                    opacity: 'var(--music-beat-opacity, 1)',
+                  }}
+                >
+                  <img
+                    key={`glow-${nowPlaying.artworkUrl}`}
+                    // The radiosity glow: a small copy, blurred and saturated, behind the artwork.
+                    className={`${artworkLayer} size-full scale-96 blur-[20px] saturate-200 data-loaded:opacity-[var(--fullscreen-artwork-glow-opacity,0.58)]`}
+                    src={sizedArtwork(nowPlaying.artworkUrl, 60)}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    decoding="async"
+                    onLoad={(e) => e.currentTarget.setAttribute('data-loaded', '')}
+                  />
+                </div>
                 <img
                   key={nowPlaying.artworkUrl}
                   className={`${artworkLayer} bg-[#ffffff12] shadow-[0_4px_10px_#0000001a] data-loaded:opacity-100`}
@@ -459,6 +444,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
             </div>
             <FavoriteButton
               videoId={nowPlaying.videoId}
+              track={{ title: nowPlaying.title, artist: nowPlaying.artist }}
               className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary cursor-pointer"
               size={18}
             />

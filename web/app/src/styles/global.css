@@ -113,6 +113,22 @@
       opacity: 0.7;
     }
   }
+  @keyframes logoBeatPulse {
+    0%, 100% {
+      opacity: 0.88;
+      filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ambient-glow-tint, var(--theme-accent)) 30%, transparent));
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      filter: drop-shadow(0 0 12px color-mix(in srgb, var(--ambient-glow-tint, var(--theme-accent)) 85%, transparent));
+      transform: scale(1.08);
+    }
+  }
+}
+
+.logo-playing-pulse {
+  animation: logoBeatPulse 2.4s ease-in-out infinite;
 }
 
 /* The shared floating-player material: dark, quiet glass with only a trace of the music accent. */
@@ -162,20 +178,25 @@
 
 /* Frameless window controls float above the content; no full-width title strip. */
 .mellow-window-chrome {
-  position: absolute;
+  position: fixed;
   z-index: var(--z-web-chrome);
-  inset: 0 0 auto;
-  height: 32px;
+  inset: 0 0 auto 0;
+  height: 38px;
   pointer-events: none;
   user-select: none;
 }
 
 .mellow-window-drag {
   position: absolute;
-  inset: 0 128px auto 0;
-  height: 7px;
+  inset: 0 140px 0 0;
+  height: 100%;
   pointer-events: auto;
   -webkit-app-region: drag;
+}
+
+/* Ensure all interactive controls are never blocked by dragging */
+button, a, input, select, textarea, [role="button"], [role="slider"], .mellow-window-control {
+  -webkit-app-region: no-drag;
 }
 
 .mellow-window-controls {
@@ -476,25 +497,29 @@
 }
 
 @layer base {
-  /* Quiet, theme-aware scrollbars that remain easy to catch while scrolling. */
+  /* Overlay scrollbars: Completely transparent track, only white/translucent capsule thumb on hover */
   ::-webkit-scrollbar {
-    width: 9px;
-    height: 9px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.018);
+    background: transparent !important;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: color-mix(in srgb, var(--theme-accent, #9b55f5) 8%, rgba(235, 237, 245, 0.2));
+    background-color: transparent;
     border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: content-box;
+    transition: background-color 0.18s ease;
+  }
+
+  *:hover::-webkit-scrollbar-thumb,
+  *:focus-within::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in srgb, var(--theme-accent, #9b55f5) 20%, rgba(245, 246, 255, 0.34));
+    background-color: rgba(255, 255, 255, 0.55) !important;
   }
 
   ::-webkit-scrollbar-corner {
@@ -503,7 +528,11 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--theme-accent, #9b55f5) 12%, rgba(235, 237, 245, 0.24)) transparent;
+    scrollbar-color: transparent transparent;
+  }
+
+  *:hover, *:focus-within {
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   }
 
   .mellow-sidebar-scroll {
@@ -626,13 +655,15 @@
   }
 
   .mellow-ambient-bloom {
-    background: radial-gradient(ellipse var(--ambient-spread, 78%) 68% at 29% 6%, color-mix(in srgb, var(--ambient-glow-tint, var(--playback-tint, var(--theme-accent))) 72%, transparent) 0%, transparent 68%);
+    background:
+      radial-gradient(ellipse var(--ambient-spread, 85%) 78% at 30% 10%, color-mix(in srgb, var(--ambient-glow-tint, var(--playback-tint, var(--theme-accent))) 84%, transparent) 0%, transparent 72%),
+      radial-gradient(ellipse var(--ambient-spread, 85%) 72% at 72% 14%, color-mix(in srgb, var(--ambient-glow-tint, var(--playback-tint, var(--theme-accent))) 58%, transparent) 0%, transparent 70%);
     animation: mellow-ambient-breathe var(--ambient-motion-duration, 30s) ease-in-out infinite alternate;
   }
 
   @keyframes mellow-ambient-breathe {
-    from { opacity: var(--ambient-motion-low, .56); }
-    to { opacity: var(--ambient-motion-high, .68); }
+    from { opacity: var(--ambient-motion-low, .78); }
+    to { opacity: var(--ambient-motion-high, 1); }
   }
 
   .mellow-sidebar-edge-glow {
@@ -658,7 +689,7 @@
   :root[data-ambient-motion='off'] .mellow-ambient-bloom,
   :root[data-low-resource='on'] .mellow-ambient-bloom {
     animation: none;
-    opacity: 0.62;
+    opacity: 0.9;
     will-change: auto;
   }
 

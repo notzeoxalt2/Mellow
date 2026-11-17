@@ -171,7 +171,7 @@ async function errorOf(response: Response): Promise<PartyError> {
   const body = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
   return new PartyError(
     body?.error || `http_${response.status}`,
-    body?.message || (response.status === 422 ? 'This account can’t be used to jam.' : `The party server said ${response.status}.`),
+    body?.message || (response.status === 422 ? 'This account can’t be used to jam.' : response.status === 404 ? 'The community party server is offline (404). Please provide a working custom party server in settings below.' : `The party server said ${response.status}.`),
     response.status,
   );
 }

@@ -332,6 +332,9 @@ function ensureAutomix(): Promise<AutomixGraph | null> {
     );
     graph = built;
     applyVolumes();
+    void import('@/lib/musicBeat').then(({ attachAutomixMasterAnalyser }) => {
+      attachAutomixMasterAnalyser(built.ctx, built.master);
+    });
     if (import.meta.env.DEV) Object.assign(window, { __bcAutomix: built, __bcAnalyzer: analyzer });
     return built;
   });
@@ -1102,6 +1105,13 @@ function applyTrack(track: LoadedTrack, from?: Track) {
     const accentGlow = document.documentElement.style.getPropertyValue('--theme-accent-glow') || 'rgba(255, 82, 113, 0.34)';
     const playerState = usePlayer.getState();
     const currentQueueTrack = playerState.queue[playerState.index]?.track;
+    const upcomingQueue = playerState.queue.slice(playerState.index + 1, playerState.index + 8).map((entry) => ({
+      videoId: entry.track.videoId,
+      title: entry.track.title,
+      artist: entry.track.artists?.map((a) => a.name).join(', ') || '',
+      thumbnail: entry.track.thumbnail,
+      durationSec: entry.track.durationSec || 0,
+    }));
     window.electronAPI.updateNowPlaying({
       videoId: nowPlaying.videoId,
       title: nowPlaying.title,
@@ -1110,8 +1120,11 @@ function applyTrack(track: LoadedTrack, from?: Track) {
       artworkUrl: nowPlaying.artworkUrl,
       durationSec: nowPlaying.durationSec,
       status: playerState.status,
+      shuffle: playerState.shuffle,
+      repeat: playerState.repeat,
       accent,
       accentGlow,
+      upcomingQueue,
     });
   }
   followVideo();

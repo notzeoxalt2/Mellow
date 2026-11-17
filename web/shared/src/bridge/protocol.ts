@@ -194,6 +194,17 @@ export interface BridgeMethods {
       sections: { title: string; playlists: SpotifyPlaylist[] }[];
     };
   };
+  'spotify.likeTrack': { params: { trackId: string; liked: boolean }; result: boolean };
+  'spotify.createPlaylist': {
+    params: { title: string; description?: string; trackUris?: string[] };
+    result: { id: string; url: string } | null;
+  };
+  'spotify.addTracksToPlaylist': {
+    params: { playlistId: string; trackUris: string[] };
+    result: boolean;
+  };
+  'discordRpc.setEnabled': { params: { enabled: boolean }; result: { enabled: boolean } };
+  'discordRpc.getState': { params: Record<string, never>; result: { enabled: boolean } };
 }
 
 export type BridgeMethod = keyof BridgeMethods;

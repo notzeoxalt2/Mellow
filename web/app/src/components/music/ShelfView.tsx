@@ -134,6 +134,7 @@ export function TrackShelf({ title, to, tracks, source }: { title: string; to?: 
 
 /** A titled horizontal shelf (report §2): grid columns per breakpoint, scroll-snap, hover arrows. */
 export function ShelfView({ shelf, allowNotInterested = false }: { shelf: Shelf; allowNotInterested?: boolean }) {
+  if (!shelf.items || shelf.items.length === 0) return null;
   return (
     <section className={shelfSection} aria-label={shelf.title}>
       <ShelfTitle title={shelf.title} to={shelf.seeAll ? browseHref(shelf.seeAll) : null} />
@@ -148,15 +149,11 @@ export function ShelfView({ shelf, allowNotInterested = false }: { shelf: Shelf;
 
 /** Shelves in order, each its own section. */
 export function Shelves({ shelves, allowNotInterested = false }: { shelves: Shelf[]; allowNotInterested?: boolean }) {
+  const nonEmpty = (shelves || []).filter((s) => s && s.items && s.items.length > 0);
   return (
     <>
-      {shelves.map((shelf, i) => (
-        <DeferredMount
-          key={`${shelf.title}-${i}`}
-          placeholder={<ShelfPlaceholder title={shelf.title} kind={shelf.layout} />}
-        >
-          <ShelfView shelf={shelf} allowNotInterested={allowNotInterested} />
-        </DeferredMount>
+      {nonEmpty.map((shelf, i) => (
+        <ShelfView key={`${shelf.title}-${i}`} shelf={shelf} allowNotInterested={allowNotInterested} />
       ))}
     </>
   );

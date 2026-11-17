@@ -26,7 +26,6 @@ interface ElectronAPI {
   openSpotifyLogin?: () => void;
   openGoogleLogin?: () => void;
   openChromeSync?: () => void;
-  toggleMiniPlayer?: () => void;
   updateNowPlaying?: (track: any) => void;
   setWindowsAccentSync?: (enabled: boolean, color?: string) => Promise<{ ok: boolean; message?: string }>;
   updatePlaybackStatus?: (status: string) => void;

@@ -125,12 +125,21 @@ export function Lcd() {
       className={`group/lcd relative grid h-full items-center gap-x-2 pb-1.5 ${video ? 'grid-cols-[60px_minmax(0,1fr)]' : 'grid-cols-[34px_minmax(0,1fr)]'}`}
     >
       {/* As Apple's: the artwork opens the full-screen player, with an expand glyph on hover. */}
-      <button
-        // A music video plays here in small, at 16:9.
-        className={`group/art relative block h-[34px] overflow-hidden rounded-[6px] bg-joe p-0 transition-[filter,opacity] ${video ? 'w-[60px] bg-black' : 'w-[34px]'}`}
-        aria-label="Open full screen player"
-        onClick={() => openFullScreen(true)}
-      >
+      <div className="relative">
+        <div
+          className="pointer-events-none absolute -inset-1.5 -z-1 rounded-lg blur-[7px] transition-all duration-300"
+          style={{
+            background: 'var(--ambient-glow-tint, var(--theme-accent, #9b55f5))',
+            opacity: status === 'playing' || status === 'buffering' ? 0.85 : 0.35,
+          }}
+          aria-hidden="true"
+        />
+        <button
+          // A music video plays here in small, at 16:9.
+          className={`group/art relative block h-[34px] overflow-hidden rounded-[6px] bg-joe p-0 transition-[filter,opacity] ${video ? 'w-[60px] bg-black' : 'w-[34px]'}`}
+          aria-label="Open full screen player"
+          onClick={() => openFullScreen(true)}
+        >
         {nowPlaying.artworkUrl && (
           <img
             key={nowPlaying.artworkUrl}
@@ -160,6 +169,7 @@ export function Lcd() {
           <Maximize2 size={14} strokeWidth={2.25} />
         </span>
       </button>
+      </div>
       {/* Over the seek line, the names soften into the background so the times can sit over them. */}
       <div className="flex min-w-0 flex-col transition-[filter,opacity] group-has-[[data-scrubber]:hover]/lcd:opacity-30 group-has-[[data-scrubber]:hover]/lcd:blur-[3px] group-has-[[data-dragging]]/lcd:opacity-30 group-has-[[data-dragging]]/lcd:blur-[3px]">
         {title ? (
@@ -215,7 +225,7 @@ function Progress() {
         aria-hidden="true"
       >
         <MixWindowHighlight />
-        <div ref={bar} className="relative size-full origin-left scale-x-(--progress) bg-(--theme-accent) [--progress:0]" />
+        <div ref={bar} className="relative size-full origin-left scale-x-(--progress) bg-(--theme-accent) shadow-[0_0_8px_var(--theme-accent)] [--progress:0]" />
       </div>
     </div>
   );

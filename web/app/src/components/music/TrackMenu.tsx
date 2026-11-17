@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, EyeOff, ListEnd, ListPlus, ListStart, MoreHorizontal, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, EyeOff, ListEnd, ListPlus, ListStart, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator, type MenuPlacement } from '@/components/Menu';
 import {
@@ -8,16 +8,78 @@ import {
   useSetLiked,
   useSignedIn,
 } from '@/data/music/queries';
+import { useSpotifyPlaylists } from '@/data/spotify/queries';
+import { addTracksToSpotifyPlaylist, createSpotifyPlaylist } from '@/data/spotify/api';
+import { createPlaylist as createYtPlaylist } from '@/data/music/api';
+import { queryClient } from '@/lib/queryClient';
 import type { Track } from '@/data/music/types';
 import { usePlayer } from '@/state/player';
 
-function PlaylistChoices({ videoId, onDone, onBack }: { videoId: string; onDone: () => void; onBack: () => void }) {
-  const options = usePlaylistOptions(videoId, true);
+function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () => void; onBack: () => void }) {
+  const options = usePlaylistOptions(track.videoId, true);
+  const spotifyPlaylists = useSpotifyPlaylists();
   const add = useAddToPlaylist();
+  const [creating, setCreating] = useState(false);
+  const [playlistName, setPlaylistName] = useState('');
+
+  const handleCreateNew = async () => {
+    const title = playlistName.trim();
+    if (!title) return;
+    try {
+      await createYtPlaylist(title, [track.videoId]);
+      await createSpotifyPlaylist(title, 'Created with Mellow', [`spotify:track:${track.videoId}`]).catch(() => null);
+    } catch {}
+    void queryClient.invalidateQueries({ queryKey: ['music', 'library'] });
+    void queryClient.invalidateQueries({ queryKey: ['music', 'playlist'] });
+    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data'] });
+    onDone();
+  };
+
+  if (creating) {
+    return (
+      <div className="p-3 flex flex-col gap-2 min-w-[220px]">
+        <span className="text-xs font-semibold text-secondary">New Playlist</span>
+        <input
+          type="text"
+          autoFocus
+          placeholder="Playlist title"
+          value={playlistName}
+          onChange={(e) => setPlaylistName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void handleCreateNew();
+            if (e.key === 'Escape') setCreating(false);
+          }}
+          className="w-full rounded-md bg-white/10 px-2.5 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-(--theme-accent)"
+        />
+        <div className="flex justify-end gap-1.5 mt-1">
+          <button
+            type="button"
+            className="px-2.5 py-1 text-xs rounded-md text-secondary hover:text-primary hover:bg-white/10 cursor-pointer"
+            onClick={() => setCreating(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="px-2.5 py-1 text-xs rounded-md bg-(--theme-accent) text-white font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer"
+            disabled={!playlistName.trim()}
+            onClick={() => void handleCreateNew()}
+          >
+            Create & Add
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <MenuItem icon={<ChevronLeft size={14} />} onSelect={onBack}>
         Back
+      </MenuItem>
+      <MenuSeparator />
+      <MenuItem icon={<Plus size={14} />} onSelect={() => setCreating(true)}>
+        + New Playlist
       </MenuItem>
       <MenuSeparator />
       <MenuHeader>Add to Playlist</MenuHeader>
@@ -31,22 +93,37 @@ function PlaylistChoices({ videoId, onDone, onBack }: { videoId: string; onDone:
           Couldn’t load your playlists
         </MenuItem>
       )}
-      {options.data?.length === 0 && (
-        <MenuItem disabled onSelect={() => {}}>
-          No playlists yet
-        </MenuItem>
-      )}
       {options.data?.map((option) => (
         <MenuItem
           key={option.playlistId}
           onSelect={() => {
-            add.mutate({ playlistId: option.playlistId, videoId });
+            add.mutate({ playlistId: option.playlistId, videoId: track.videoId });
+            void queryClient.invalidateQueries({ queryKey: ['music', 'library'] });
+            void queryClient.invalidateQueries({ queryKey: ['music', 'playlist'] });
             onDone();
           }}
         >
           {option.title}
         </MenuItem>
       ))}
+      {spotifyPlaylists.data && spotifyPlaylists.data.length > 0 && (
+        <>
+          <MenuSeparator />
+          <MenuHeader>Spotify Playlists</MenuHeader>
+          {spotifyPlaylists.data.map((sp) => (
+            <MenuItem
+              key={sp.id}
+              onSelect={async () => {
+                await addTracksToSpotifyPlaylist(sp.id, [track.videoId]);
+                void queryClient.invalidateQueries({ queryKey: ['spotify', 'data'] });
+                onDone();
+              }}
+            >
+              {sp.name}
+            </MenuItem>
+          ))}
+        </>
+      )}
     </>
   );
 }
@@ -56,6 +133,11 @@ function AccountItems({ track, onClose, onPlaylists }: { track: Track; onClose: 
   const status = useLikeStatus(track.videoId);
   const setLiked = useSetLiked();
   const liked = status.data === 'LIKE';
+  const effectiveTrack = {
+    title: track.title,
+    artist: track.artists.map((a) => a.name).join(', '),
+    durationSec: track.durationSec ?? undefined,
+  };
   return (
     <>
       <MenuSeparator />
@@ -63,7 +145,7 @@ function AccountItems({ track, onClose, onPlaylists }: { track: Track; onClose: 
         icon={<Star size={15} fill={liked ? 'currentColor' : 'none'} />}
         disabled={status.isPending}
         onSelect={() => {
-          setLiked.mutate({ videoId: track.videoId, liked: !liked });
+          setLiked.mutate({ videoId: track.videoId, liked: !liked, track: effectiveTrack });
           onClose();
         }}
       >
@@ -80,7 +162,7 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
   const [view, setView] = useState<'main' | 'playlists'>('main');
   const signedIn = useSignedIn();
   if (view === 'playlists') {
-    return <PlaylistChoices videoId={track.videoId} onDone={onClose} onBack={() => setView('main')} />;
+    return <PlaylistChoices track={track} onDone={onClose} onBack={() => setView('main')} />;
   }
   const { playNext, addToQueue } = usePlayer.getState();
   return (

@@ -14,13 +14,13 @@ import { nextVolumeFromWheel } from './wheelVolume';
  * `--volume-gap` on the row where the speaker is a different size.
  */
 const slider = [
-  'absolute top-1/2 right-[var(--volume-gap,33px)] z-20 mx-0 mb-0 -mt-2 block h-5 w-24 cursor-pointer appearance-none rounded-full border border-white/10 bg-[#111218]/95 px-1 shadow-[0_4px_14px_rgba(0,0,0,.45)] backdrop-blur-md',
-  'pointer-events-none translate-x-2 opacity-0 transition-[opacity,translate] duration-200',
+  'absolute top-1/2 right-[var(--volume-gap,33px)] mx-0 mb-0 -mt-2 block h-4 w-24 cursor-pointer appearance-none bg-transparent',
+  'pointer-events-none translate-x-2 opacity-0 transition-[opacity,translate]',
   'data-open:pointer-events-auto data-open:translate-none data-open:opacity-100',
-  '[&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-[2px] [&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,var(--systemPrimary)_var(--fill),var(--systemQuaternary)_var(--fill))]',
-  '[&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-[2px] [&::-moz-range-track]:bg-[linear-gradient(to_right,var(--systemPrimary)_var(--fill),var(--systemQuaternary)_var(--fill))]',
-  '[&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_0_2px_#0006]',
-  '[&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-[0_0_2px_#0006]',
+  '[&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-[2px] [&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,var(--theme-accent,#9b55f5)_var(--fill),rgba(255,255,255,0.2)_var(--fill))]',
+  '[&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-[2px] [&::-moz-range-track]:bg-[linear-gradient(to_right,var(--theme-accent,#9b55f5)_var(--fill),rgba(255,255,255,0.2)_var(--fill))]',
+  '[&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_0_4px_rgba(0,0,0,0.5)]',
+  '[&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-[0_0_4px_rgba(0,0,0,0.5)]',
 ].join(' ');
 
 /** What the level slides in over: the actions sharing the row get out of its way. */
@@ -94,7 +94,7 @@ export function VolumeControl({ open, onOpen, className, iconSize = 20 }: Volume
         onChange={(e) => setVolume(Number(e.currentTarget.value))}
       />
       <button
-        className={`${className} aria-pressed:bg-red-500/15 aria-pressed:text-white aria-pressed:ring-1 aria-pressed:ring-red-400/40 aria-pressed:drop-shadow-[0_0_5px_rgba(255,102,114,0.55)]`}
+        className={`${className} aria-pressed:text-red-400 transition-colors`}
         aria-label={volumeLabel}
         aria-pressed={effectivelyMuted}
         title={volumeLabel}

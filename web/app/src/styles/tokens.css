@@ -47,9 +47,9 @@
   --theme-accent-glow: rgba(155, 85, 245, 0.34);
   --glass-opacity: 82%;
   --glass-blur: 22px;
-  --artwork-glow-strength: 0.42;
-  --artwork-glow-art-opacity: 0.2016;
-  --artwork-glow-bloom-opacity: 0.2268;
+  --artwork-glow-strength: 0.65;
+  --artwork-glow-art-opacity: 0.728;
+  --artwork-glow-bloom-opacity: 0.78;
 
   /* ---- Radii ------------------------------------------------------------- */
   --radius-artwork-small: 5px; /* 40px track rows, horizontal lockups */

@@ -34,6 +34,7 @@ import {
 } from './api';
 import { isLibrarySection, LIKED_MUSIC_PLAYLIST, type LibrarySection } from './library';
 import type { AlbumPage, BrowseLink, BrowsePage, HeaderInfo, PlaylistPage, Shelf, Track } from './types';
+import { syncFavoriteToSpotify } from '@/data/spotify/api';
 
 // TanStack Query for every browse request (prompt §1: caching, dedupe,
 // retries). YouTube requests need the extension, so every query waits for it;
@@ -230,10 +231,15 @@ export function useLikeStatus(videoId: string | null) {
   });
 }
 
-/** Like or unlike, shown at once and put back if YouTube refuses. */
+/** Like or unlike, shown at once and put back if YouTube refuses. Also syncs to Spotify when connected. */
 export function useSetLiked() {
   return useMutation({
-    mutationFn: ({ videoId, liked }: { videoId: string; liked: boolean }) => setTrackLiked(videoId, liked),
+    mutationFn: async ({ videoId, liked, track }: { videoId: string; liked: boolean; track?: { title: string; artist: string; durationSec?: number } }) => {
+      await setTrackLiked(videoId, liked);
+      if (track?.title && track?.artist) {
+        void syncFavoriteToSpotify(track, liked).catch(() => undefined);
+      }
+    },
     onMutate: ({ videoId, liked }) => {
       const previous = queryClient.getQueryData<LikeStatus>(likeKey(videoId));
       queryClient.setQueryData<LikeStatus>(likeKey(videoId), liked ? 'LIKE' : 'INDIFFERENT');
@@ -244,6 +250,8 @@ export function useSetLiked() {
       void queryClient.invalidateQueries({ queryKey: ['music', 'library', 'songs'] });
       void queryClient.invalidateQueries({ queryKey: ['music', 'playlist', LIKED_MUSIC_PLAYLIST] });
       void queryClient.invalidateQueries({ queryKey: ['music', 'playlist', `VL${LIKED_MUSIC_PLAYLIST}`] });
+      void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlist', 'liked'] });
+      void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlists'] });
     },
   });
 }

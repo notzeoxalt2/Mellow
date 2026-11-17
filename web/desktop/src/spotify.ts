@@ -498,3 +498,112 @@ export async function fetchHomeSections(spDc: string): Promise<{
     return { madeForYou: [], recents: [], topMixes: [], sections: [] };
   }
 }
+
+/** Like or unlike a track in the user's Spotify Liked Songs library. */
+export async function likeTrack(spDc: string, trackId: string, liked: boolean): Promise<boolean> {
+  try {
+    const token = await mintAccessToken(spDc);
+    const cleanId = trackId.replace(/^spotify:track:/, '');
+    const method = liked ? 'PUT' : 'DELETE';
+    const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${encodeURIComponent(cleanId)}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+    return response.ok;
+  } catch (err: any) {
+    console.warn('[Mellow] Failed to like track on Spotify:', err?.message);
+    return false;
+  }
+}
+
+/** Create a playlist on Spotify with optional initial tracks. */
+export async function createPlaylist(
+  spDc: string,
+  title: string,
+  description = 'Created with Mellow',
+  trackUris?: string[],
+): Promise<{ id: string; url: string } | null> {
+  try {
+    const token = await mintAccessToken(spDc);
+    let userId = '';
+    try {
+      const meRes = await fetch('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      if (meRes.ok) {
+        const meData = (await meRes.json()) as { id?: string };
+        userId = meData.id || '';
+      }
+    } catch {}
+
+    const url = userId
+      ? `https://api.spotify.com/v1/users/${encodeURIComponent(userId)}/playlists`
+      : 'https://api.spotify.com/v1/me/playlists';
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        name: title,
+        description,
+        public: false,
+      }),
+    });
+
+    if (!res.ok) return null;
+    const created = (await res.json()) as { id: string; external_urls?: { spotify?: string } };
+    const playlistId = created.id;
+    const playlistUrl = created.external_urls?.spotify || `https://open.spotify.com/playlist/${playlistId}`;
+
+    if (trackUris && trackUris.length > 0) {
+      const uris = trackUris.map((u) => (u.startsWith('spotify:track:') ? u : `spotify:track:${u}`));
+      await fetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ uris }),
+      }).catch(() => undefined);
+    }
+
+    return { id: playlistId, url: playlistUrl };
+  } catch (err: any) {
+    console.warn('[Mellow] Failed to create playlist on Spotify:', err?.message);
+    return null;
+  }
+}
+
+/** Add tracks to an existing playlist on Spotify. */
+export async function addTracksToPlaylist(
+  spDc: string,
+  playlistId: string,
+  trackUris: string[],
+): Promise<boolean> {
+  try {
+    const token = await mintAccessToken(spDc);
+    const cleanPlaylistId = playlistId.replace(/^spotify:playlist:/, '');
+    const uris = trackUris.map((u) => (u.startsWith('spotify:track:') ? u : `spotify:track:${u}`));
+    const res = await fetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(cleanPlaylistId)}/tracks`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ uris }),
+    });
+    return res.ok;
+  } catch (err: any) {
+    console.warn('[Mellow] Failed to add tracks to Spotify playlist:', err?.message);
+    return false;
+  }
+}

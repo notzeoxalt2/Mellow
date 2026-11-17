@@ -56,11 +56,10 @@ export function VolumeIcon({ level, size = 24, muted = level === 0, ...props }: 
         <path key={i} transform="translate(2,11.149)" d={d} />
       ))}
       {muted && (
-        <>
-          {/* A light keyline keeps the mute mark legible over tiny glass controls. */}
-          <path d="m20 17 29 30m0-30L20 47" fill="none" stroke="#111218" strokeWidth="13" strokeLinecap="round" />
-          <path d="m20 17 29 30m0-30L20 47" fill="none" stroke="#ff7580" strokeWidth="7" strokeLinecap="round" />
-        </>
+        <g stroke="currentColor" strokeWidth="3.5" strokeLinecap="round">
+          <line x1="36" y1="15" x2="48" y2="27" />
+          <line x1="48" y1="15" x2="36" y2="27" />
+        </g>
       )}
     </svg>
   );

@@ -11,8 +11,10 @@ const RELEASE_NOTES = `## Mellow v1.0.0 — Official Windows Release
 ### Features & Highlights
 - **Unified Music Player**: Stream seamlessly from YouTube Music and Spotify.
 - **Dynamic Ambient Theme**: Real-time background tinting from artwork colors, matching active playlists.
-- **Rich Desktop Controls**: Custom frameless window, Taskbar thumbar controls, Mini Player picture-in-picture mode, Windows accent sync.
-- **Built-in Auto-Updater**: Automatic silent background checks with one-click update and restart directly in Settings.
+- **Editorial Artist View**: Full-bleed hero banner, live in-page catalog search, combined play/shuffle pill, and latest release spotlight.
+- **Interactive Live Settings**: Real-time preview screen showcasing atmosphere glow, glass blur, and theme palettes before toggling.
+- **Direct Background Auto-Update**: Silent background installer download with seamless 1-click update restart.
+- **Refined Desktop Experience**: Frameless window with smooth top-region dragging, clean overlay scrollbars, and taskbar thumbar controls.
 
 ### Downloads
 - **Windows Installer**: \`Mellow-Setup-1.0.0.exe\` (Recommended)

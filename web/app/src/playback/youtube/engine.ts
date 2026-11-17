@@ -316,11 +316,42 @@ export class YouTubeEngine {
   async videoStream(height: number | null = null): Promise<VideoStream | null> {
     const resolved = this.direct;
     if (!resolved) return null;
-    const { videoId, client, info } = resolved;
-    const pictures = (info.streaming_data?.adaptive_formats ?? []).filter(
+    let { videoId, client, info, yt } = resolved;
+    let pictures = (info.streaming_data?.adaptive_formats ?? []).filter(
       (f) => f.has_video && !f.has_audio && f.width && f.height && (f.url || f.signature_cipher || f.cipher),
     );
-    const largest = pictures.sort((a, b) => b.width! * b.height! - a.width! * a.height!)[0];
+    let largest = pictures.sort((a, b) => b.width! * b.height! - a.width! * a.height!)[0];
+
+    // If this stream has no 16:9 video format (it is an audio-only release, still cover art, or Spotify match),
+    // find the official music video for this song so the listener can watch the actual official music video in full screen!
+    if (!largest || largest.width! / largest.height! < MIN_VIDEO_ASPECT) {
+      try {
+        const title = info.basic_info?.title || '';
+        const author = info.basic_info?.author || '';
+        if (title && yt) {
+          const query = `${title} ${author} official video`.trim();
+          const search = await yt.music.search(query, { type: 'video' });
+          const firstHit = (search as any)?.videos?.[0] || (search as any)?.results?.[0];
+          const matchedId = firstHit?.id || firstHit?.video_id;
+          if (matchedId && matchedId !== videoId) {
+            const videoInfo = await yt.getBasicInfo(matchedId, { client } as any);
+            const videoPictures = (videoInfo.streaming_data?.adaptive_formats ?? []).filter(
+              (f) => f.has_video && !f.has_audio && f.width && f.height && (f.url || f.signature_cipher || f.cipher),
+            );
+            const videoLargest = videoPictures.sort((a, b) => b.width! * b.height! - a.width! * a.height!)[0];
+            if (videoLargest && videoLargest.width! / videoLargest.height! >= MIN_VIDEO_ASPECT) {
+              videoId = matchedId;
+              info = videoInfo;
+              pictures = videoPictures;
+              largest = videoLargest;
+            }
+          }
+        }
+      } catch {
+        // Fall back gracefully if search fails
+      }
+    }
+
     if (!largest || largest.width! / largest.height! < MIN_VIDEO_ASPECT) return null;
     const heights = [...new Set(pictures.map((f) => f.height!))].sort((a, b) => b - a);
     const wanted = height !== null && heights.includes(height) ? height : null;

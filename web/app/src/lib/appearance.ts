@@ -43,6 +43,14 @@ export interface AppearancePreferences {
   lowResourceMode: boolean;
   /** Temporarily match the Windows shell accent to the current cover. */
   windowsAccentSync: boolean;
+  playerBarGlow: boolean;
+  playerBarGlowStrength: number;
+  sidebarGlow: boolean;
+  sidebarGlowStrength: number;
+  musicBeatSync: boolean;
+  musicBeatStrength: number;
+  appleMusicRpc: boolean;
+  dualSync: boolean;
 }
 
 export const DEFAULT_APPEARANCE: AppearancePreferences = {
@@ -50,12 +58,12 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   glassOpacity: 82,
   glassBlur: 22,
   artworkBackdrop: true,
-  artworkGlow: 42,
+  artworkGlow: 65,
   playerArtworkAmbient: true,
   fullScreenPlayerAmbient: false,
-  fullScreenArtworkGlow: 42,
+  fullScreenArtworkGlow: 68,
   fullScreenAmbientBlur: 82,
-  ambientSpread: 78,
+  ambientSpread: 85,
   nowPlayingPanelGlow: 22,
   nowPlayingPanelGlowSpread: 55,
   nowPlayingPanelGlowBlur: 44,
@@ -70,6 +78,14 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   playAnimatedArtwork: false,
   lowResourceMode: false,
   windowsAccentSync: false,
+  playerBarGlow: true,
+  playerBarGlowStrength: 70,
+  sidebarGlow: true,
+  sidebarGlowStrength: 60,
+  musicBeatSync: true,
+  musicBeatStrength: 75,
+  appleMusicRpc: true,
+  dualSync: true,
 };
 
 const STORAGE_KEY = 'mellow:appearance';
@@ -95,7 +111,7 @@ export function readAppearancePreferences(): AppearancePreferences {
       fullScreenPlayerAmbient: typeof value.fullScreenPlayerAmbient === 'boolean' ? value.fullScreenPlayerAmbient : DEFAULT_APPEARANCE.fullScreenPlayerAmbient,
       fullScreenArtworkGlow: clamp(value.fullScreenArtworkGlow, 0, 100, DEFAULT_APPEARANCE.fullScreenArtworkGlow),
       fullScreenAmbientBlur: clamp(value.fullScreenAmbientBlur, 16, 140, DEFAULT_APPEARANCE.fullScreenAmbientBlur),
-      ambientSpread: clamp(value.ambientSpread, 40, 120, DEFAULT_APPEARANCE.ambientSpread),
+      ambientSpread: clamp(value.ambientSpread, 20, 300, DEFAULT_APPEARANCE.ambientSpread),
       nowPlayingPanelGlow: clamp(value.nowPlayingPanelGlow, 0, 60, DEFAULT_APPEARANCE.nowPlayingPanelGlow),
       nowPlayingPanelGlowSpread: clamp(value.nowPlayingPanelGlowSpread, 24, 100, DEFAULT_APPEARANCE.nowPlayingPanelGlowSpread),
       nowPlayingPanelGlowBlur: clamp(value.nowPlayingPanelGlowBlur, 8, 96, DEFAULT_APPEARANCE.nowPlayingPanelGlowBlur),
@@ -110,6 +126,14 @@ export function readAppearancePreferences(): AppearancePreferences {
       playAnimatedArtwork: typeof value.playAnimatedArtwork === 'boolean' ? value.playAnimatedArtwork : DEFAULT_APPEARANCE.playAnimatedArtwork,
       lowResourceMode: typeof value.lowResourceMode === 'boolean' ? value.lowResourceMode : DEFAULT_APPEARANCE.lowResourceMode,
       windowsAccentSync: typeof value.windowsAccentSync === 'boolean' ? value.windowsAccentSync : DEFAULT_APPEARANCE.windowsAccentSync,
+      playerBarGlow: typeof value.playerBarGlow === 'boolean' ? value.playerBarGlow : DEFAULT_APPEARANCE.playerBarGlow,
+      playerBarGlowStrength: clamp(value.playerBarGlowStrength, 0, 100, DEFAULT_APPEARANCE.playerBarGlowStrength),
+      sidebarGlow: typeof value.sidebarGlow === 'boolean' ? value.sidebarGlow : DEFAULT_APPEARANCE.sidebarGlow,
+      sidebarGlowStrength: clamp(value.sidebarGlowStrength, 0, 100, DEFAULT_APPEARANCE.sidebarGlowStrength),
+      musicBeatSync: typeof value.musicBeatSync === 'boolean' ? value.musicBeatSync : DEFAULT_APPEARANCE.musicBeatSync,
+      musicBeatStrength: clamp(value.musicBeatStrength, 0, 100, DEFAULT_APPEARANCE.musicBeatStrength),
+      appleMusicRpc: typeof value.appleMusicRpc === 'boolean' ? value.appleMusicRpc : DEFAULT_APPEARANCE.appleMusicRpc,
+      dualSync: typeof value.dualSync === 'boolean' ? value.dualSync : DEFAULT_APPEARANCE.dualSync,
     };
   } catch {
     return DEFAULT_APPEARANCE;
@@ -126,20 +150,25 @@ export function applyAppearancePreferences(preferences: AppearancePreferences): 
   root.style.setProperty('--glass-blur', `${preferences.lowResourceMode ? Math.min(preferences.glassBlur, 8) : preferences.glassBlur}px`);
   const glow = preferences.artworkBackdrop ? preferences.artworkGlow / 100 : 0;
   root.style.setProperty('--artwork-glow-strength', String(glow));
-  root.style.setProperty('--artwork-glow-art-opacity', String(glow * 0.48));
-  root.style.setProperty('--artwork-glow-bloom-opacity', String(glow * 0.54));
-  root.style.setProperty('--fullscreen-artwork-glow-opacity', String(preferences.fullScreenArtworkGlow / 100 * 0.42));
+  root.style.setProperty('--artwork-glow-art-opacity', String(Math.min(1, glow * 1.12)));
+  root.style.setProperty('--artwork-glow-bloom-opacity', String(Math.min(1, glow * 1.2)));
+  root.style.setProperty('--fullscreen-artwork-glow-opacity', String(Math.min(0.95, (preferences.fullScreenArtworkGlow / 100) * 0.85)));
   root.style.setProperty('--fullscreen-ambient-blur', `${preferences.lowResourceMode ? Math.min(preferences.fullScreenAmbientBlur, 26) : preferences.fullScreenAmbientBlur}px`);
   root.style.setProperty('--ambient-spread', `${preferences.ambientSpread}%`);
   root.style.setProperty('--now-playing-glow-opacity', String(preferences.nowPlayingPanelGlow / 100));
   root.style.setProperty('--now-playing-glow-inset', `${-preferences.nowPlayingPanelGlowSpread * 0.36}%`);
   root.style.setProperty('--now-playing-glow-extra', `${preferences.nowPlayingPanelGlowSpread * 0.72}%`);
   root.style.setProperty('--now-playing-glow-blur', `${preferences.lowResourceMode ? Math.min(preferences.nowPlayingPanelGlowBlur, 20) : preferences.nowPlayingPanelGlowBlur}px`);
-  root.style.setProperty('--sidebar-edge-glow-opacity', String(preferences.edgeGlow / 100));
+  root.dataset.sidebarGlow = preferences.sidebarGlow ? 'on' : 'off';
+  root.dataset.musicBeat = preferences.musicBeatSync ? 'on' : 'off';
+  root.style.setProperty('--sidebar-edge-glow-opacity', preferences.sidebarGlow ? String(((preferences.sidebarGlowStrength ?? 60) / 100) * (preferences.edgeGlow / 100)) : '0');
   root.style.setProperty('--sidebar-edge-glow-spread', `${preferences.edgeGlowSpread}px`);
+  root.style.setProperty('--player-bar-glow-opacity', preferences.playerBarGlow ? String(preferences.playerBarGlowStrength / 100) : '0');
+  root.style.setProperty('--music-beat-sync', preferences.musicBeatSync ? '1' : '0');
+  root.style.setProperty('--music-beat-strength', `${preferences.musicBeatStrength ?? 75}%`);
   const movement = preferences.ambientGlowMotion ? preferences.ambientGlowAmount : 0;
-  root.style.setProperty('--ambient-motion-low', String(0.62 - movement / 100 * 0.25));
-  root.style.setProperty('--ambient-motion-high', String(0.62 + movement / 100 * 0.25));
+  root.style.setProperty('--ambient-motion-low', String(Math.max(0.68, 0.88 - movement / 100 * 0.2)));
+  root.style.setProperty('--ambient-motion-high', String(Math.min(1, 0.88 + movement / 100 * 0.14)));
   root.style.setProperty('--ambient-motion-duration', `${Math.round(60 - preferences.ambientMotionSpeed * 0.48)}s`);
   root.dataset.ambientMotion = movement > 0 ? 'on' : 'off';
 }
@@ -200,6 +229,11 @@ export function updateAppearancePreferences(patch: Partial<AppearancePreferences
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     window.dispatchEvent(new CustomEvent('mellow:appearance-changed'));
+    if (patch.appleMusicRpc !== undefined) {
+      import('@/extension/bridge').then(({ getBridge }) => {
+        getBridge()?.call('discordRpc.setEnabled', { enabled: patch.appleMusicRpc! });
+      }).catch(() => undefined);
+    }
   }
   applyAppearancePreferences(next);
   return next;

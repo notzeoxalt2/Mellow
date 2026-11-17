@@ -3,6 +3,7 @@ import { best, type MatchCandidate } from '@/data/match/trackMatcher';
 import { searchSongs } from '@/data/music/api';
 import type { Track } from '@/data/music/types';
 import { getBridge } from '@/extension/bridge';
+import { queryClient } from '@/lib/queryClient';
 
 /**
  * Spotify through the extension (prompt §7.1): the library, a playlist's
@@ -145,4 +146,66 @@ export async function fetchCanvas(track: { videoId: string; title: string; artis
   canvases.set(track.videoId, url);
   if (canvases.size > 200) canvases.delete(canvases.keys().next().value!);
   return url;
+}
+
+export async function syncFavoriteToSpotify(
+  track: { videoId?: string; title: string; artist: string; durationSec?: number },
+  liked: boolean,
+): Promise<boolean> {
+  try {
+    const b = bridge();
+    const hits = await b.call('spotify.searchTracks', { query: `${track.title} ${track.artist}` }, { timeoutMs: 15_000 });
+    if (!hits || !hits.length) return false;
+    const pick = best(
+      hits.map((h) => ({
+        title: h.title,
+        artist: h.artist,
+        durationSec: h.durationMs > 0 ? Math.round(h.durationMs / 1000) : null,
+        album: h.album,
+        id: h.id,
+      })),
+      { title: track.title, artist: track.artist, durationSec: track.durationSec && track.durationSec > 0 ? Math.round(track.durationSec) : null },
+    );
+    const targetId = pick?.id ?? hits[0]?.id;
+    if (!targetId) return false;
+    const ok = await b.call('spotify.likeTrack', { trackId: targetId, liked }, { timeoutMs: 15_000 });
+    // Instantly invalidate Spotify liked songs cache so the app updates immediately
+    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlist', 'liked'] });
+    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlists'] });
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function createSpotifyPlaylist(
+  title: string,
+  description?: string,
+  trackUris?: string[],
+): Promise<{ id: string; url: string } | null> {
+  try {
+    const b = bridge();
+    const res = await b.call('spotify.createPlaylist', { title, description, trackUris }, { timeoutMs: 20_000 });
+    // Instantly invalidate Spotify playlists queries
+    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlists'] });
+    return res;
+  } catch {
+    return null;
+  }
+}
+
+export async function addTracksToSpotifyPlaylist(
+  playlistId: string,
+  trackUris: string[],
+): Promise<boolean> {
+  try {
+    const b = bridge();
+    const ok = await b.call('spotify.addTracksToPlaylist', { playlistId, trackUris }, { timeoutMs: 20_000 });
+    // Instantly invalidate Spotify playlist and playlists queries
+    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlist', playlistId] });
+    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlists'] });
+    return ok;
+  } catch {
+    return false;
+  }
 }

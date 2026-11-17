@@ -1,19 +1,22 @@
 /** The Mellow wave mark, drawn in the current theme accent. */
-export function LogoMark({ size = 20, className }: { size?: number; className?: string }) {
+export function LogoMark({ size = 20, className, playing = false }: { size?: number; className?: string; playing?: boolean }) {
   return (
     <svg
       viewBox="0 0 730 484"
       width={size}
       height={(size * 484) / 730}
-      className={className}
+      className={`${className || ''} ${playing ? 'logo-playing-pulse will-change-transform' : ''}`}
       aria-hidden="true"
       focusable="false"
       style={{
         display: 'inline-block',
         color: 'color-mix(in srgb, var(--theme-accent, #9b78ff) 84%, white 16%)',
-        filter: 'drop-shadow(0 0 3px color-mix(in srgb, var(--theme-accent, #9b78ff) 18%, transparent))',
-        opacity: 0.92,
+        filter: playing
+          ? 'drop-shadow(0 0 8px color-mix(in srgb, var(--ambient-glow-tint, var(--theme-accent)) 65%, transparent))'
+          : 'drop-shadow(0 0 3px color-mix(in srgb, var(--theme-accent, #9b78ff) 18%, transparent))',
+        opacity: playing ? 1 : 0.92,
         verticalAlign: 'middle',
+        transition: 'filter 0.3s ease, opacity 0.3s ease',
       }}
     >
       <path

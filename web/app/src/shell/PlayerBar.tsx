@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useArtworkColor } from '@/lib/artworkColor';
-import { PanelRight, PictureInPicture2 } from 'lucide-react';
+import { readAppearancePreferences } from '@/lib/appearance';
+import { PanelRight } from 'lucide-react';
 import {
   BackwardIcon,
   ForwardIcon,
@@ -47,6 +48,13 @@ export function PlayerBar() {
   const repeat = usePlayer((s) => s.repeat);
   const { togglePlay, next, previous, toggleShuffle, cycleRepeat } = usePlayer.getState();
   const [volumeOpen, setVolumeOpen] = useState(false);
+  const [appearance, setAppearance] = useState(readAppearancePreferences);
+
+  useEffect(() => {
+    const onAppChange = () => setAppearance(readAppearancePreferences());
+    window.addEventListener('mellow:appearance-changed', onAppChange);
+    return () => window.removeEventListener('mellow:appearance-changed', onAppChange);
+  }, []);
 
   return (
     // The side panel overlays the page; the pill re-centres in what's left.
@@ -55,11 +63,14 @@ export function PlayerBar() {
       data-panel-open={sidePanel !== null}
     >
       <div
-        className="mellow-glass group/pill pointer-events-auto relative grid h-(--player-pill-height) w-[min(680px,100%)] grid-cols-[184px_minmax(180px,427px)_minmax(57px,auto)] items-center rounded-pill px-4 border border-white/12 shadow-[0_18px_42px_rgba(0,0,0,0.58)] transition-all duration-300"
-        style={artColor ? {
-          boxShadow: '0 18px 42px rgba(0, 0, 0, 0.58), 0 0 22px color-mix(in srgb, var(--theme-accent) 10%, transparent)',
-          borderColor: 'color-mix(in srgb, var(--theme-accent) 12%, rgba(255, 255, 255, 0.16))',
-        } : undefined}
+        className="glass-pill group/pill pointer-events-auto relative grid h-(--player-pill-height) w-[min(668px,100%)] grid-cols-[184px_minmax(180px,427px)_minmax(57px,auto)] items-center rounded-pill px-4 transition-shadow duration-300"
+        style={
+          hasTrack && appearance.playerBarGlow
+            ? {
+                boxShadow: `0 18px 46px rgba(0, 0, 0, 0.55), 0 0 28px color-mix(in srgb, var(--ambient-glow-tint, var(--theme-accent)) ${((appearance.playerBarGlowStrength / 100) * 40).toFixed(1)}%, transparent)`,
+              }
+            : undefined
+        }
         role="region"
         aria-label="Player"
       >
@@ -104,7 +115,11 @@ export function PlayerBar() {
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setVolumeOpen(false);
           }}
         >
-          <FavoriteButton videoId={videoId} className={fading} />
+          <FavoriteButton
+            videoId={videoId}
+            track={nowPlaying ? { title: nowPlaying.title, artist: nowPlaying.artist } : undefined}
+            className={fading}
+          />
           {track && <TrackMenu track={track} className={fading} placement="above-end" />}
           {/* Always here: the panel itself says whether this track has lyrics, and from where. */}
           <button className={fading} aria-label="Lyrics" aria-pressed={sidePanel === 'lyrics'} onClick={() => toggleSidePanel('lyrics')}>
@@ -121,16 +136,6 @@ export function PlayerBar() {
           >
             <UpNextIcon size={18} />
           </button>
-          {typeof window !== 'undefined' && window.electronAPI?.isDesktop && (
-            <button
-              className={fading}
-              aria-label="Mini Player Popout"
-              title="Mini Player Popout"
-              onClick={() => window.electronAPI?.toggleMiniPlayer?.()}
-            >
-              <PictureInPicture2 size={18} />
-            </button>
-          )}
           <VolumeControl open={volumeOpen} onOpen={() => setVolumeOpen(true)} className={action} />
         </div>
       </div>

@@ -15,7 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openSpotifyLogin: () => ipcRenderer.invoke('auth-spotify-login'),
   openGoogleLogin: () => ipcRenderer.invoke('auth-google-login'),
   openChromeSync: () => ipcRenderer.invoke('open-chrome-sync'),
-  toggleMiniPlayer: () => ipcRenderer.invoke('toggle-mini-player'),
   updateNowPlaying: (track: any) => ipcRenderer.send('update-now-playing', track),
   setWindowsAccentSync: (enabled: boolean, color?: string) =>
     ipcRenderer.invoke('windows-accent-sync', enabled, color),
@@ -64,18 +63,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 });
 
-/** The floating player gets only the four controls it needs, not Node access. */
-contextBridge.exposeInMainWorld('mellowMiniPlayer', {
-  action: (action: string) => ipcRenderer.send('mini-player-action', action),
-  seek: (ratio: number) => ipcRenderer.send('mini-player-seek', ratio),
-  restore: () => ipcRenderer.send('mini-player-restore'),
-  close: () => ipcRenderer.send('mini-player-close'),
-  onUpdate: (callback: (state: unknown) => void) => {
-    const handler = (_: unknown, state: unknown) => callback(state);
-    ipcRenderer.on('mini-player-update', handler);
-    return () => ipcRenderer.removeListener('mini-player-update', handler);
-  },
-});
 
 // Bridge message relay: Intercepts bitchord-bridge messages from window.postMessage as well
 window.addEventListener('message', async (event) => {

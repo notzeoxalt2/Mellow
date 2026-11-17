@@ -16,16 +16,24 @@ import {
   fetchSpotifyCategories,
   fetchSpotifyCategoryPlaylists,
   fetchSpotifyProfile,
+  likeTrack,
+  createPlaylist,
+  addTracksToPlaylist,
   LIKED_ID,
 } from './spotify.js';
+import { discordRpc } from './discordRpc.js';
 import { mergeYouTubeCookies, prioritizeYouTubeSigningCookie, resetYouTubeChannelForSessionChange } from './ytCookies.js';
 import { isDesktopYouTubeSignedIn, shouldVerifyDesktopYouTubeAtStartup, validateYouTubeAccountMenu } from './ytAuthValidation.js';
 import { setupAutoUpdater } from './updater.js';
 
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256');
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=512');
 app.commandLine.appendSwitch('disable-web-security');
-app.commandLine.appendSwitch('renderer-process-limit', '2');
+app.commandLine.appendSwitch('renderer-process-limit', '4');
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+// High-performance DirectX GPU hardware acceleration flags for buttery 120-144 FPS smoothness
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
 
 function sapisidHash(secret: string, origin: string): string {
   const timestamp = Math.floor(Date.now() / 1000);
@@ -130,10 +138,6 @@ async function shutdownApp() {
   shutdownInProgress = true;
   if (fs.existsSync(windowsAccentBackup)) await restoreWindowsAccentAsync(app.getPath('userData'));
   try {
-    if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-      miniPlayerWindow.destroy();
-      miniPlayerWindow = null;
-    }
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.destroy();
       mainWindow = null;
@@ -748,19 +752,7 @@ function createMainWindow() {
   // Track maximize state and notify renderer
   mainWindow.on('maximize', () => mainWindow?.webContents.send('window-maximize-changed', true));
   mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window-maximize-changed', false));
-  let miniPlayerAutoOpened = false;
-  mainWindow.on('minimize', () => {
-    if (currentTrackState.title) {
-      miniPlayerAutoOpened = true;
-      createOrShowMiniPlayer();
-    }
-  });
-  mainWindow.on('restore', () => {
-    if (miniPlayerAutoOpened) {
-      destroyMiniPlayer();
-      miniPlayerAutoOpened = false;
-    }
-  });
+
   mainWindow.on('close', () => {
     shutdownApp();
   });
@@ -922,7 +914,7 @@ ipcMain.handle('windows-accent-sync', async (_, enabled: unknown, color: unknown
   }
 });
 
-let miniPlayerWindow: BrowserWindow | null = null;
+// Playback state for Windows Taskbar Thumbar
 let currentTrackState = {
   videoId: '',
   title: '',
@@ -934,129 +926,22 @@ let currentTrackState = {
   durationSec: 0,
 };
 
-function getMiniPlayerBounds() {
-  const anchorBounds = mainWindow && !mainWindow.isDestroyed()
-    ? mainWindow.getBounds()
-    : screen.getPrimaryDisplay().workArea;
-  const { workArea } = screen.getDisplayMatching(anchorBounds);
-  const width = 488;
-  const height = 142;
-  const margin = 20;
-
-  return {
-    x: Math.max(workArea.x + margin, workArea.x + workArea.width - width - margin),
-    y: Math.max(workArea.y + margin, workArea.y + workArea.height - height - margin),
-    width,
-    height,
-  };
-}
-
-function createOrShowMiniPlayer() {
-  if (miniPlayerWindow && !miniPlayerWindow.isDestroyed()) {
-    miniPlayerWindow.setBounds(getMiniPlayerBounds());
-    miniPlayerWindow.showInactive();
-    miniPlayerWindow.webContents.send('mini-player-update', currentTrackState);
-    return;
-  }
-
-  const appIcon = getAppIcon();
-  miniPlayerWindow = new BrowserWindow({
-    ...getMiniPlayerBounds(),
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    skipTaskbar: false,
-    title: 'Mellow Mini Player',
-    icon: appIcon || undefined,
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-    },
-  });
-
-  const miniHtmlCandidates = [
-    path.join(app.getAppPath(), 'dist/mini-player.html'),
-    path.join(__dirname, 'mini-player.html'),
-    path.join(__dirname, '../src/mini-player.html'),
-  ];
-  const miniHtml = miniHtmlCandidates.find((p) => fs.existsSync(p));
-  if (miniHtml) {
-    miniPlayerWindow.loadFile(miniHtml);
-  }
-
-  miniPlayerWindow.once('ready-to-show', () => {
-    miniPlayerWindow?.showInactive();
-    miniPlayerWindow?.webContents.send('mini-player-update', currentTrackState);
-  });
-
-  miniPlayerWindow.on('closed', () => {
-    miniPlayerWindow = null;
-  });
-}
-
-/** Release Chromium's extra renderer when the floating player is not in use. */
-function destroyMiniPlayer() {
-  if (!miniPlayerWindow || miniPlayerWindow.isDestroyed()) {
-    miniPlayerWindow = null;
-    return;
-  }
-  const windowToDestroy = miniPlayerWindow;
-  miniPlayerWindow = null;
-  windowToDestroy.destroy();
-}
-
-// Mini Player & Playback Sync IPC
 ipcMain.on('update-now-playing', (_, track) => {
   if (track?.videoId && track.videoId !== currentTrackState.videoId) currentTrackState.positionSec = 0;
   currentTrackState = { ...currentTrackState, ...track };
-  miniPlayerWindow?.webContents.send('mini-player-update', currentTrackState);
+  discordRpc.updatePresence(currentTrackState);
 });
 
 ipcMain.on('update-playback-status', (_, status) => {
   currentTrackState.status = status;
-  miniPlayerWindow?.webContents.send('mini-player-update', currentTrackState);
   updateThumbarButtons(status === 'playing' || status === 'buffering');
+  discordRpc.updatePresence(currentTrackState);
 });
 
 ipcMain.on('update-playback-position', (_, positionSec, durationSec) => {
-  if (!miniPlayerWindow || miniPlayerWindow.isDestroyed()) return;
   currentTrackState.positionSec = Math.max(0, Number(positionSec) || 0);
   currentTrackState.durationSec = Math.max(0, Number(durationSec) || 0);
-  miniPlayerWindow.webContents.send('mini-player-update', currentTrackState);
-});
-
-ipcMain.handle('toggle-mini-player', () => {
-  if (miniPlayerWindow && miniPlayerWindow.isVisible()) {
-    destroyMiniPlayer();
-  } else {
-    createOrShowMiniPlayer();
-  }
-});
-
-ipcMain.on('mini-player-action', (_, action) => {
-  mainWindow?.webContents.send('player-action', action);
-});
-
-ipcMain.on('mini-player-seek', (_, ratio) => {
-  const value = Number(ratio);
-  if (Number.isFinite(value)) mainWindow?.webContents.send('player-action', `seek:${Math.max(0, Math.min(1, value))}`);
-});
-
-ipcMain.on('mini-player-restore', () => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
-  }
-  destroyMiniPlayer();
-});
-
-ipcMain.on('mini-player-close', () => {
-  destroyMiniPlayer();
+  discordRpc.updatePresence(currentTrackState);
 });
 
 // Open external URL in user's default Chrome browser
@@ -1182,6 +1067,33 @@ ipcMain.handle('bitchord-bridge-call', async (_, request) => {
         if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success({ madeForYou: [], recents: [], topMixes: [], sections: [] });
         const sections = await fetchHomeSections(currentAuth.spDc);
         return success(sections);
+      }
+
+      case 'spotify.likeTrack': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success(false);
+        const ok = await likeTrack(currentAuth.spDc, params.trackId, params.liked);
+        return success(ok);
+      }
+
+      case 'spotify.createPlaylist': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return failure('unauthenticated', 'Spotify is paused in Settings or not signed in');
+        const res = await createPlaylist(currentAuth.spDc, params.title, params.description, params.trackUris);
+        return success(res);
+      }
+
+      case 'spotify.addTracksToPlaylist': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return failure('unauthenticated', 'Spotify is paused in Settings or not signed in');
+        const ok = await addTracksToPlaylist(currentAuth.spDc, params.playlistId, params.trackUris);
+        return success(ok);
+      }
+
+      case 'discordRpc.setEnabled': {
+        discordRpc.setEnabled(!!params.enabled);
+        return success({ enabled: discordRpc.isEnabled() });
+      }
+
+      case 'discordRpc.getState': {
+        return success({ enabled: discordRpc.isEnabled() });
       }
 
       case 'yt.authState':
