@@ -9,15 +9,19 @@ const cache = new Map<string, Rgb[]>();
 const CACHE_LIMIT = 64;
 
 /**
- * Pushes a cell's colour toward something white text stands on: a little more
- * saturated, and no brighter than a mid-dark tone. Dark cells stay as they are,
- * so a mostly black sleeve still makes a mostly black backdrop.
+ * Pushes a cell's colour toward vibrant, luminous tones like Apple Music:
+ * saturated, rich, and never crushed to murky mud.
  */
 function shape([r, g, b]: Rgb): Rgb {
   const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  const saturated = [r, g, b].map((v) => gray + (v - gray) * 1.3) as Rgb;
+  // Increase saturation factor so color blooms stay rich and vibrant
+  const saturated = [r, g, b].map((v) => gray + (v - gray) * 1.45) as Rgb;
   const luminance = gray / 255;
-  const k = luminance > 0.38 ? 0.38 / luminance : 1;
+  // Preserve luminous gradients: allow tones up to 0.65 with soft exponential compression
+  // and lift near-black tones slightly so dark red/brown album art doesn't collapse into sludge.
+  const k = luminance > 0.65
+    ? Math.pow(0.65 / luminance, 0.65)
+    : (luminance < 0.07 ? 1.35 : 1.0);
   return saturated.map((v) => Math.round(Math.min(255, Math.max(0, v * k)))) as Rgb;
 }
 

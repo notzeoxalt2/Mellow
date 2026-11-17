@@ -381,6 +381,25 @@ export default function SettingsPage() {
             />
           )}
           <Toggle
+            label="Smart Gaming & Memory Saver"
+            detail="Automatically pauses background video decoders and heavy animations when Mellow is minimized or you are gaming in another window."
+            checked={appearance.smartMemorySaving}
+            onChange={(on) => update({ smartMemorySaving: on })}
+          />
+          <label className={settingsUi.controlRow}>
+            <span>Visuals & Video Preference</span>
+            <Select<'spotify' | 'youtube' | 'auto'>
+              label="Visuals & Video Preference"
+              value={appearance.videoPreference}
+              options={[
+                { value: 'spotify', label: 'Spotify Canvas (Looping Visual)' },
+                { value: 'youtube', label: 'YouTube Official Music Video' },
+                { value: 'auto', label: 'Smart Auto' },
+              ]}
+              onChange={(value) => update({ videoPreference: value })}
+            />
+          </label>
+          <Toggle
             label="Low Resource Mode"
             detail="Limits background GPU work for maximum battery life and high gaming performance."
             checked={appearance.lowResourceMode}
@@ -433,6 +452,10 @@ export default function SettingsPage() {
               />
             </label>
           )}
+          <div className={settingsUi.controlRow}>
+            <span>Audio Quality</span>
+            <span className="type-[500_12px/16px] text-tertiary">Maximum Bitrate (Opus 256/160kbps, AAC) • DRC Off</span>
+          </div>
           <Toggle
             label="Show Stats for Nerds"
             detail="Codec, bitrate and sample rate under the artist in the full-screen player, and what Automix is doing."

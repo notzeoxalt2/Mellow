@@ -1,4 +1,4 @@
-import { Film, Maximize, Minimize, Minus, Video, VideoOff, X } from 'lucide-react';
+import { Loader2, Maximize, Minimize, Sparkles, SunMedium, Video, VideoOff, X } from 'lucide-react';
 import type { Track } from '@/data/music/types';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router';
@@ -194,13 +194,19 @@ export function FullScreenPlayer() {
   const [resolvingVideo, setResolvingVideo] = useState(false);
   const handleToggleOrFindVideo = async () => {
     if (video) {
-      if (theater) setPanel('lyrics');
-      else setPanel(null);
+      // User clicked official video button again: STOP the video and revert to normal player
+      try {
+        const { stopVideo } = await import('@/playback/youtube/videoDeck');
+        stopVideo();
+      } catch {}
+      useVideo.setState({ videoId: null, surfaces: 0 });
+      setPanel('lyrics');
       return;
     }
     if (!nowPlaying) return;
     setResolvingVideo(true);
     try {
+      useVideo.setState({ surfaces: 1 });
       const { fetchSearch } = await import('@/data/music/api');
       const query = `${nowPlaying.title} ${nowPlaying.artist} official video`;
       const search = await fetchSearch(query);
@@ -313,22 +319,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
       {!theater && fullScreenPlayerAmbient && (
-        canvas && !canvasDisabled ? (
-          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-            <video
-              key={canvas}
-              src={canvas}
-              playsInline
-              loop
-              muted
-              autoPlay
-              className="size-full object-cover scale-125 blur-[75px] saturate-[180%] brightness-110 opacity-75 transition-opacity duration-700"
-            />
-            <div className="absolute inset-0 bg-black/40" />
-          </div>
-        ) : (
-          <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
-        )
+        <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
       )}
       {theater && (
         <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in bg-black">
@@ -339,36 +330,61 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       <button ref={close} className={closeCorner} aria-label="Close" title="Close player" onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
         <X size={20} />
       </button>
-      {/* Top right clean window controls (matches minimalist full screen design) */}
+      {/* Top right clean icon controls (Apple Music minimalist glass design, pure Lucide icons) */}
       <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-2">
-        {/* Toggle or find official music video */}
+        {/* Button 1: Official Music Video (Click to watch, click again while active to stop) */}
         <button
           type="button"
-          className={`h-8 px-3.5 cursor-pointer rounded-full text-xs font-medium flex items-center gap-1.5 transition-all backdrop-blur-md shadow-sm border border-white/10 active:scale-95 ${
-            theater
-              ? 'bg-(--theme-accent)/40 text-white border-(--theme-accent)/50'
-              : 'bg-white/10 hover:bg-white/15 text-white/85 hover:text-white'
+          className={`size-9 grid place-items-center rounded-full transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+            video
+              ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
+              : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
           }`}
           onClick={handleToggleOrFindVideo}
-          title={video ? (theater ? 'Exit theater video' : 'Full theater video') : 'Find & stream official music video'}
+          title={video ? 'Stop Official Video' : 'Watch Official Music Video'}
+          aria-label={video ? 'Stop Official Video' : 'Watch Official Music Video'}
         >
-          <Film size={13} className={resolvingVideo ? 'animate-spin' : ''} />
-          <span>{resolvingVideo ? 'Finding…' : theater ? '✕ Exit Video' : video ? '🎬 Video' : '🎬 Official Video'}</span>
+          {resolvingVideo ? (
+            <Loader2 size={17} className="animate-spin text-white" />
+          ) : (
+            <Video size={17} />
+          )}
         </button>
 
-        {/* 1-click toggle between Default Clean Dark (low CPU) and Ambient Artwork Blur */}
+        {/* Button 2: Spotify Canvas visual toggle */}
+        <button
+          type="button"
+          className={`size-9 grid place-items-center rounded-full transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+            !canvasDisabled && canvas
+              ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
+              : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+          }`}
+          onClick={toggleCanvasMode}
+          title={canvasDisabled ? 'Enable Spotify Canvas' : 'Disable Spotify Canvas'}
+          aria-label={canvasDisabled ? 'Enable Spotify Canvas' : 'Disable Spotify Canvas'}
+        >
+          <Sparkles size={17} />
+        </button>
+
+        {/* Button 3: Ambient Mode (Apple Music radiant mesh vs Clean Dark) */}
         {!theater && (
           <button
             type="button"
-            className="h-8 px-3.5 cursor-pointer rounded-full text-xs font-medium flex items-center gap-1.5 transition-all bg-white/10 hover:bg-white/15 active:scale-95 text-white/85 hover:text-white backdrop-blur-md shadow-sm border border-white/10"
+            className={`size-9 grid place-items-center rounded-full transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+              fullScreenPlayerAmbient
+                ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
+                : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+            }`}
             onClick={() => {
               updateAppearancePreferences({ fullScreenPlayerAmbient: !fullScreenPlayerAmbient });
             }}
-            title={fullScreenPlayerAmbient ? 'Switch to Clean Dark mode' : 'Switch to Ambient Artwork mode'}
+            title={fullScreenPlayerAmbient ? 'Switch to Clean Dark Mode' : 'Switch to Radiant Ambient Mode'}
+            aria-label={fullScreenPlayerAmbient ? 'Switch to Clean Dark Mode' : 'Switch to Radiant Ambient Mode'}
           >
-            {fullScreenPlayerAmbient ? '✦ Ambient' : '☾ Clean Dark'}
+            <SunMedium size={17} />
           </button>
         )}
+
         {video && <VideoQuality />}
         {(document.fullscreenEnabled || isDesktop) && (
           <button

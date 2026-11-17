@@ -743,8 +743,20 @@ object StreamResolver {
      * everything is above it (e.g. Low on a track that only has 130kbps+), take
      * the cheapest available rather than failing.
      */
-    private fun <T> pickForQuality(candidates: List<Pair<Int, T>>): T? =
-        underCeiling(candidates, maxKbps())
+    /**
+     * Picks the absolute highest quality stream within the connection ceiling,
+     * preferring pristine transparent Opus-in-WebM on bitrate ties.
+     */
+    private fun pickForQuality(candidates: List<Pair<Int, AudioStream>>): AudioStream? {
+        if (candidates.isEmpty()) return null
+        val max = maxKbps()
+        val withinBudget = candidates.filter { it.first <= max }
+        val pool = withinBudget.ifEmpty { candidates }
+        return pool.sortedWith(
+            compareByDescending<Pair<Int, AudioStream>> { it.first }
+                .thenByDescending { it.second.isWebmOpus }
+        ).firstOrNull()?.second
+    }
 
     /**
      * Highest of [candidates] at or under [maxKbps]; if everything is above it

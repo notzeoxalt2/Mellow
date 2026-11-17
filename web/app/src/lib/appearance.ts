@@ -51,6 +51,8 @@ export interface AppearancePreferences {
   musicBeatStrength: number;
   appleMusicRpc: boolean;
   dualSync: boolean;
+  videoPreference: 'spotify' | 'youtube' | 'auto';
+  smartMemorySaving: boolean;
 }
 
 export const DEFAULT_APPEARANCE: AppearancePreferences = {
@@ -86,6 +88,8 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   musicBeatStrength: 75,
   appleMusicRpc: true,
   dualSync: true,
+  videoPreference: 'spotify',
+  smartMemorySaving: true,
 };
 
 const STORAGE_KEY = 'mellow:appearance';
@@ -134,6 +138,8 @@ export function readAppearancePreferences(): AppearancePreferences {
       musicBeatStrength: clamp(value.musicBeatStrength, 0, 100, DEFAULT_APPEARANCE.musicBeatStrength),
       appleMusicRpc: typeof value.appleMusicRpc === 'boolean' ? value.appleMusicRpc : DEFAULT_APPEARANCE.appleMusicRpc,
       dualSync: typeof value.dualSync === 'boolean' ? value.dualSync : DEFAULT_APPEARANCE.dualSync,
+      videoPreference: value.videoPreference === 'youtube' || value.videoPreference === 'auto' ? value.videoPreference : DEFAULT_APPEARANCE.videoPreference,
+      smartMemorySaving: typeof value.smartMemorySaving === 'boolean' ? value.smartMemorySaving : DEFAULT_APPEARANCE.smartMemorySaving,
     };
   } catch {
     return DEFAULT_APPEARANCE;

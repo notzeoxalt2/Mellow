@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { readAppearancePreferences } from '@/lib/appearance';
 
 /**
  * Spotify's looping Canvas MP4 video over the artwork.
  * Muted, looping, seamlessly fades in over the cover once ready.
+ * Automatically throttles and pauses during gaming or background minimization to save CPU and RAM.
  */
 export function CanvasArtwork({
   url,
@@ -23,11 +25,41 @@ export function CanvasArtwork({
   useEffect(() => {
     const el = video.current;
     if (!el || !ready) return;
-    if (playing) {
+    if (playing && !document.hidden) {
       void el.play().catch(() => undefined);
     } else {
       el.pause();
     }
+  }, [playing, ready]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      const el = video.current;
+      if (!el || !ready) return;
+      if (document.hidden) {
+        el.pause();
+      } else if (playing) {
+        void el.play().catch(() => undefined);
+      }
+    };
+    const handleBlur = () => {
+      if (readAppearancePreferences().smartMemorySaving && video.current) {
+        video.current.pause();
+      }
+    };
+    const handleFocus = () => {
+      if (video.current && playing && !document.hidden) {
+        void video.current.play().catch(() => undefined);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [playing, ready]);
 
   return (

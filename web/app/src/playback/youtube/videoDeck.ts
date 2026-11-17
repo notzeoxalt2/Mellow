@@ -167,6 +167,8 @@ function listen(audio: HTMLAudioElement) {
     listening?.removeEventListener(type, sync);
     audio.addEventListener(type, sync);
   }
+  document.removeEventListener('visibilitychange', sync);
+  document.addEventListener('visibilitychange', sync);
   listening = audio;
 }
 
@@ -184,6 +186,7 @@ function sync() {
     const nudge = Math.abs(drift) > IGNORE_DRIFT_SEC ? Math.max(-0.1, Math.min(0.1, -drift)) : 0;
     video.playbackRate = audio.playbackRate * (1 + nudge);
   }
-  if (audio.paused && !video.paused) video.pause();
-  else if (!audio.paused && video.paused) void video.play().catch(() => {});
+  // Smart throttling: auto pause video decoding when window/tab is hidden to save GPU/CPU for games
+  if ((audio.paused || document.hidden) && !video.paused) video.pause();
+  else if (!audio.paused && !document.hidden && video.paused) void video.play().catch(() => {});
 }
