@@ -1067,15 +1067,30 @@ function maybeCrossfade() {
     });
 }
 
+function cleanDisplayTitle(t: string): string {
+  let cleaned = t.replace(/\s*[([](?:official|music|video|audio|lyrics?|sub\s*español|hd|4k|visualizer|remastered)[^)\]]*[)\]]/gi, '').trim();
+  if (cleaned.includes(' - ')) {
+    const parts = cleaned.split(' - ');
+    if (parts.length === 2 && parts[1]?.trim()) {
+      cleaned = parts[1].trim();
+    }
+  }
+  return cleaned || t;
+}
+
 function applyTrack(track: LoadedTrack, from?: Track) {
+  const current = usePlayer.getState().nowPlaying;
+  const rawTitle = from?.title || current?.title || track.title;
+  const title = cleanDisplayTitle(rawTitle);
+  const artist = (from && artistNames(from)) || current?.artist || track.author.replace(/ - Topic$/, '');
+
   const nowPlaying: NowPlaying = {
     videoId: track.videoId,
-    // YouTube Music metadata (from the queue) beats the video's own title.
-    title: from?.title || track.title,
-    // Auto-generated YouTube channels are named "Artist - Topic".
-    artist: (from && artistNames(from)) || track.author.replace(/ - Topic$/, ''),
-    artworkUrl: from?.thumbnail ?? track.thumbnails[0]?.url ?? null,
-    durationSec: track.durationSec || from?.durationSec || 0,
+    // Editorial metadata strictly beats the video's own title.
+    title,
+    artist,
+    artworkUrl: from?.thumbnail ?? current?.artworkUrl ?? track.thumbnails[0]?.url ?? null,
+    durationSec: track.durationSec || from?.durationSec || current?.durationSec || 0,
     streamInfo: `${track.format} via ${track.client}`,
     stream: { ...track.stream, client: track.client },
   };

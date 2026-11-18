@@ -154,7 +154,12 @@ export async function syncFavoriteToSpotify(
 ): Promise<boolean> {
   try {
     const b = bridge();
-    const hits = await b.call('spotify.searchTracks', { query: `${track.title} ${track.artist}` }, { timeoutMs: 15_000 });
+    const cleanTitle = track.title.replace(/\s*[([](?:official|music|video|audio|lyrics?|sub\s*español|hd|4k)[^)\]]*[)\]]/gi, '').trim();
+    const cleanArtist = track.artist.replace(/\b(?:vevo|official|topic)\b/gi, '').trim();
+    let hits = await b.call('spotify.searchTracks', { query: `${cleanTitle} ${cleanArtist}` }, { timeoutMs: 15_000 }).catch(() => []);
+    if (!hits || !hits.length) {
+      hits = await b.call('spotify.searchTracks', { query: cleanTitle }, { timeoutMs: 15_000 }).catch(() => []);
+    }
     if (!hits || !hits.length) return false;
     const pick = best(
       hits.map((h) => ({
@@ -210,8 +215,13 @@ export async function addTracksToSpotifyPlaylist(
       } else if (/^[a-zA-Z0-9]{22}$/.test(item)) {
         uris.push(`spotify:track:${item}`);
       } else if (trackMeta?.title && trackMeta?.artist) {
-        // Resolve YouTube / generic track to Spotify track ID
-        const hits = await b.call('spotify.searchTracks', { query: `${trackMeta.title} ${trackMeta.artist}` }, { timeoutMs: 15_000 }).catch(() => []);
+        // Resolve YouTube / generic track to Spotify track ID with clean query fallback
+        const cleanTitle = trackMeta.title.replace(/\s*[([](?:official|music|video|audio|lyrics?|sub\s*español|hd|4k)[^)\]]*[)\]]/gi, '').trim();
+        const cleanArtist = trackMeta.artist.replace(/\b(?:vevo|official|topic)\b/gi, '').trim();
+        let hits = await b.call('spotify.searchTracks', { query: `${cleanTitle} ${cleanArtist}` }, { timeoutMs: 15_000 }).catch(() => []);
+        if (!hits || !hits.length) {
+          hits = await b.call('spotify.searchTracks', { query: cleanTitle }, { timeoutMs: 15_000 }).catch(() => []);
+        }
         if (hits && hits[0]?.id) {
           uris.push(`spotify:track:${hits[0].id}`);
         }

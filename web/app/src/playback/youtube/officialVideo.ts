@@ -1,41 +1,58 @@
-import { getInnertube, getMusicClient } from './innertube';
+import { getInnertube } from './innertube';
 
-/** Words indicating bootlegs, fan reuploads, karaoke, covers, reactions, or bad quality */
+/** Words indicating bootlegs, fan reuploads, tiktok versions, karaoke, covers, reactions, or bad quality */
 const BOOTLEG_PATTERNS = [
-  /\b(?:lyrics?|sub español|sub espanol|subtitulad[oa]|traducid[oa]|letra)\b/i,
-  /\b(?:1\s*hour|loop|karaoke|cover|dance|reaction|remix|parody|slowed|reverb|nightcore|8d audio|bass boosted)\b/i,
-  /\b(?:instrumental|backing track|audios|unofficial|leak|snippet)\b/i,
+  /\b(?:lyrics?|lyric\s*video|sub\s*español|sub\s*espanol|subtitulad[oa]|traducid[oa]|letra|tradução)\b/i,
+  /\b(?:tiktok|tik\s*tok|1\s*hour|loop|karaoke|cover|dance|reaction|remix|parody|slowed|reverb|nightcore|8d|bass\s*boosted)\b/i,
+  /\b(?:instrumental|backing\s*track|unofficial|leak|snippet|sped\s*up|speed\s*up|speedup|amv|edit|shorts?)\b/i,
 ];
 
-/** Clean artist name for comparison */
-function cleanName(s: string): string {
+/** Clean string for comparison */
+function clean(s: string): string {
   return s
     .toLowerCase()
-    .replace(/\b(?:vevo|official|music|records|channel|topic)\b/gi, '')
+    .replace(/\b(?:vevo|official|music|records|recordings|channel|topic)\b/gi, '')
     .replace(/[^\p{L}\p{N}]+/gu, '')
     .trim();
 }
 
-/** Check if channel looks like an official artist channel or VEVO */
+/** Check if channel looks like an official artist channel, label, or VEVO */
 function isOfficialChannel(channelName: string, targetArtist: string): boolean {
-  const cn = cleanName(channelName);
-  const ta = cleanName(targetArtist);
+  const cn = clean(channelName);
+  const ta = clean(targetArtist);
   if (!cn || !ta) return false;
+
+  // Major record labels that host official music videos
+  const MAJOR_LABELS = ['atlanticrecords', 'columbiarecords', 'warnermusic', 'universalmusic', 'republicrecords', 'interscope', 'rcarecords', 'defjam'];
+  if (MAJOR_LABELS.some((l) => cn.includes(l))) return true;
+
   return cn.includes(ta) || ta.includes(cn);
 }
 
+const videoCache = new Map<string, string | null>();
+
 /**
  * Searches YouTube for the legitimate official music video of a song.
- * Uses strict heuristic scoring to prevent selecting fan bootlegs, lyric videos, or reuploads.
+ * Uses strict heuristic scoring to prevent selecting fan bootlegs, TikTok edits, lyric videos, or reuploads.
+ * If no authentic official video exists, returns null rather than displaying poor-quality reuploads.
  */
 export async function findOfficialMusicVideo(
   title: string,
   artist: string,
   durationSec?: number | null,
 ): Promise<string | null> {
-  const cleanTitle = title.replace(/\s*[([](?:official|music|video|audio)[^)\]]*[)\]]/gi, '').trim();
+  const cacheKey = `${title.toLowerCase()}:::${artist.toLowerCase()}`;
+  if (videoCache.has(cacheKey)) {
+    return videoCache.get(cacheKey)!;
+  }
+
+  const cleanTitle = title
+    .replace(/\s*[([](?:official|music|video|audio|lyrics?|sub\s*español|hd|4k)[^)\]]*[)\]]/gi, '')
+    .replace(/\s*-\s*.*$/, '') // Remove secondary hyphens
+    .trim();
+
   const queries = [
-    `${cleanTitle} ${artist} official music video`,
+    `"${cleanTitle}" "${artist}" official music video`,
     `${cleanTitle} ${artist} official video`,
   ];
 
@@ -57,57 +74,73 @@ export async function findOfficialMusicVideo(
           const durSec = vid.duration?.seconds ?? null;
 
           let score = 0;
+          const lowerTitle = vTitle.toLowerCase();
+
+          // Reject bootlegs, lyric videos, TikTok edits immediately
+          let hasBootleg = false;
+          for (const pattern of BOOTLEG_PATTERNS) {
+            if (pattern.test(lowerTitle)) {
+              hasBootleg = true;
+              break;
+            }
+          }
+          if (hasBootleg) continue;
 
           // 1. Author scoring
-          if (isOfficialChannel(author, artist)) {
-            score += 55;
+          const channelOfficial = isOfficialChannel(author, artist);
+          if (channelOfficial) {
+            score += 65;
+          } else if (isOfficialArtist) {
+            score += 45;
           } else {
-            // Unrelated author name (e.g. "Marco Antonio", "Swift Leaks Backup")
+            // Unrelated author (e.g. "Marco Antonio", "AnimeEdits") -> strictly penalize
             score -= 60;
           }
 
-          if (isOfficialArtist) {
+          // 2. Title matching
+          const cleanVTitle = clean(vTitle);
+          const cleanTarget = clean(cleanTitle);
+          if (cleanVTitle.includes(cleanTarget)) {
             score += 35;
+          } else {
+            // Title doesn't even contain the track name -> skip
+            continue;
           }
 
-          // 2. Title scoring
-          const lowerTitle = vTitle.toLowerCase();
-          if (lowerTitle.includes('official video') || lowerTitle.includes('official music video')) {
-            score += 40;
+          if (lowerTitle.includes('official music video') || lowerTitle.includes('official video')) {
+            score += 30;
           } else if (lowerTitle.includes('official audio') || lowerTitle.includes('audio')) {
-            score -= 10;
+            score -= 15;
           }
 
-          // Penalize bootlegs and fan subtitles
-          for (const pattern of BOOTLEG_PATTERNS) {
-            if (pattern.test(lowerTitle)) {
-              score -= 80;
-            }
-          }
-
-          // 3. Duration match (official music videos are typically close to the song length, ±45s for video intros)
+          // 3. Duration match (official videos are close to track length, ±45s)
           if (durationSec && durSec) {
             const diff = Math.abs(durSec - durationSec);
-            if (diff <= 30) score += 25;
+            if (diff <= 25) score += 20;
             else if (diff <= 60) score += 10;
-            else if (diff > 120) score -= 50; // wildly different length (e.g. 1 hour loop or 30s clip)
+            else if (diff > 100) score -= 40;
           }
 
           candidates.push({ id, title: vTitle, author, score });
         }
       } catch {}
-      if (candidates.some((c) => c.score >= 50)) break;
+
+      if (candidates.some((c) => c.score >= 70)) break;
     }
 
     // Sort by highest score
     candidates.sort((a, b) => b.score - a.score);
     const best = candidates[0];
-    if (best && best.score >= 35) {
+
+    // High threshold ensures only authentic official releases are selected
+    if (best && best.score >= 50) {
+      videoCache.set(cacheKey, best.id);
       return best.id;
     }
   } catch (err) {
     console.warn('[Mellow] Failed to search official video:', err);
   }
 
+  videoCache.set(cacheKey, null);
   return null;
 }

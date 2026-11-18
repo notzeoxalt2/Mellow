@@ -507,6 +507,35 @@ export async function likeTrack(spDc: string, trackId: string, liked: boolean): 
     const token = await mintAccessToken(spDc);
     const cleanId = trackId.replace(/^spotify:track:/, '');
     const method = liked ? 'PUT' : 'DELETE';
+
+    // 1. Try modern /v1/me/library?uris=spotify:track:... endpoint
+    try {
+      const libRes = await fetch(`https://api.spotify.com/v1/me/library?uris=${encodeURIComponent(`spotify:track:${cleanId}`)}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      if (libRes.ok) return true;
+    } catch {}
+
+    // 2. Try /v1/me/tracks with JSON body
+    try {
+      const bodyRes = await fetch(`https://api.spotify.com/v1/me/tracks`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ ids: [cleanId] }),
+      });
+      if (bodyRes.ok) return true;
+    } catch {}
+
+    // 3. Fallback to query param
     const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${encodeURIComponent(cleanId)}`, {
       method,
       headers: {

@@ -25,6 +25,7 @@ interface Activity {
     small_image?: string;
     small_text?: string;
   };
+  buttons?: Array<{ label: string; url: string }>;
   type?: number; // 2 = Listening
 }
 
@@ -205,6 +206,8 @@ class DiscordRpcClient {
     const state = track.artist ? `by ${track.artist}`.slice(0, 128) : undefined;
     const albumName = track.album || track.title;
 
+    const appleMusicUrl = `https://music.apple.com/search?term=${encodeURIComponent(`${track.title} ${track.artist || ''}`)}`;
+
     const activity: Activity = {
       details,
       state,
@@ -218,6 +221,12 @@ class DiscordRpcClient {
         small_image: 'apple_music',
         small_text: 'Apple Music',
       },
+      buttons: [
+        {
+          label: 'Listen on Apple Music',
+          url: appleMusicUrl,
+        },
+      ],
       type: 2, // Listening to ...
     };
 
