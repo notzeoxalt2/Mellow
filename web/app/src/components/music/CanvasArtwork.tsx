@@ -8,6 +8,11 @@ interface CanvasArtworkProps {
   minPosterMs?: number;
 }
 
+let masterCanvasElement: HTMLVideoElement | null = null;
+export function getMasterCanvasElement(): HTMLVideoElement | null {
+  return masterCanvasElement;
+}
+
 /**
  * Spotify's looping Canvas MP4 video over the artwork.
  * Preloads silently in the background while the static artwork remains crisp.
@@ -23,6 +28,17 @@ export function CanvasArtwork({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
   const [posterElapsed, setPosterElapsed] = useState(false);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      masterCanvasElement = videoRef.current;
+    }
+    return () => {
+      if (masterCanvasElement === videoRef.current) {
+        masterCanvasElement = null;
+      }
+    };
+  }, []);
 
   // Ensure minimum poster display time so the high-res cover is enjoyed before animation starts
   useEffect(() => {

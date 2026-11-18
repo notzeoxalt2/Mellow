@@ -55,6 +55,27 @@ async function packageApp() {
   console.log('Copying Electron runtime binaries...');
   copyDirSync(electronDistDir, releaseDir);
 
+  // Prune redundant Electron locales (keep en-US and en-GB), saving ~46 MB!
+  const localesDir = path.join(releaseDir, 'locales');
+  if (fs.existsSync(localesDir)) {
+    const keepLocales = new Set(['en-US.pak', 'en-GB.pak']);
+    for (const file of fs.readdirSync(localesDir)) {
+      if (!keepLocales.has(file)) {
+        try {
+          fs.unlinkSync(path.join(localesDir, file));
+        } catch {}
+      }
+    }
+  }
+
+  // Prune redundant Chromium license dump (~20 MB) from release binary root
+  const licenseFile = path.join(releaseDir, 'LICENSES.chromium.html');
+  if (fs.existsSync(licenseFile)) {
+    try {
+      fs.unlinkSync(licenseFile);
+    } catch {}
+  }
+
   // 3. Rename electron.exe to Mellow.exe
   const oldExe = path.join(releaseDir, 'electron.exe');
   const newExe = path.join(releaseDir, 'Mellow.exe');

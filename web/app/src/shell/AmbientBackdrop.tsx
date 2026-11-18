@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MeshBackdrop } from './MeshBackdrop';
 import { getVideoElement } from '@/state/video';
+import { getMasterCanvasElement } from '@/components/music/CanvasArtwork';
 
 interface AmbientBackdropProps {
   artworkUrl?: string | null;
@@ -63,16 +64,34 @@ function VideoBackdrop({ playing }: { playing: boolean }) {
  */
 function CanvasBackdrop({ url, playing }: { url: string; playing: boolean }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (playing) {
+    if (playing && ready) {
       void video.play().catch(() => {});
     } else {
       video.pause();
     }
-  }, [playing]);
+  }, [playing, ready]);
+
+  // Keep background video in 100% frame synchronization with the card canvas video
+  useEffect(() => {
+    let animId: number;
+    const sync = () => {
+      animId = requestAnimationFrame(sync);
+      const bg = videoRef.current;
+      const master = getMasterCanvasElement();
+      if (bg && master && !master.paused && !bg.paused) {
+        if (Math.abs(bg.currentTime - master.currentTime) > 0.06) {
+          bg.currentTime = master.currentTime;
+        }
+      }
+    };
+    animId = requestAnimationFrame(sync);
+    return () => cancelAnimationFrame(animId);
+  }, []);
 
   return (
     <div className="pointer-events-none absolute inset-0 size-full overflow-hidden">
@@ -84,8 +103,15 @@ function CanvasBackdrop({ url, playing }: { url: string; playing: boolean }) {
         muted
         loop
         playsInline
-        className="pointer-events-none absolute inset-0 size-full object-cover scale-[1.7] blur-[55px] saturate-[195%] brightness-110 opacity-85 transition-opacity duration-700"
+        className={`pointer-events-none absolute inset-0 size-full object-cover scale-[1.7] blur-[55px] saturate-[195%] brightness-110 transition-opacity duration-700 ${
+          ready ? 'opacity-85' : 'opacity-0'
+        }`}
         onCanPlay={(e) => {
+          setReady(true);
+          if (playing) void e.currentTarget.play().catch(() => {});
+        }}
+        onLoadedData={(e) => {
+          setReady(true);
           if (playing) void e.currentTarget.play().catch(() => {});
         }}
       />

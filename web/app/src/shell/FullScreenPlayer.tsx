@@ -322,27 +322,18 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       onKeyDown={wake}
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
-      {!theater && fullScreenPlayerAmbient && (
+      {!theater && !video && fullScreenPlayerAmbient && (
         <AmbientBackdrop
           artworkUrl={nowPlaying.artworkUrl}
           canvasUrl={canvas}
           canvasDisabled={canvasDisabled}
-          videoActive={!!video}
+          videoActive={false}
           playing={playing}
         />
       )}
       {theater && (
         <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in bg-black">
-          {fullScreenPlayerAmbient && (
-            <AmbientBackdrop
-              artworkUrl={nowPlaying.artworkUrl}
-              canvasUrl={canvas}
-              canvasDisabled={canvasDisabled}
-              videoActive={!!video}
-              playing={playing}
-            />
-          )}
-          <VideoSurface fit="contain" className="size-full relative z-1" />
+          <VideoSurface fit="contain" className="size-full bg-black" />
         </div>
       )}
 
@@ -418,7 +409,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       </div>
 
       {videoStatusNotice && (
-        <div className="pointer-events-none absolute top-16 right-5 z-30 px-3 py-1.5 rounded-full bg-black/70 text-white/90 text-xs backdrop-blur-md border border-white/10 animate-fade-in shadow-lg">
+        <div className="pointer-events-none absolute top-16 right-5 z-30 px-3 py-1.5 rounded-[8px] bg-black/80 text-white/90 text-xs backdrop-blur-md border border-white/10 animate-fade-in shadow-lg">
           {videoStatusNotice}
         </div>
       )}
@@ -444,61 +435,62 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         >
           {/* Shrinks a touch while paused, as Apple's does. Beside a column, a music video plays here at 16:9. */}
           <div
-            className={`relative w-(--art) rounded-[10px] transition-[scale] duration-450 ease-[cubic-bezier(0.34,1.3,0.64,1)] motion-reduce:transition-none will-change-transform${
-              video ? ' aspect-video overflow-hidden bg-black' : ' aspect-square'
+            className={`relative w-(--art) transition-[scale] duration-450 ease-[cubic-bezier(0.34,1.3,0.64,1)] motion-reduce:transition-none will-change-transform${
+              video ? ' aspect-video' : ' aspect-square'
             }${playing ? '' : ' scale-92'}${column ? ' max-md:hidden' : ''}${theater ? ' hidden' : ''}`}
             style={playing ? { transform: 'scale(var(--music-beat-card-scale, 1))' } : undefined}
           >
-            {nowPlaying.artworkUrl && (
-              <>
-                {/* Radiosity glow behind the card: shown only for static cover art, hidden when animated canvas or video is active */}
-                {!video && (canvasDisabled || !canvas) && !motion && (
-                  <div
-                    className="pointer-events-none absolute inset-0 -z-1 translate-y-2 will-change-transform"
-                    style={{
-                      transform: 'scale(var(--music-beat-scale, 1))',
-                      opacity: 'var(--music-beat-opacity, 1)',
-                    }}
-                  >
-                    <img
-                      key={`glow-${nowPlaying.artworkUrl}`}
-                      className="absolute inset-0 size-full scale-96 rounded-[inherit] object-cover blur-[20px] saturate-200 opacity-[var(--fullscreen-artwork-glow-opacity,0.58)]"
-                      src={sizedArtwork(nowPlaying.artworkUrl, 60)}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      decoding="async"
-                    />
-                  </div>
-                )}
-                {/* Sharp album cover art - immediately displayed without blur */}
+            {/* Radiosity glow behind the card: shown only for static cover art, completely hidden when animated canvas or video is active */}
+            {!video && (canvasDisabled || !canvas) && !motion && nowPlaying.artworkUrl && (
+              <div
+                className="pointer-events-none absolute inset-0 -z-1 translate-y-2 will-change-transform"
+                style={{
+                  transform: 'scale(var(--music-beat-scale, 1))',
+                  opacity: 'var(--music-beat-opacity, 1)',
+                }}
+              >
+                <img
+                  key={`glow-${nowPlaying.artworkUrl}`}
+                  className="absolute inset-0 size-full scale-96 rounded-[10px] object-cover blur-[20px] saturate-200 opacity-[var(--fullscreen-artwork-glow-opacity,0.58)]"
+                  src={sizedArtwork(nowPlaying.artworkUrl, 60)}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  decoding="async"
+                />
+              </div>
+            )}
+
+            {/* The clipped card containing album cover art and looping canvas */}
+            <div className={`relative size-full rounded-[10px] overflow-hidden ${video ? 'bg-black' : 'bg-[#ffffff12] shadow-[0_4px_10px_#0000001a]'}`}>
+              {nowPlaying.artworkUrl && (
                 <img
                   key={nowPlaying.artworkUrl}
-                  className="absolute inset-0 size-full rounded-[inherit] object-cover bg-[#ffffff12] shadow-[0_4px_10px_#0000001a]"
+                  className="absolute inset-0 size-full object-cover"
                   src={sizedArtwork(nowPlaying.artworkUrl, 600)}
                   alt=""
                   referrerPolicy="no-referrer"
                   decoding="async"
                 />
-              </>
-            )}
-            {/* Apple's motion artwork or Spotify's looping Canvas MP4 video - smoothly dissolves in over the cover once fully buffered */}
-            {motion ? (
-              <MotionArtwork
-                key={motion.url}
-                motion={motion}
-                className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-1000 ease-in data-ready:opacity-100"
-                playing={playing}
-              />
-            ) : !canvasDisabled && canvas ? (
-              <CanvasArtwork
-                key={canvas}
-                url={canvas}
-                playing={playing}
-                minPosterMs={1200}
-                className="absolute inset-0 size-full rounded-[inherit] object-cover"
-              />
-            ) : null}
-            {video && !theater && <VideoSurface className="absolute inset-0 rounded-[inherit] overflow-hidden" />}
+              )}
+              {/* Apple's motion artwork or Spotify's looping Canvas MP4 video - smoothly dissolves in over the cover once fully buffered */}
+              {motion ? (
+                <MotionArtwork
+                  key={motion.url}
+                  motion={motion}
+                  className="absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-1000 ease-in data-ready:opacity-100"
+                  playing={playing}
+                />
+              ) : !canvasDisabled && canvas ? (
+                <CanvasArtwork
+                  key={canvas}
+                  url={canvas}
+                  playing={playing}
+                  minPosterMs={1200}
+                  className="absolute inset-0 size-full object-cover"
+                />
+              ) : null}
+              {video && !theater && <VideoSurface className="absolute inset-0 overflow-hidden bg-black" />}
+            </div>
           </div>
 
           <div className={`flex items-center gap-3${theater ? '' : ' mt-[clamp(20px,3.2vh,32px)]'}${column ? ' max-md:mt-0' : ''}`}>

@@ -407,9 +407,14 @@ export async function fetchCanvas(spDc: string, trackId: string): Promise<{ url:
     if (resp.ok) {
       const buf = Buffer.from(await resp.arrayBuffer());
       const text = buf.toString('latin1');
-      const match = text.match(/https:\/\/[^"'\s\x00-\x1F]+\.cnvs\.mp4/);
-      if (match) {
-        return { url: match[0] };
+      const matches = [...text.matchAll(/https:\/\/[^"'\s\x00-\x1F]+\.(?:cnvs\.mp4|mp4)/g)].map((m) => m[0]);
+      if (matches.length > 0) {
+        // Select the highest quality stream: prioritize 1080p, 720p, or official .cnvs.mp4 stream
+        const bestUrl = matches.find((u) => u.includes('1080') || u.includes('1080p') || u.includes('hd'))
+          ?? matches.find((u) => u.includes('720') || u.includes('720p'))
+          ?? matches.find((u) => u.endsWith('.cnvs.mp4'))
+          ?? matches[matches.length - 1];
+        return { url: bestUrl };
       }
     }
 

@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { Track } from '@/data/music/types';
 import { extensionQueryKey } from '@/extension/useExtension';
 import { artworkAtPixels } from '@/lib/artwork';
+import { readAppearancePreferences } from '@/lib/appearance';
 import { queryClient } from '@/lib/queryClient';
 import { extendStation } from '@/playback/queue/builder';
 import {
@@ -775,12 +776,28 @@ async function resolvePlayableVideoId(entry: QueueEntry, index?: number): Promis
   return videoId;
 }
 
+interface PreloadCache {
+  at: number;
+  playId: string;
+  loadedTrack: LoadedTrack;
+  deckIndex: number;
+  entry: QueueEntry;
+}
+
+let preloadedNext: PreloadCache | null = null;
+let preloadNextTimer: ReturnType<typeof setTimeout> | null = null;
+
 async function startAt(at: number, { startSec = 0, auto = false, autoplay = true } = {}): Promise<void> {
   const state = usePlayer.getState();
   const entry = state.queue[at];
   if (!entry) return;
   cancelCrossfade();
   const token = ++loadToken;
+
+  if (preloadNextTimer) {
+    clearTimeout(preloadNextTimer);
+    preloadNextTimer = null;
+  }
 
   if (!extensionReady()) {
     usePlayer.setState({
@@ -790,6 +807,38 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
       error: 'YouTube playback needs the BitChord extension.',
     });
     return;
+  }
+
+  // Instant Deck Swap: If upcoming track was preloaded on the idle deck, switch immediately (0.0s latency)
+  if (preloadedNext && preloadedNext.at === at && startSec === 0 && preloadedNext.deckIndex === (1 - active)) {
+    const all = await getDecks();
+    active = 1 - active;
+    const deck = all[active]!;
+    deck.gain = 1;
+    applyVolumes();
+    const { loadedTrack, entry: preloadedEntry } = preloadedNext;
+    preloadedNext = null;
+
+    usePlayer.setState({
+      index: at,
+      nowPlaying: hintOf(preloadedEntry.track),
+      status: autoplay ? 'playing' : 'paused',
+      error: null,
+    });
+    applyTrack(loadedTrack, preloadedEntry.track);
+    if (autoplay) {
+      void deck.audio.play().catch(() => {});
+    }
+    updateMediaSession(usePlayer.getState().nowPlaying);
+    afterTrackStarted();
+    syncAutomix();
+    return;
+  }
+
+  if (preloadedNext) {
+    const all = await getDecks();
+    all[preloadedNext.deckIndex]!.engine.stop().catch(() => {});
+    preloadedNext = null;
   }
 
   usePlayer.setState({ index: at, nowPlaying: hintOf(entry.track), status: 'loading', error: null });
@@ -864,7 +913,7 @@ async function advance(auto: boolean): Promise<void> {
   await startAt(plan.index, { auto });
 }
 
-/** Once a track is under way: prune hand-queued tracks already played, and top up AutoPlay. */
+/** Once a track is under way: prune hand-queued tracks already played, top up AutoPlay, and smart preload next track. */
 function afterTrackStarted() {
   const { queue, index } = usePlayer.getState();
   const played = new Set(playedUserQueueIndices(queue.map((e) => e.tier), index));
@@ -875,6 +924,55 @@ function afterTrackStarted() {
     });
   }
   void refillAutoplay();
+
+  // Smart Ahead Preloading: Pre-resolve and buffer the upcoming track on the idle deck
+  if (preloadNextTimer) {
+    clearTimeout(preloadNextTimer);
+    preloadNextTimer = null;
+  }
+
+  const prefs = readAppearancePreferences();
+  if (prefs.lowResourceMode) return;
+
+  // Wait 6 seconds after current track begins to ensure current playback is stable
+  preloadNextTimer = setTimeout(async () => {
+    preloadNextTimer = null;
+    const cur = usePlayer.getState();
+    if (cur.status !== 'playing' || cur.index !== index) return;
+
+    const plan = planNext(true);
+    if (!plan || plan.kind !== 'index') return;
+    const nextAt = plan.index;
+    const nextEntry = plan.queue[nextAt];
+    if (!nextEntry) return;
+
+    try {
+      const all = await getDecks();
+      const idleIdx = 1 - active;
+      const idleDeck = all[idleIdx]!;
+
+      // 1. Resolve playback ID ahead of time (Spotify matching done in advance!)
+      const nextPlayId = await resolvePlayableVideoId(nextEntry, nextAt);
+
+      if (usePlayer.getState().status !== 'playing' || usePlayer.getState().index !== index) return;
+
+      // 2. Preload on the idle deck without playing
+      const loaded = await idleDeck.engine.load(nextPlayId, { startSec: 0, autoplay: false });
+
+      if (usePlayer.getState().index === index) {
+        preloadedNext = {
+          at: nextAt,
+          playId: nextPlayId,
+          loadedTrack: loaded,
+          deckIndex: idleIdx,
+          entry: nextEntry,
+        };
+        trackLog.i(`Smart preloaded next track: ${nextEntry.track.title}`, nextPlayId);
+      }
+    } catch (err) {
+      trackLog.w(`Preload ahead skipped or unavailable: ${String(err)}`, nextEntry.track.videoId);
+    }
+  }, 6000);
 }
 
 // ---- AutoPlay ---------------------------------------------------------------------

@@ -149,28 +149,28 @@ export default function HomePage() {
       <div className="mb-6 flex w-fit max-w-[calc(100%-2.5rem)] items-center gap-1.5 overflow-x-auto sm:mx-8">
         <button
           onClick={() => setFilter('all')}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'all' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
+          className={`shrink-0 rounded-[8px] px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'all' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
           aria-pressed={filter === 'all'}
         >
           All
         </button>
         <button
           onClick={() => setFilter('spotify')}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'spotify' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
+          className={`shrink-0 rounded-[8px] px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'spotify' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
           aria-pressed={filter === 'spotify'}
         >
           Spotify
         </button>
         <button
           onClick={() => setFilter('yt')}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'yt' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
+          className={`shrink-0 rounded-[8px] px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'yt' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
           aria-pressed={filter === 'yt'}
         >
           YouTube Music
         </button>
         <button
           onClick={() => setFilter('blend')}
-          className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'blend' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
+          className={`shrink-0 whitespace-nowrap rounded-[8px] px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'blend' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
           aria-pressed={filter === 'blend'}
         >
           Your blend
@@ -320,7 +320,7 @@ export default function HomePage() {
         <div className="py-6 text-center">
           <button
             onClick={() => void home.fetchNextPage()}
-            className="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium text-secondary hover:text-primary transition-all cursor-pointer"
+            className="px-4 py-1.5 rounded-[8px] bg-white/10 hover:bg-white/20 text-xs font-medium text-secondary hover:text-primary transition-all cursor-pointer"
           >
             Load more
           </button>

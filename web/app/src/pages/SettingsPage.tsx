@@ -178,7 +178,7 @@ function DesktopUpdatesSection() {
           </div>
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer"
             onClick={handleCheck}
             disabled={checking || status === 'downloading'}
           >
@@ -200,7 +200,7 @@ function DesktopUpdatesSection() {
               <span className="text-xs font-semibold text-white">Update Available: {updateInfo?.version || 'Newer version'}</span>
               <button
                 type="button"
-                className="flex items-center gap-1 px-3 py-1 rounded-full bg-(--theme-accent) hover:brightness-110 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-[8px] bg-(--theme-accent) hover:brightness-110 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
                 onClick={handleDownload}
               >
                 <ArrowDownCircle size={13} />
@@ -233,7 +233,7 @@ function DesktopUpdatesSection() {
             <span className="text-xs text-green-400 font-medium">Update downloaded! Restart to apply.</span>
             <button
               type="button"
-              className="px-3 py-1 rounded-full bg-green-600 hover:bg-green-500 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
+              className="px-3 py-1.5 rounded-[8px] bg-green-600 hover:bg-green-500 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
               onClick={() => window.electronAPI?.quitAndInstallUpdate?.()}
             >
               Restart & Update
@@ -452,10 +452,6 @@ export default function SettingsPage() {
               />
             </label>
           )}
-          <div className={settingsUi.controlRow}>
-            <span>Audio Quality</span>
-            <span className="type-[500_12px/16px] text-tertiary">Maximum Bitrate (Opus 256/160kbps, AAC) • DRC Off</span>
-          </div>
           <Toggle
             label="Show Stats for Nerds"
             detail="Codec, bitrate and sample rate under the artist in the full-screen player, and what Automix is doing."
@@ -468,6 +464,42 @@ export default function SettingsPage() {
             checked={shareHistory}
             onChange={setShareHistory}
           />
+        </section>
+
+        {/* ---- 5. Sound Quality & Audio Formats ---- */}
+        <h2 className={settingsUi.sectionHeader}>Sound Quality & Formats</h2>
+        <section className={settingsUi.group}>
+          <label className={settingsUi.controlRow}>
+            <span>Streaming Audio Format</span>
+            <Select<'lossless-hires' | 'lossless-cd' | 'opus-256' | 'aac-256' | 'saver-96'>
+              label="Streaming Audio Format"
+              value={appearance.audioQualityFormat}
+              options={[
+                { value: 'lossless-hires', label: 'Hi-Res Lossless (FLAC 24-bit / 192kHz)' },
+                { value: 'lossless-cd', label: 'Lossless CD Quality (FLAC 16-bit / 44.1kHz)' },
+                { value: 'opus-256', label: 'High Quality (Opus 256kbps VBR)' },
+                { value: 'aac-256', label: 'High Quality (AAC 256kbps)' },
+                { value: 'saver-96', label: 'Data Saver (Opus 96kbps)' },
+              ]}
+              onChange={(value) => update({ audioQualityFormat: value })}
+            />
+          </label>
+          <Toggle
+            label="EBU R128 Loudness Normalization"
+            detail="Matches perceived volume across all songs (-14 LUFS standard), eliminating jarring jumps between loud and quiet tracks."
+            checked={appearance.soundCheck}
+            onChange={(on) => update({ soundCheck: on })}
+          />
+          <Toggle
+            label="Smart Ahead Preload (Zero-Gap Playback)"
+            detail="Pre-buffers the upcoming song on the second audio deck while you listen, guaranteeing instant 0.0s playback start on track advance."
+            checked={appearance.preloadUpcoming}
+            onChange={(on) => update({ preloadUpcoming: on })}
+          />
+          <div className={settingsUi.controlRow}>
+            <span>Bit-Perfect Audio Output</span>
+            <span className="type-[500_12px/16px] text-tertiary">Exclusive Hardware Clock • DRC Dynamic Range Compression Bypassed</span>
+          </div>
         </section>
 
         {/* ---- 5. Listen Together ---- */}

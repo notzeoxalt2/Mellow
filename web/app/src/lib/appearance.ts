@@ -53,6 +53,9 @@ export interface AppearancePreferences {
   dualSync: boolean;
   videoPreference: 'spotify' | 'youtube' | 'auto';
   smartMemorySaving: boolean;
+  audioQualityFormat: 'lossless-hires' | 'lossless-cd' | 'opus-256' | 'aac-256' | 'saver-96';
+  soundCheck: boolean;
+  preloadUpcoming: boolean;
 }
 
 export const DEFAULT_APPEARANCE: AppearancePreferences = {
@@ -90,6 +93,9 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   dualSync: true,
   videoPreference: 'spotify',
   smartMemorySaving: true,
+  audioQualityFormat: 'lossless-hires',
+  soundCheck: true,
+  preloadUpcoming: true,
 };
 
 const STORAGE_KEY = 'mellow:appearance';
@@ -140,6 +146,9 @@ export function readAppearancePreferences(): AppearancePreferences {
       dualSync: typeof value.dualSync === 'boolean' ? value.dualSync : DEFAULT_APPEARANCE.dualSync,
       videoPreference: value.videoPreference === 'youtube' || value.videoPreference === 'auto' ? value.videoPreference : DEFAULT_APPEARANCE.videoPreference,
       smartMemorySaving: typeof value.smartMemorySaving === 'boolean' ? value.smartMemorySaving : DEFAULT_APPEARANCE.smartMemorySaving,
+      audioQualityFormat: value.audioQualityFormat === 'lossless-cd' || value.audioQualityFormat === 'opus-256' || value.audioQualityFormat === 'aac-256' || value.audioQualityFormat === 'saver-96' ? value.audioQualityFormat : DEFAULT_APPEARANCE.audioQualityFormat,
+      soundCheck: typeof value.soundCheck === 'boolean' ? value.soundCheck : DEFAULT_APPEARANCE.soundCheck,
+      preloadUpcoming: typeof value.preloadUpcoming === 'boolean' ? value.preloadUpcoming : DEFAULT_APPEARANCE.preloadUpcoming,
     };
   } catch {
     return DEFAULT_APPEARANCE;

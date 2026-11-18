@@ -39,14 +39,14 @@ export default function PlaylistSyncPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <PrefetchLink to={`/spotify/playlist/${encodeURIComponent(record.spotifyPlaylistId)}`} className="rounded-full border border-white/10 px-3 py-2 type-callout-emphasized hover:bg-white/[0.07]">
+                <PrefetchLink to={`/spotify/playlist/${encodeURIComponent(record.spotifyPlaylistId)}`} className="rounded-[8px] border border-white/10 px-3 py-2 type-callout-emphasized hover:bg-white/[0.07]">
                   <span className="inline-flex items-center gap-1.5">Open Spotify <ExternalLink size={13} /></span>
                 </PrefetchLink>
-                <PrefetchLink to={`/playlist/${encodeURIComponent(`VL${record.youtubePlaylistId}`)}`} className="rounded-full border border-white/10 px-3 py-2 type-callout-emphasized hover:bg-white/[0.07]">
+                <PrefetchLink to={`/playlist/${encodeURIComponent(`VL${record.youtubePlaylistId}`)}`} className="rounded-[8px] border border-white/10 px-3 py-2 type-callout-emphasized hover:bg-white/[0.07]">
                   Open YouTube
                 </PrefetchLink>
                 <button
-                  className="grid size-9 place-items-center rounded-full text-secondary hover:bg-white/[0.07] hover:text-primary"
+                  className="grid size-9 place-items-center rounded-[8px] text-secondary hover:bg-white/[0.07] hover:text-primary"
                   aria-label={`Unlink ${record.spotifyTitle}`}
                   title="Unlink sync (keeps the YouTube playlist)"
                   onClick={() => unlinkPlaylistSync(account, record.spotifyPlaylistId)}
@@ -61,7 +61,7 @@ export default function PlaylistSyncPage() {
         <section className="mellow-glass rounded-2xl border border-white/10 p-5">
           <h2 className="type-title-3-emphasized">No synced playlists yet</h2>
           <p className="mt-1 type-body text-secondary">Open a Spotify playlist and choose “Create synced YouTube playlist” to start.</p>
-          <PrefetchLink to="/spotify" className="mt-4 inline-flex rounded-full bg-white/[0.09] px-4 py-2 type-callout-emphasized hover:bg-white/[0.14]">Browse Spotify playlists</PrefetchLink>
+          <PrefetchLink to="/spotify" className="mt-4 inline-flex rounded-[8px] bg-white/[0.09] px-4 py-2 type-callout-emphasized hover:bg-white/[0.14]">Browse Spotify playlists</PrefetchLink>
         </section>
       )}
     </div>
