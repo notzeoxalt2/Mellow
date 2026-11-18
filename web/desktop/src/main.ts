@@ -19,6 +19,8 @@ import {
   likeTrack,
   createPlaylist,
   addTracksToPlaylist,
+  searchSpotifyAll,
+  reportPlaybackToSpotify,
   LIKED_ID,
 } from './spotify.js';
 import { discordRpc } from './discordRpc.js';
@@ -1087,6 +1089,18 @@ ipcMain.handle('bitchord-bridge-call', async (_, request) => {
       case 'spotify.addTracksToPlaylist': {
         if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return failure('unauthenticated', 'Spotify is paused in Settings or not signed in');
         const ok = await addTracksToPlaylist(currentAuth.spDc, params.playlistId, params.trackUris);
+        return success(ok);
+      }
+
+      case 'spotify.searchAll': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return failure('unauthenticated', 'Spotify is paused in Settings or not signed in');
+        const results = await searchSpotifyAll(currentAuth.spDc, params.query);
+        return success(results);
+      }
+
+      case 'spotify.reportPlayback': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success(false);
+        const ok = await reportPlaybackToSpotify(currentAuth.spDc, params.trackId, params.positionSec ?? 0);
         return success(ok);
       }
 

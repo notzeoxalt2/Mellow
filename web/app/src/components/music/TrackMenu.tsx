@@ -9,6 +9,7 @@ import {
   useSignedIn,
 } from '@/data/music/queries';
 import { useSpotifyPlaylists } from '@/data/spotify/queries';
+import { useSpotifySignedIn } from '@/extension/useSpotifyAuth';
 import { addTracksToSpotifyPlaylist, createSpotifyPlaylist } from '@/data/spotify/api';
 import { createPlaylist as createYtPlaylist } from '@/data/music/api';
 import { queryClient } from '@/lib/queryClient';
@@ -114,7 +115,8 @@ function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () =
             <MenuItem
               key={sp.id}
               onSelect={async () => {
-                await addTracksToSpotifyPlaylist(sp.id, [track.videoId]);
+                const artistName = track.artists.map((a) => a.name).join(' ');
+                await addTracksToSpotifyPlaylist(sp.id, [track.videoId], { title: track.title, artist: artistName });
                 void queryClient.invalidateQueries({ queryKey: ['spotify', 'data'] });
                 onDone();
               }}
@@ -160,7 +162,9 @@ function AccountItems({ track, onClose, onPlaylists }: { track: Track; onClose: 
 
 function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onClose: () => void; onNotInterested?: () => void }) {
   const [view, setView] = useState<'main' | 'playlists'>('main');
-  const signedIn = useSignedIn();
+  const ytSignedIn = useSignedIn();
+  const spotifySignedIn = useSpotifySignedIn();
+  const signedIn = ytSignedIn || spotifySignedIn;
   if (view === 'playlists') {
     return <PlaylistChoices track={track} onDone={onClose} onBack={() => setView('main')} />;
   }
@@ -178,14 +182,23 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
         onSelect={async () => {
           onClose();
           try {
-            const { fetchSearch } = await import('@/data/music/api');
+            const { findOfficialMusicVideo } = await import('@/playback/youtube/officialVideo');
             const { playTrack } = await import('@/components/music/play');
             const artistName = track.artists.map((a) => a.name).join(' ');
-            const query = `${track.title} ${artistName} official video`;
-            const search = await fetchSearch(query);
-            const videoHit = search.videos?.[0] || search.top.find((item) => item.kind === 'video');
-            if (videoHit && videoHit.id) {
-              playTrack(videoHit);
+            const matchedId = await findOfficialMusicVideo(track.title, artistName, track.durationSec);
+            if (matchedId) {
+              playTrack({
+                id: matchedId,
+                title: track.title,
+                kind: 'video',
+                subtitle: artistName,
+                artists: track.artists,
+                album: track.album,
+                thumbnail: track.thumbnail,
+                durationSec: track.durationSec,
+                explicit: track.explicit,
+                wide: true,
+              });
             }
           } catch (e) {
             console.warn('Failed to find official video:', e);

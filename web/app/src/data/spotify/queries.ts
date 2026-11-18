@@ -99,6 +99,27 @@ export function useSpotifySearch(query: string) {
   });
 }
 
+/** Full Spotify search across playlists, albums, artists and tracks */
+export function useSpotifySearchAll(query: string) {
+  const signedIn = useSpotifySignedIn();
+  const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
+  return useQuery({
+    queryKey: ['spotify', 'searchAll', query],
+    queryFn: async () => {
+      try {
+        const { getBridge } = await import('@/extension/bridge');
+        const b = getBridge();
+        if (!b) return null;
+        return await b.call('spotify.searchAll', { query });
+      } catch {
+        return null;
+      }
+    },
+    enabled: (signedIn || isDesktop) && !!query.trim(),
+    staleTime: 60_000,
+  });
+}
+
 
 /** How many tracks are looked up on YouTube Music at once (MainViewModel.SPOTIFY_MATCH_PARALLELISM). */
 const MATCH_PARALLELISM = 6;
@@ -191,6 +212,20 @@ class PlaylistJob {
 }
 
 const jobs = new Map<string, PlaylistJob>();
+
+/** Invalidates the in-memory playlist cache so newly added tracks appear immediately */
+export function invalidateSpotifyPlaylistRows(playlistId?: string) {
+  if (playlistId) {
+    const cleanId = playlistId.replace(/^spotify:playlist:/, '');
+    for (const [key] of jobs.entries()) {
+      if (key.endsWith(`|${cleanId}`) || key.endsWith(`|${playlistId}`)) {
+        jobs.delete(key);
+      }
+    }
+  } else {
+    jobs.clear();
+  }
+}
 
 /** Per account and playlist: another account's rows are never shown. */
 export function useSpotifyRows(playlistId: string): SpotifyRows & { retry: () => void } {

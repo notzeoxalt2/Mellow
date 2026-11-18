@@ -545,8 +545,8 @@ export async function lrclib(q: LyricsQuery): Promise<Parsed | null> {
   let synced = exact;
   if (!synced) {
     const hits = json<{ syncedLyrics?: string; duration?: number }[]>(await lyricsGet(urlWith('https://lrclib.net/api/search', { track_name: title, artist_name: artist })));
-    synced = (hits ?? [])
-      .filter((h) => h.syncedLyrics?.trim())
+    const validHits = (hits ?? []).filter((h) => h.syncedLyrics?.trim() && (secs <= 0 || Math.abs((h.duration ?? 0) - secs) <= 15));
+    synced = validHits
       .sort((a, b) => Math.abs((a.duration ?? 0) - secs) - Math.abs((b.duration ?? 0) - secs))[0]?.syncedLyrics;
   }
   return synced ? fromLines(parseLrc(synced)) : null;
@@ -659,7 +659,7 @@ export async function musixmatch(q: LyricsQuery): Promise<Parsed | null> {
     return s;
   };
   const track = tracks.sort((a, b) => score(b) - score(a))[0];
-  if (!track) return null;
+  if (!track || score(track) < 40) return null;
   if (track.has_richsync) {
     const rich = await mxmGet((token) => urlWith(`${MXM}/track.richsync.get`, { app_id: MXM_APP, format: 'json', track_id: track.track_id, usertoken: token }));
     const body = (rich?.richsync as { richsync_body?: string } | undefined)?.richsync_body;

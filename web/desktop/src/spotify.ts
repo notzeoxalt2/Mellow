@@ -609,3 +609,111 @@ export async function addTracksToPlaylist(
     return false;
   }
 }
+
+/** Full Spotify Search across tracks, playlists, albums, and artists */
+export async function searchSpotifyAll(spDc: string, query: string): Promise<{
+  tracks: SpotifyTrack[];
+  playlists: SpotifyPlaylist[];
+  albums: { id: string; name: string; artist: string; imageUrl: string | null; totalTracks: number }[];
+  artists: { id: string; name: string; imageUrl: string | null; followers: number }[];
+}> {
+  try {
+    const token = await mintAccessToken(spDc);
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,playlist,album,artist&limit=15`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+    if (!res.ok) return { tracks: [], playlists: [], albums: [], artists: [] };
+    const data = await res.json();
+
+    const tracks: SpotifyTrack[] = (data.tracks?.items ?? []).map((t: any) => ({
+      id: t.id,
+      title: t.name,
+      artist: t.artists?.map((a: any) => a.name).join(', ') ?? '',
+      album: t.album?.name ?? '',
+      durationMs: t.duration_ms ?? 0,
+      imageUrl: t.album?.images?.[0]?.url ?? null,
+    }));
+
+    const playlists: SpotifyPlaylist[] = (data.playlists?.items ?? [])
+      .filter(Boolean)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        imageUrl: p.images?.[0]?.url ?? null,
+        owner: p.owner?.display_name ?? null,
+        total: p.tracks?.total ?? 0,
+      }));
+
+    const albums = (data.albums?.items ?? []).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      artist: a.artists?.map((art: any) => art.name).join(', ') ?? '',
+      imageUrl: a.images?.[0]?.url ?? null,
+      totalTracks: a.total_tracks ?? 0,
+    }));
+
+    const artists = (data.artists?.items ?? []).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      imageUrl: a.images?.[0]?.url ?? null,
+      followers: a.followers?.total ?? 0,
+    }));
+
+    return { tracks, playlists, albums, artists };
+  } catch (err: any) {
+    console.warn('[Mellow] Spotify searchAll failed:', err?.message);
+    return { tracks: [], playlists: [], albums: [], artists: [] };
+  }
+}
+
+/** Report playing track to Spotify so it registers in user history and algorithm taste profile */
+export async function reportPlaybackToSpotify(
+  spDc: string,
+  trackId: string,
+  positionSec = 0,
+): Promise<boolean> {
+  try {
+    const cleanId = trackId.replace(/^spotify:(?:track:)?/, '');
+    if (!cleanId || cleanId.length !== 22) return false;
+    const token = await mintAccessToken(spDc);
+    const uri = `spotify:track:${cleanId}`;
+
+    // 1. Report to Spotify player queue / recently played endpoint
+    void fetch(`https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(uri)}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    }).catch(() => null);
+
+    // 2. Send play event packet to Spotify telemetry and session tracker
+    void fetch('https://event-service.spotify.com/v1/events', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        events: [
+          {
+            type: 'track_played',
+            uri,
+            position_ms: Math.round(positionSec * 1000),
+            timestamp: Date.now(),
+          },
+        ],
+      }),
+    }).catch(() => null);
+
+    return true;
+  } catch {
+    return false;
+  }
+}

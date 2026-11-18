@@ -51,8 +51,20 @@ const CREDITS = [
 ];
 
 /** A YouTube title as a lyrics database indexed it: credits and packaging off, version words kept. */
-export function forLyricsSearch(title: string): string {
+export function forLyricsSearch(title: string, artist?: string): string {
   let name = title;
+  // If title has "Artist - Title", strip the artist prefix if it matches
+  if (artist && name.toLowerCase().startsWith(artist.toLowerCase())) {
+    name = name.slice(artist.length).replace(/^[\s\-–—:]+/, '');
+  } else {
+    const dashIdx = name.indexOf(' - ');
+    if (dashIdx > 0 && dashIdx < name.length / 2) {
+      const prefix = name.slice(0, dashIdx).trim();
+      if (artist && (prefix.toLowerCase().includes(artist.toLowerCase()) || artist.toLowerCase().includes(prefix.toLowerCase()))) {
+        name = name.slice(dashIdx + 3).trim();
+      }
+    }
+  }
   for (const pattern of CREDITS) name = name.replace(pattern, ' ');
   const cleaned = name.replace(/\s+/g, ' ').trim().replace(/[,\-–—]+$/, '').trim();
   return cleaned || title.trim();

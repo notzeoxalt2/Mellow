@@ -203,6 +203,19 @@ export interface BridgeMethods {
     params: { playlistId: string; trackUris: string[] };
     result: boolean;
   };
+  'spotify.searchAll': {
+    params: { query: string };
+    result: {
+      tracks: SpotifyTrack[];
+      playlists: SpotifyPlaylist[];
+      albums: { id: string; name: string; artist: string; imageUrl: string | null; totalTracks: number }[];
+      artists: { id: string; name: string; imageUrl: string | null; followers: number }[];
+    };
+  };
+  'spotify.reportPlayback': {
+    params: { trackId: string; positionSec?: number };
+    result: boolean;
+  };
   'discordRpc.setEnabled': { params: { enabled: boolean }; result: { enabled: boolean } };
   'discordRpc.getState': { params: Record<string, never>; result: { enabled: boolean } };
 }

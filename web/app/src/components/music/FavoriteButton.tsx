@@ -1,5 +1,6 @@
 import { StarFilledIcon, StarIcon } from '@/components/icons/Transport';
 import { useLikeStatus, useSetLiked, useSignedIn } from '@/data/music/queries';
+import { useSpotifySignedIn } from '@/extension/useSpotifyAuth';
 import { usePlayer } from '@/state/player';
 
 interface FavoriteButtonProps {
@@ -14,7 +15,9 @@ interface FavoriteButtonProps {
  * Liked Music). Only shown signed in; also syncs to Spotify Liked Songs.
  */
 export function FavoriteButton({ videoId, track, className, size = 18 }: FavoriteButtonProps) {
-  const signedIn = useSignedIn();
+  const ytSignedIn = useSignedIn();
+  const spotifySignedIn = useSpotifySignedIn();
+  const signedIn = ytSignedIn || spotifySignedIn;
   const status = useLikeStatus(videoId);
   const setLiked = useSetLiked();
   const nowPlaying = usePlayer((s) => s.nowPlaying);

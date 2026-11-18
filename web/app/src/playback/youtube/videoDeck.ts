@@ -17,20 +17,15 @@ const IGNORE_DRIFT_SEC = 0.02;
 const SYNC_EVERY_MS = 250;
 
 /**
- * What Auto opens at. Shaka's own default (500kbps) starts a music video at
- * 360p and climbs from there, which is most of a short song; the picture is
- * worth more than the first few seconds of caution, and a connection that
- * can't hold this is measured within seconds and backed off.
+ * What Auto opens at: high bandwidth estimate ensures Shaka selects highest quality
+ * rendition (4K / 2K / 1080p High Bitrate) immediately.
  */
-const AUTO_START_BPS = 6_000_000;
+const AUTO_START_BPS = 25_000_000;
 
 /**
- * What Auto climbs to: H.264 tops out here on YouTube and every browser
- * decodes it in hardware, so Auto never asks the machine for a VP9 2K or 4K
- * frame it may have to decode in software. Above this is the listener's call,
- * in the quality switcher.
+ * Maximum resolution Auto will climb to (supports full 4K / 2160p high bitrate).
  */
-const AUTO_MAX_HEIGHT = 1080;
+const AUTO_MAX_HEIGHT = 2160;
 
 let player: shaka.Player | null = null;
 let source: { engine: YouTubeEngine; audio: HTMLAudioElement } | null = null;
@@ -46,10 +41,8 @@ async function ensurePlayer(): Promise<shaka.Player> {
   const created = new shaka.Player();
   created.configure({
     manifest: { disableAudio: true, disableText: true, disableThumbnails: true },
-    // H.264 first: every browser decodes it in hardware. A picked height above
-    // the H.264 ladder arrives as a manifest with only that height in it
-    // (engine.videoStream), so this falls through to VP9 or AV1 there.
-    preferredVideoCodecs: ['avc1', 'vp9', 'av01'],
+    // Highest quality first: AV1 and VP9 offer dramatically higher bitrates and sharpness than base H.264.
+    preferredVideoCodecs: ['av01', 'vp9', 'avc1'],
     preferredDecodingAttributes: ['smooth', 'powerEfficient'],
     streaming: {
       bufferingGoal: 30,

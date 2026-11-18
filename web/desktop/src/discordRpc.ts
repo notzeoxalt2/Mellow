@@ -2,7 +2,7 @@ import net from 'node:net';
 import crypto from 'node:crypto';
 
 // Apple Music registered client ID for authentic "Listening to Apple Music" presence
-const APPLE_MUSIC_CLIENT_ID = '886578863148859422';
+const APPLE_MUSIC_CLIENT_ID = '886578863147192350';
 
 const OPCODES = {
   HANDSHAKE: 0,
@@ -37,7 +37,8 @@ class DiscordRpcClient {
   private pipeIndex = 0;
 
   constructor() {
-    // Client starts idle
+    // Connect to Discord desktop client IPC pipe on startup
+    this.connect();
   }
 
   public setEnabled(val: boolean) {

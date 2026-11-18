@@ -94,7 +94,7 @@ export async function lookupLyrics(track: LyricsTrack, { only, onSource }: Looku
 
   const query: providers.LyricsQuery = {
     videoId: track.videoId,
-    title: forLyricsSearch(track.title),
+    title: forLyricsSearch(track.title, track.artist),
     artist: artistForLyricsSearch(track.artist),
     durationMs: track.durationMs,
     album: track.album,

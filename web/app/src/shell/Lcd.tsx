@@ -129,7 +129,7 @@ export function Lcd() {
   const album = track?.album ?? null;
   return (
     <div
-      className={`group/lcd relative grid h-full items-center gap-x-2 pb-1.5 ${video ? 'grid-cols-[60px_minmax(0,1fr)]' : 'grid-cols-[34px_minmax(0,1fr)]'}`}
+      className="group/lcd relative grid h-full items-center gap-x-2 pb-1.5 grid-cols-[34px_minmax(0,1fr)]"
     >
       {/* As Apple's: the artwork opens the full-screen player, with an expand glyph on hover. */}
       <div className="relative">
@@ -144,15 +144,14 @@ export function Lcd() {
           />
         )}
         <button
-          // A music video plays here in small, at 16:9.
-          className={`group/art relative block h-[34px] overflow-hidden rounded-[6px] bg-joe p-0 transition-[filter,opacity] ${video ? 'w-[60px] bg-black' : 'w-[34px]'}`}
+          className="group/art relative block size-[34px] overflow-hidden rounded-[6px] bg-joe p-0 transition-[filter,opacity]"
           aria-label="Open full screen player"
           onClick={() => openFullScreen(true)}
         >
         {nowPlaying.artworkUrl && (
           <img
             key={nowPlaying.artworkUrl}
-            src={sizedArtwork(nowPlaying.artworkUrl, 34)}
+            src={sizedArtwork(nowPlaying.artworkUrl, 68)}
             alt=""
             referrerPolicy="no-referrer"
             decoding="async"
@@ -160,16 +159,6 @@ export function Lcd() {
             onLoad={(e) => e.currentTarget.setAttribute('data-loaded', '')}
           />
         )}
-        {canvas && animatedArtworkEnabled && (
-          <CanvasArtwork
-            url={canvas}
-            playing={status === 'playing' || status === 'buffering'}
-            className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
-          />
-        )}
-        <VideoSurface
-          className={`absolute inset-0 transition-opacity duration-300 ${video ? 'opacity-100' : 'opacity-0'}`}
-        />
         {/* Hovering anywhere on the player pill dims the artwork and shows the expand glyph. */}
         <span
           className="absolute inset-0 grid place-items-center bg-[rgb(0_0_0/0.5)] text-white opacity-0 transition-opacity duration-200 group-hover/pill:opacity-100 group-focus-visible/art:opacity-100"

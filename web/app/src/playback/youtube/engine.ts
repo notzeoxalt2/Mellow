@@ -323,16 +323,15 @@ export class YouTubeEngine {
     let largest = pictures.sort((a, b) => b.width! * b.height! - a.width! * a.height!)[0];
 
     // If this stream has no 16:9 video format (it is an audio-only release, still cover art, or Spotify match),
-    // find the official music video for this song so the listener can watch the actual official music video in full screen!
+    // find the legitimate official music video for this song so the listener can watch the actual official music video in full screen!
     if (!largest || largest.width! / largest.height! < MIN_VIDEO_ASPECT) {
       try {
         const title = info.basic_info?.title || '';
         const author = info.basic_info?.author || '';
+        const durationSec = info.basic_info?.duration || null;
         if (title && yt) {
-          const query = `${title} ${author} official video`.trim();
-          const search = await yt.music.search(query, { type: 'video' });
-          const firstHit = (search as any)?.videos?.[0] || (search as any)?.results?.[0];
-          const matchedId = firstHit?.id || firstHit?.video_id;
+          const { findOfficialMusicVideo } = await import('./officialVideo');
+          const matchedId = await findOfficialMusicVideo(title, author, durationSec);
           if (matchedId && matchedId !== videoId) {
             const videoInfo = await yt.getBasicInfo(matchedId, { client } as any);
             const videoPictures = (videoInfo.streaming_data?.adaptive_formats ?? []).filter(

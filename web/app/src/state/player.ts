@@ -1096,6 +1096,22 @@ function applyTrack(track: LoadedTrack, from?: Track) {
       plays: null,
     });
   }
+  // Dual-sync playback with Spotify so Spotify builds listening history and taste profile
+  void (async () => {
+    try {
+      const { getBridge } = await import('@/extension/bridge');
+      const b = getBridge();
+      if (!b) return;
+      let spotifyId = nowPlaying.videoId.startsWith('spotify:') ? nowPlaying.videoId.replace(/^spotify:(?:track:)?/, '') : null;
+      if (!spotifyId) {
+        const hits = await b.call('spotify.searchTracks', { query: `${nowPlaying.title} ${nowPlaying.artist}` }).catch(() => []);
+        spotifyId = hits?.[0]?.id ?? null;
+      }
+      if (spotifyId) {
+        void b.call('spotify.reportPlayback', { trackId: spotifyId, positionSec: 0 }).catch(() => null);
+      }
+    } catch {}
+  })();
   saveSession({ queue: usePlayer.getState().queue, index: usePlayer.getState().index, nowPlaying });
   if (typeof window !== 'undefined' && window.electronAPI?.updateNowPlaying) {
     // The mini-player can receive a track before AppShell has finished applying

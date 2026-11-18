@@ -192,6 +192,14 @@ export function FullScreenPlayer() {
     }
   }, [isDesktop]);
   const [resolvingVideo, setResolvingVideo] = useState(false);
+  // Poster-first experience: show the original high-resolution album poster first, then transition smoothly to canvas or video
+  const [showPosterOnly, setShowPosterOnly] = useState(true);
+  useEffect(() => {
+    setShowPosterOnly(true);
+    const timer = setTimeout(() => setShowPosterOnly(false), 1800);
+    return () => clearTimeout(timer);
+  }, [nowPlaying?.videoId]);
+
   const handleToggleOrFindVideo = async () => {
     if (video) {
       // User clicked official video button again: STOP the video and revert to normal player
@@ -207,15 +215,7 @@ export function FullScreenPlayer() {
     setResolvingVideo(true);
     try {
       useVideo.setState({ surfaces: 1 });
-      const { fetchSearch } = await import('@/data/music/api');
-      const query = `${nowPlaying.title} ${nowPlaying.artist} official video`;
-      const search = await fetchSearch(query);
-      const videoHit = search.videos?.[0] || search.top.find((item) => item.kind === 'video');
-      if (videoHit && videoHit.id) {
-        const { playTrack } = await import('@/components/music/play');
-        playTrack(videoHit);
-        setPanel(null);
-      }
+      setPanel(null);
     } catch (e) {
       console.warn('Failed to resolve official video:', e);
     } finally {
@@ -319,7 +319,22 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
       {!theater && fullScreenPlayerAmbient && (
-        <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
+        !canvasDisabled && canvas ? (
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <video
+              key={`canvas-bg-${canvas}`}
+              src={canvas}
+              className="size-full object-cover scale-125 blur-[60px] saturate-[180%] brightness-105 opacity-80"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+            <div className="absolute inset-0 bg-black/20" />
+          </div>
+        ) : (
+          <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
+        )
       )}
       {theater && (
         <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in bg-black">
@@ -455,22 +470,25 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
                 />
               </>
             )}
-            {/* Apple's motion artwork or Spotify's looping Canvas MP4 video */}
-            {motion ? (
-              <MotionArtwork
-                key={motion.url}
-                motion={motion}
-                className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
-                playing={playing}
-              />
-            ) : !canvasDisabled && canvas ? (
-              <CanvasArtwork
-                key={canvas}
-                url={canvas}
-                playing={playing}
-              />
-            ) : null}
-            {video && !theater && <VideoSurface className="absolute inset-0" />}
+            {/* Apple's motion artwork or Spotify's looping Canvas MP4 video - smoothly dissolves in after original poster window */}
+            {!showPosterOnly && (
+              motion ? (
+                <MotionArtwork
+                  key={motion.url}
+                  motion={motion}
+                  className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-1000 ease-in data-ready:opacity-100"
+                  playing={playing}
+                />
+              ) : !canvasDisabled && canvas ? (
+                <CanvasArtwork
+                  key={canvas}
+                  url={canvas}
+                  playing={playing}
+                  className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-1000 ease-in data-ready:opacity-100"
+                />
+              ) : null
+            )}
+            {video && !theater && !showPosterOnly && <VideoSurface className="absolute inset-0" />}
           </div>
 
           <div className={`flex items-center gap-3${theater ? '' : ' mt-[clamp(20px,3.2vh,32px)]'}${column ? ' max-md:mt-0' : ''}`}>

@@ -6,7 +6,7 @@ import { hrefFor } from '@/components/music/links';
 import { playTrack, toTrack } from '@/components/music/play';
 import { SearchField } from '@/components/music/SearchField';
 import { Shelves, TrackShelf } from '@/components/music/ShelfView';
-import { useSpotifyCategoryPlaylists, useSpotifySearch } from '@/data/spotify/queries';
+import { useSpotifyCategoryPlaylists, useSpotifySearch, useSpotifySearchAll } from '@/data/spotify/queries';
 import { useState } from 'react';
 import { TrackMenu } from '@/components/music/TrackMenu';
 import { EmptyState, LoadError } from '@/components/music/States';
@@ -114,6 +114,7 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
   const search = useSearch(query);
   const youtubeSongs = useSearchSongs(query);
   const spotifySearch = useSpotifySearch(query);
+  const spotifyAll = useSpotifySearchAll(query);
   const spotifyCategory = useSpotifyCategoryPlaylists(categoryId ?? '', !!categoryId);
 
   const spotifyTracks = spotifySearch.data?.pages.flat() ?? [];
@@ -122,6 +123,10 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
   const shelves = results ? shelvesFor(results) : [];
   const spotifyCategoryItems: MusicItem[] = (spotifyCategory.data ?? []).map((playlist) => ({
     kind: 'spotify-playlist', id: playlist.id, title: playlist.name, subtitle: playlist.owner ?? 'Spotify',
+    artists: [], album: null, thumbnail: playlist.imageUrl, wide: false, durationSec: null, explicit: false,
+  }));
+  const spotifyPlaylistItems: MusicItem[] = (spotifyAll.data?.playlists ?? []).map((playlist) => ({
+    kind: 'spotify-playlist', id: playlist.id, title: playlist.name, subtitle: playlist.owner ? `Playlist • ${playlist.owner}` : 'Spotify Playlist',
     artists: [], album: null, thumbnail: playlist.imageUrl, wide: false, durationSec: null, explicit: false,
   }));
   const normalized = (value: string) => value.normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase().replace(/[^\p{Letter}\p{Number}]+/gu, ' ').trim();
@@ -143,10 +148,10 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
     return true;
   });
 
-  const hasAny = (results && (results.top.length > 0 || shelves.length > 0)) || allResultSongs.length > 0 || spotifyCategoryItems.length > 0;
+  const hasAny = (results && (results.top.length > 0 || shelves.length > 0)) || allResultSongs.length > 0 || spotifyCategoryItems.length > 0 || spotifyPlaylistItems.length > 0;
 
   if (search.isLoading && spotifySearch.isLoading && youtubeSongs.isLoading && spotifyCategory.isLoading) return <ResultsSkeleton />;
-  if (search.isError && !spotifyTracks.length) return <LoadError error={search.error} onRetry={() => void search.refetch()} />;
+  if (search.isError && !spotifyTracks.length && !spotifyPlaylistItems.length) return <LoadError error={search.error} onRetry={() => void search.refetch()} />;
 
   if (!hasAny) {
     return <EmptyState title="No Results" detail={`Try a new search for something other than “${query}”.`} />;
@@ -195,6 +200,12 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
             <h2 className={sectionTitle}>{query} on Spotify</h2>
             <div className={topGrid}>{spotifyCategoryItems.map((item) => <TopResult key={item.id} item={item} />)}</div>
           </section>}
+          {spotifyPlaylistItems.length > 0 && (
+            <section aria-label="Spotify Playlists">
+              <h2 className={sectionTitle}>Playlists from Spotify</h2>
+              <div className={topGrid}>{spotifyPlaylistItems.slice(0, 6).map((item) => <TopResult key={item.id} item={item} />)}</div>
+            </section>
+          )}
           {results && results.top.length > 0 && (
             <section aria-label="Top Results">
               <h2 className={sectionTitle}>Top Results</h2>
@@ -266,7 +277,13 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
             <h2 className={sectionTitle}>{query}</h2>
             <div className={topGrid}>{spotifyCategoryItems.map((item) => <TopResult key={item.id} item={item} />)}</div>
           </section>}
-          {spotifyTracks.length > 0 ? (
+          {spotifyPlaylistItems.length > 0 && (
+            <section aria-label="Spotify Playlists">
+              <h2 className={sectionTitle}>Spotify Playlists</h2>
+              <div className={topGrid}>{spotifyPlaylistItems.map((item) => <TopResult key={item.id} item={item} />)}</div>
+            </section>
+          )}
+          {spotifyTracks.length > 0 && (
             <>
               <TrackShelf
                 title="Songs"
@@ -281,9 +298,10 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
                 </div>
               )}
             </>
-          ) : spotifyCategoryItems.length === 0 && !spotifySearch.isLoading && !spotifySearch.isFetchingNextPage ? (
+          )}
+          {spotifyTracks.length === 0 && spotifyPlaylistItems.length === 0 && spotifyCategoryItems.length === 0 && !spotifySearch.isLoading && !spotifySearch.isFetchingNextPage && !spotifyAll.isLoading && (
             <EmptyState title="No Spotify Results" detail="Try a different song or artist title." />
-          ) : null}
+          )}
         </>
       )}
     </>

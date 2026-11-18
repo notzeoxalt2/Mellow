@@ -196,14 +196,34 @@ export async function createSpotifyPlaylist(
 
 export async function addTracksToSpotifyPlaylist(
   playlistId: string,
-  trackUris: string[],
+  trackUrisOrIds: string[],
+  trackMeta?: { title: string; artist: string },
 ): Promise<boolean> {
   try {
     const b = bridge();
-    const ok = await b.call('spotify.addTracksToPlaylist', { playlistId, trackUris }, { timeoutMs: 20_000 });
-    // Instantly invalidate Spotify playlist and playlists queries
+    let uris: string[] = [];
+    for (const item of trackUrisOrIds) {
+      if (item.startsWith('spotify:track:')) {
+        uris.push(item);
+      } else if (item.startsWith('spotify:')) {
+        uris.push(`spotify:track:${item.replace(/^spotify:/, '')}`);
+      } else if (/^[a-zA-Z0-9]{22}$/.test(item)) {
+        uris.push(`spotify:track:${item}`);
+      } else if (trackMeta?.title && trackMeta?.artist) {
+        // Resolve YouTube / generic track to Spotify track ID
+        const hits = await b.call('spotify.searchTracks', { query: `${trackMeta.title} ${trackMeta.artist}` }, { timeoutMs: 15_000 }).catch(() => []);
+        if (hits && hits[0]?.id) {
+          uris.push(`spotify:track:${hits[0].id}`);
+        }
+      }
+    }
+    if (!uris.length) return false;
+    const ok = await b.call('spotify.addTracksToPlaylist', { playlistId, trackUris: uris }, { timeoutMs: 20_000 });
+    // Invalidate TanStack query cache and in-memory row cache
     void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlist', playlistId] });
     void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlists'] });
+    const { invalidateSpotifyPlaylistRows } = await import('./queries');
+    invalidateSpotifyPlaylistRows(playlistId);
     return ok;
   } catch {
     return false;
