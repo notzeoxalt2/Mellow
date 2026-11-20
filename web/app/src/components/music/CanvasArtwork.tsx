@@ -75,7 +75,7 @@ export function CanvasArtwork({
       }
     };
     const handleBlur = () => {
-      if (videoRef.current) {
+      if (readAppearancePreferences().smartMemorySaving && videoRef.current) {
         videoRef.current.pause();
       }
     };

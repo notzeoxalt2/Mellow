@@ -10,12 +10,10 @@ import { claimVideoSurface, type VideoFit } from '@/state/video';
  */
 export function VideoSurface({ fit = 'cover', className }: { fit?: VideoFit; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
-  const enabled = useMusicVideosEnabled();
   useLayoutEffect(() => {
     const node = host.current;
-    if (!enabled || !node) return;
+    if (!node) return;
     return claimVideoSurface(node, fit);
-  }, [fit, enabled]);
-  if (!enabled) return null;
+  }, [fit]);
   return <div ref={host} className={`pointer-events-none ${className ?? ''}`} aria-hidden="true" />;
 }

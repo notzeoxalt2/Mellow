@@ -83,9 +83,49 @@ export function generateTotp(codes: number[], epochMs: number): string {
 interface MintedToken {
   token: string;
   expiresAt: number;
+  clientId?: string;
 }
 
 let cachedToken: MintedToken | null = null;
+let cachedClientToken: { token: string; expiresAt: number } | null = null;
+
+export async function mintClientToken(spDc: string): Promise<string | null> {
+  if (cachedClientToken && Date.now() < cachedClientToken.expiresAt - 30_000) {
+    return cachedClientToken.token;
+  }
+  try {
+    await mintAccessToken(spDc);
+    const clientId = cachedToken?.clientId || 'd8a5dc304d63477f88f4d614bd3ae76c';
+    const res = await fetch('https://clienttoken.spotify.com/v1/clienttoken', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_data: {
+          client_version: '1.2.56.502.ga68d2d4f',
+          client_id: clientId,
+          js_sdk_data: {
+            device_brand: 'unknown',
+            device_model: 'unknown',
+            os: 'windows',
+            os_version: 'unknown',
+            device_id: crypto.randomUUID().replaceAll('-', ''),
+            device_type: 'computer',
+          },
+        },
+      }),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as any;
+    if (body.response_type === 'RESPONSE_GRANTED_TOKEN_RESPONSE' && body.granted_token?.token) {
+      cachedClientToken = {
+        token: body.granted_token.token,
+        expiresAt: Date.now() + (body.granted_token.expires_after_seconds ?? 3600) * 1000,
+      };
+      return cachedClientToken.token;
+    }
+  } catch {}
+  return null;
+}
 
 export async function mintAccessToken(spDc: string, retry = true): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
@@ -117,7 +157,7 @@ export async function mintAccessToken(spDc: string, retry = true): Promise<strin
     throw new Error(`Failed to mint Spotify token: ${response.status}`);
   }
 
-  const data = (await response.json()) as { accessToken?: string; accessTokenExpirationTimestampMs?: number; totpVerExpired?: boolean };
+  const data = (await response.json()) as { accessToken?: string; accessTokenExpirationTimestampMs?: number; clientId?: string; totpVerExpired?: boolean };
   if (data.totpVerExpired && retry) {
     await refreshLiveSecret();
     return mintAccessToken(spDc, false);
@@ -130,6 +170,7 @@ export async function mintAccessToken(spDc: string, retry = true): Promise<strin
   cachedToken = {
     token: data.accessToken,
     expiresAt: data.accessTokenExpirationTimestampMs ?? Date.now() + 3600_000,
+    clientId: data.clientId,
   };
 
   return cachedToken.token;
@@ -137,14 +178,19 @@ export async function mintAccessToken(spDc: string, retry = true): Promise<strin
 
 async function queryGraphQL(spDc: string, operation: Operation, variables: Record<string, unknown>): Promise<any> {
   const token = await mintAccessToken(spDc);
+  const clientTok = await mintClientToken(spDc).catch(() => null);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/json',
+    'Content-Type': 'application/json;charset=UTF-8',
+    'App-Platform': 'WebPlayer',
+  };
+  if (clientTok) {
+    headers['Client-Token'] = clientTok;
+  }
   const response = await fetch(PATHFINDER, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-      'Content-Type': 'application/json;charset=UTF-8',
-      'App-Platform': 'WebPlayer',
-    },
+    headers,
     body: JSON.stringify({
       variables,
       operationName: operation,
@@ -401,20 +447,27 @@ export async function fetchCanvas(spDc: string, trackId: string): Promise<{ url:
       }
     } catch {}
 
-    // 2. Fallback to canvaz-cache protobuf endpoint
+    // 2. Fallback to canvaz-cache protobuf endpoint (works across all regions including Pakistan)
     const token = await mintAccessToken(spDc);
+    const clientTok = await mintClientToken(spDc).catch(() => null);
     const uriBytes = Buffer.from(trackUri, 'utf8');
     const trackMsg = Buffer.concat([Buffer.from([0x0a, uriBytes.length]), uriBytes]);
     const rootMsg = Buffer.concat([Buffer.from([0x0a, trackMsg.length]), trackMsg]);
 
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'Spotify/9.0.34.593 iOS/18.4 (iPhone15,3)',
+      'Content-Type': 'application/protobuf',
+      Accept: 'application/protobuf',
+      'Accept-Language': 'en',
+    };
+    if (clientTok) {
+      headers['Client-Token'] = clientTok;
+    }
+
     const resp = await fetch('https://spclient.wg.spotify.com/canvaz-cache/v0/canvases', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'Spotify/9.0.34.593 iOS/18.4 (iPhone15,3)',
-        'Content-Type': 'application/protobuf',
-        'Accept': 'application/protobuf',
-      },
+      headers,
       body: rootMsg,
     });
 

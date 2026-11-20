@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadUpdate: (assetUrl: string) => ipcRenderer.invoke('app-download-update', assetUrl),
   quitAndInstallUpdate: () => ipcRenderer.invoke('app-quit-and-install'),
   openReleaseUrl: (url: string) => ipcRenderer.invoke('app-open-release-url', url),
+  openInstaller: () => ipcRenderer.invoke('app-open-installer'),
   onUpdateAvailable: (callback: (info: any) => void) => {
     const handler = (_: unknown, info: any) => callback(info);
     ipcRenderer.on('app-update-available', handler);

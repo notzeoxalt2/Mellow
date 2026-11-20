@@ -32,6 +32,7 @@ let source: { engine: YouTubeEngine; audio: HTMLAudioElement } | null = null;
 /** The video whose manifest is loaded (or loading) in the picture player, and at which quality. */
 let loaded: string | null = null;
 let loadedQuality: VideoQuality | null = null;
+let isOfficialVideo = false;
 let generation = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let listening: HTMLAudioElement | null = null;
@@ -89,6 +90,7 @@ export function followVideo(engine: YouTubeEngine, audio: HTMLAudioElement): voi
 
 /** Nothing is playing: drop the picture. */
 export function stopVideo(): void {
+  isOfficialVideo = false;
   source = null;
   loaded = null;
   loadedQuality = null;
@@ -101,12 +103,13 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
   const quality = useVideo.getState().quality;
   try {
     const { getInnertube } = await import('./innertube');
-    const { resolvePlayer } = await import('./resolver');
+    const { resolvePlayer, usesWebPo } = await import('./resolver');
+    const { botguard } = await import('./botguard');
     const yt = await getInnertube();
     const resolved = await resolvePlayer(yt, videoId);
     if (!resolved || run !== generation) return false;
 
-    const { info } = resolved;
+    const { info, client } = resolved;
     const pictures = (info.streaming_data?.adaptive_formats ?? []).filter(
       (f) => f.has_video && !f.has_audio && f.width && f.height && (f.url || f.signature_cipher || f.cipher),
     );
@@ -116,8 +119,13 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
     const heights = [...new Set(pictures.map((f) => f.height!))].sort((a, b) => b - a);
     const wantedHeight = quality !== 'auto' && heights.includes(quality) ? quality : null;
 
+    const pot = usesWebPo(client) ? await botguard.mint(videoId) : undefined;
     const manifest = await info.toDash({
       format_filter: (f) => !f.has_video || f.has_audio || (wantedHeight !== null && f.height !== wantedHeight),
+      url_transformer: (url) => {
+        if (pot) url.searchParams.set('pot', pot);
+        return url;
+      },
       manifest_options: { include_thumbnails: false },
     });
 
@@ -126,6 +134,7 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
     const resumeAt = audio?.currentTime ?? 0;
 
     await unload(false);
+    isOfficialVideo = true;
     loaded = videoId;
     loadedQuality = quality;
 
@@ -138,7 +147,7 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
     if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
       await Promise.race([
         new Promise<void>((resolve) => video.addEventListener('loadeddata', () => resolve(), { once: true })),
-        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+        new Promise<void>((resolve) => setTimeout(resolve, 1500)),
       ]);
     }
     if (run !== generation) return false;
@@ -157,10 +166,12 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
       listen(audio);
       sync();
     }
+    void video.play().catch(() => {});
     timer ??= setInterval(sync, SYNC_EVERY_MS);
     return true;
   } catch (err) {
     trackLog.w(`video: failed to load official video: ${String(err)}`, videoId);
+    isOfficialVideo = false;
     await unload();
     return false;
   }
@@ -171,6 +182,7 @@ useVideo.subscribe((state, previous) => {
 });
 
 async function refresh(): Promise<void> {
+  if (isOfficialVideo && loaded) return;
   const run = ++generation;
   const quality = useVideo.getState().quality;
   const wanted = source && useVideo.getState().surfaces > 0 ? source : null;
@@ -226,6 +238,7 @@ async function unload(keepPicture = false): Promise<void> {
   timer = null;
   loaded = null;
   loadedQuality = null;
+  isOfficialVideo = false;
   if (!keepPicture) useVideo.setState({ videoId: null, heights: [], activeHeight: null, surfaces: 0 });
   try {
     const video = getVideoElement();
@@ -237,13 +250,6 @@ async function unload(keepPicture = false): Promise<void> {
   await player?.unload().catch(() => {});
 }
 
-function handleWindowBlur() {
-  const video = getVideoElement();
-  if (video && !video.paused) {
-    video.pause();
-  }
-}
-
 function listen(audio: HTMLAudioElement) {
   if (listening === audio) return;
   for (const type of ['play', 'pause', 'seeked', 'ratechange'] as const) {
@@ -252,10 +258,6 @@ function listen(audio: HTMLAudioElement) {
   }
   document.removeEventListener('visibilitychange', sync);
   document.addEventListener('visibilitychange', sync);
-  window.removeEventListener('blur', handleWindowBlur);
-  window.addEventListener('blur', handleWindowBlur);
-  window.removeEventListener('mellow:window-blur', handleWindowBlur);
-  window.addEventListener('mellow:window-blur', handleWindowBlur);
   window.removeEventListener('focus', sync);
   window.addEventListener('focus', sync);
   window.removeEventListener('mellow:window-focus', sync);
@@ -277,8 +279,8 @@ function sync() {
     const nudge = Math.abs(drift) > IGNORE_DRIFT_SEC ? Math.max(-0.1, Math.min(0.1, -drift)) : 0;
     video.playbackRate = audio.playbackRate * (1 + nudge);
   }
-  // Smart throttling: auto pause video decoding when window/tab is hidden or app is in background to save GPU/CPU for other apps/games
-  const isBackgrounded = typeof document !== 'undefined' && (document.hidden || !document.hasFocus());
+  // Smart throttling: auto pause video decoding ONLY when window/tab is minimized/hidden
+  const isBackgrounded = typeof document !== 'undefined' && document.hidden;
   if ((audio.paused || isBackgrounded) && !video.paused) video.pause();
   else if (!audio.paused && !isBackgrounded && video.paused) void video.play().catch(() => {});
 }

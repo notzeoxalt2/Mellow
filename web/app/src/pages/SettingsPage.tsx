@@ -1,4 +1,4 @@
-import { ArrowDownCircle, CheckCircle2, ChevronRight, FolderDown, RefreshCw, Sparkles, Users } from 'lucide-react';
+import { ArrowDownCircle, CheckCircle2, ChevronRight, Download, FolderDown, RefreshCw, Sparkles, Users } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
 import { SiApplemusic, SiSpotify, SiYoutubemusic } from 'react-icons/si';
@@ -246,6 +246,21 @@ function DesktopUpdatesSection() {
             <span>{errorMsg}</span>
           </div>
         )}
+
+        <div className={`${settingsUi.row} justify-between items-center py-2.5 border-t border-white/[0.06]`}>
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-white">Windows Installer (.exe)</span>
+            <span className="text-[11px] text-secondary">Download or open the standalone Mellow Setup package</span>
+          </div>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/[0.08] hover:bg-white/[0.14] active:scale-95 text-xs font-medium text-white transition-all cursor-pointer border border-white/10"
+            onClick={() => (window as any).electronAPI?.openInstaller?.()}
+          >
+            <Download size={13} />
+            <span>Open Installer</span>
+          </button>
+        </div>
       </section>
     </>
   );

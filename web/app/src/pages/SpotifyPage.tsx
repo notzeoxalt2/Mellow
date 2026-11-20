@@ -1,22 +1,25 @@
+import { useSearchParams } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
 import { SquareLockup } from '@/components/music/Lockups';
 import { EmptyState, LoadError, NeedsExtension, stateStyles } from '@/components/music/States';
 import type { MusicItem } from '@/data/music/types';
-import { useSpotifyPlaylists } from '@/data/spotify/queries';
+import { useSpotifyHomeSections, useSpotifyPlaylists } from '@/data/spotify/queries';
 import { useExtension } from '@/extension/useExtension';
 import { openSpotifySignIn, useRefreshSpotifyAuth, useSetSpotifyConnected, useSpotifyAuth } from '@/extension/useSpotifyAuth';
 import { PlainSkeleton } from '@/skeletons/PageSkeletons';
 import { seeAllGrid } from './pageStyles';
 
 /**
- * The signed-in Spotify account's playlists (SpotifyLibraryScreen): this page
- * is only the way in; a playlist opens as an ordinary playlist page whose
- * songs are matched to YouTube Music.
+ * The signed-in Spotify account's playlists or a specific Spotify section:
+ * opens as an ordinary playlist page whose songs are matched to YouTube Music.
  */
 export default function SpotifyPage() {
+  const [searchParams] = useSearchParams();
+  const sectionParam = searchParams.get('section');
   const extension = useExtension();
   const auth = useSpotifyAuth();
   const playlists = useSpotifyPlaylists();
+  const homeSections = useSpotifyHomeSections();
   const connect = useSetSpotifyConnected();
   const retry = useRefreshSpotifyAuth();
 
@@ -59,7 +62,15 @@ export default function SpotifyPage() {
   if (playlists.isError && !playlists.data) return <LoadError error={playlists.error} onRetry={() => void playlists.refetch()} />;
   if (!playlists.data) return <PlainSkeleton />;
 
-  const items: MusicItem[] = playlists.data.map((p) => ({
+  // If viewing a specific section (e.g. "It's New Music Friday!"), show that section's playlists 1:1 with Spotify
+  const matchedSection = sectionParam
+    ? homeSections.data?.sections?.find((s) => s.title.toLowerCase().trim() === sectionParam.toLowerCase().trim())
+    : null;
+
+  const displayTitle = matchedSection ? matchedSection.title : 'All Spotify Playlists';
+  const targetPlaylists = matchedSection ? matchedSection.playlists : playlists.data;
+
+  const items: MusicItem[] = targetPlaylists.map((p) => ({
     kind: 'spotify-playlist',
     id: p.id,
     title: p.name,
@@ -73,7 +84,7 @@ export default function SpotifyPage() {
   }));
   return (
     <>
-      <PageHeader title="Spotify" />
+      <PageHeader title={displayTitle} />
       {!items.length && <EmptyState title="No playlists yet" />}
       <ul className={seeAllGrid}>
         {items.map((item) => (

@@ -811,6 +811,14 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   const state = usePlayer.getState();
   const entry = state.queue[at];
   if (!entry) return;
+  
+  // Cut any currently playing audio immediately so the song switch is instant
+  if (decks) {
+    try {
+      decks[active]?.audio.pause();
+      decks[1 - active]?.audio.pause();
+    } catch {}
+  }
   cancelCrossfade();
   void import('@/playback/youtube/videoDeck').then((m) => m.stopVideo()).catch(() => {});
   const token = ++loadToken;
@@ -831,7 +839,12 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   }
 
   // Instant Deck Swap: If upcoming track was preloaded on the idle deck, switch immediately (0.0s latency)
-  if (preloadedNext && preloadedNext.at === at && startSec === 0 && preloadedNext.deckIndex === (1 - active)) {
+  if (
+    preloadedNext &&
+    (preloadedNext.at === at || preloadedNext.playId === entry.track.videoId || preloadedNext.entry.track.videoId === entry.track.videoId) &&
+    startSec === 0 &&
+    preloadedNext.deckIndex === (1 - active)
+  ) {
     const all = await getDecks();
     const oldDeck = all[active]!;
     oldDeck.audio.pause();
@@ -1027,7 +1040,7 @@ function afterTrackStarted() {
     } catch (err) {
       trackLog.w(`Preload ahead skipped or unavailable: ${String(err)}`, nextEntry.track.videoId);
     }
-  }, 2500);
+  }, 400);
 }
 
 // ---- AutoPlay ---------------------------------------------------------------------

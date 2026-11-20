@@ -108,13 +108,36 @@ export default function HomePage() {
     }
   };
 
-  const shelves = home.data
-    ? home.data.pages
-        .flatMap((page) => page.data)
-        .map((shelf) => ({ ...shelf, items: shelf.items.filter((item) => !hiddenRecommendations.has(item.id)) }))
-        .filter((shelf) => shelf.items.length > 0)
-        .filter((shelf) => !(recent.length > 0 && shelf.title.trim().toLowerCase() === RECENT_TITLE.toLowerCase()))
-    : [];
+  const spotifyLibraryItems = useMemo(() => {
+    return userPlaylists.map((p) => ({
+      kind: 'spotify-playlist' as const,
+      id: p.id,
+      title: p.name,
+      subtitle: p.owner ? `By ${p.owner}` : 'Spotify',
+      artists: [],
+      album: null,
+      thumbnail: p.imageUrl,
+      wide: false,
+      durationSec: null,
+      explicit: false,
+    }));
+  }, [userPlaylists]);
+
+  const shelves = useMemo(() => {
+    if (!home.data) return [];
+    return home.data.pages
+      .flatMap((page) => page.data)
+      .map((shelf) => {
+        let items = shelf.items.filter((item) => !hiddenRecommendations.has(item.id));
+        // Inject user's Spotify playlists and recents into "From your library" shelf
+        if (spotifySignedIn && spotifyLibraryItems.length > 0 && /from your library|your library/i.test(shelf.title)) {
+          items = [...spotifyLibraryItems, ...items];
+        }
+        return { ...shelf, items };
+      })
+      .filter((shelf) => shelf.items.length > 0)
+      .filter((shelf) => !(recent.length > 0 && shelf.title.trim().toLowerCase() === RECENT_TITLE.toLowerCase()));
+  }, [home.data, hiddenRecommendations, recent.length, spotifySignedIn, spotifyLibraryItems]);
 
   const topYtShelf = shelves[0];
   const remainingYtShelves = shelves.slice(1);

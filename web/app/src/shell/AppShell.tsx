@@ -256,7 +256,7 @@ export function AppShell() {
         >
           {/* Clears the floating player bar with generous breathing room */}
           <div className="relative min-h-full pb-36">
-            {appearance.artworkBackdrop && sidePanel !== 'now-playing' && appearance.artworkGlow > 0 && nowPlaying?.artworkUrl && (
+            {appearance.artworkBackdrop && appearance.artworkGlow > 0 && nowPlaying?.artworkUrl && (
               <div
                 className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
                 style={{

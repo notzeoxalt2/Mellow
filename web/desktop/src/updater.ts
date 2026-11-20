@@ -228,6 +228,24 @@ export function setupAutoUpdater(mainWindow: BrowserWindow): void {
     ipcMain.handle('app-open-release-url', (_, url: string) => {
       shell.openExternal(url || `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`);
     });
+
+    // Open local installer file or releases
+    ipcMain.handle('app-open-installer', () => {
+      const candidates = [
+        path.join(process.cwd(), 'release', 'installer', 'Mellow-Setup-1.1.0.exe'),
+        path.join(__dirname, '..', '..', 'release', 'installer', 'Mellow-Setup-1.1.0.exe'),
+        path.join(process.cwd(), '..', 'release', 'installer', 'Mellow-Setup-1.1.0.exe'),
+        'E:\\AntiGravity\\BitChord\\web\\release\\installer\\Mellow-Setup-1.1.0.exe',
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          shell.showItemInFolder(p);
+          return { ok: true, path: p };
+        }
+      }
+      shell.openExternal(`https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`);
+      return { ok: true };
+    });
   }
 
   // Automatic silent check and DIRECT background auto-download

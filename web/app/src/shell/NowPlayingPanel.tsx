@@ -76,7 +76,11 @@ export function NowPlayingPanel() {
       const { loadOfficialVideo } = await import('@/playback/youtube/videoDeck');
       const matchedId = await findOfficialMusicVideo(nowPlaying.title, nowPlaying.artist, nowPlaying.durationSec);
       if (matchedId) {
-        await loadOfficialVideo(matchedId);
+        const ok = await loadOfficialVideo(matchedId);
+        if (ok) {
+          const { updateAppearancePreferences } = await import('@/lib/appearance');
+          updateAppearancePreferences({ playMusicVideos: true });
+        }
       }
     } catch (e) {
       console.warn('Failed to resolve video in side panel:', e);
@@ -160,9 +164,18 @@ export function NowPlayingPanel() {
         {/* 2. Track Title, Artist, Actions (Spotify 1:1 Typography) */}
         <div className="flex items-start justify-between gap-3 pt-1">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[20px] font-bold text-white tracking-tight leading-snug line-clamp-2 hover:underline cursor-pointer">
-              {nowPlaying?.title ?? 'Nothing playing'}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[20px] font-bold text-white tracking-tight leading-snug line-clamp-2 hover:underline cursor-pointer">
+                {nowPlaying?.title ?? 'Nothing playing'}
+              </h2>
+              {playing && (
+                <span
+                  className="inline-block size-2 shrink-0 rounded-full bg-(--theme-accent) shadow-[0_0_8px_var(--theme-accent)] animate-pulse"
+                  title="Now playing"
+                  aria-label="Playing"
+                />
+              )}
+            </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[14px] text-[#b3b3b3]">
               {current?.artists?.length ? (
                 current.artists.map((artist, i) => (
@@ -181,6 +194,17 @@ export function NowPlayingPanel() {
                 <span>{nowPlaying?.artist ?? 'Choose a song to start listening'}</span>
               )}
             </div>
+            {current?.album?.name && (
+              <div className="mt-0.5 text-[13px] text-[#777] truncate">
+                {current.album.id ? (
+                  <Link to={albumHref(current.album.id) ?? ''} className="hover:text-white/80 hover:underline transition-colors">
+                    {current.album.name}
+                  </Link>
+                ) : (
+                  <span>{current.album.name}</span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 flex-none pt-0.5">

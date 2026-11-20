@@ -30,8 +30,9 @@ interface SpotifyShelfProps {
   icon?: React.ReactNode;
 }
 
-export function SpotifyShelf({ title, subtitle, to = '/spotify', playlists, icon }: SpotifyShelfProps) {
+export function SpotifyShelf({ title, subtitle, to, playlists, icon }: SpotifyShelfProps) {
   if (!playlists.length) return null;
+  const linkTo = to ?? (title === 'Your Spotify Playlists' ? '/spotify' : `/spotify?section=${encodeURIComponent(title)}`);
 
   return (
     <section className={shelfSection}>
@@ -39,8 +40,8 @@ export function SpotifyShelf({ title, subtitle, to = '/spotify', playlists, icon
         <div className="flex flex-col">
           <h2 className="type-title-2-emphasized flex items-center gap-2">
             {icon}
-            {to ? (
-              <PrefetchLink to={to} className="group/title inline-flex items-center gap-0.5">
+            {linkTo ? (
+              <PrefetchLink to={linkTo} className="group/title inline-flex items-center gap-0.5">
                 {title}
                 <ChevronRight size={18} strokeWidth={2.6} className="text-secondary group-hover/title:text-primary" />
               </PrefetchLink>

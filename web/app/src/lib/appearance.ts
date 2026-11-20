@@ -79,7 +79,7 @@ export const DEFAULT_APPEARANCE: AppearancePreferences = {
   glowColorMode: 'music',
   customGlowColor: '#9b55f5',
   ambientGlowMotion: true,
-  playMusicVideos: false,
+  playMusicVideos: true,
   playAnimatedArtwork: true,
   lowResourceMode: false,
   windowsAccentSync: false,

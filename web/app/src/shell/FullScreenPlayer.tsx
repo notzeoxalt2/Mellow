@@ -220,6 +220,7 @@ export function FullScreenPlayer() {
       if (matchedId) {
         const ok = await loadOfficialVideo(matchedId);
         if (ok) {
+          updateAppearancePreferences({ playMusicVideos: true });
           setPanel(null);
         } else {
           setVideoStatusNotice('Video playback error');
