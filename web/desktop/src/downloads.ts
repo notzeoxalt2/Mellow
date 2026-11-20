@@ -105,32 +105,62 @@ export async function downloadTrackStream(
     const filename = `${cleanArtist} - ${cleanTitle}.${ext}`;
     const filePath = path.join(dir, filename);
 
-    const response = await fetch(streamUrl);
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      'Accept': '*/*',
+      'Accept-Encoding': 'identity;q=1, *;q=0',
+      'Referer': 'https://music.youtube.com/',
+      'Origin': 'https://music.youtube.com',
+    };
+
+    let response = await fetch(streamUrl, { headers });
     if (!response.ok || !response.body) {
       throw new Error(`HTTP ${response.status}: Failed to fetch stream`);
     }
 
-    const totalBytes = Number(response.headers.get('content-length') || 0);
+    const rangeMatch = response.headers.get('content-range')?.match(/\/(\d+)$/);
+    const totalBytes = rangeMatch ? Number(rangeMatch[1]) : Number(response.headers.get('content-length') || 0);
     let bytesReceived = 0;
 
     const fileStream = fs.createWriteStream(filePath, { highWaterMark: 1024 * 1024 });
-    const reader = response.body.getReader();
     let lastProgressEmit = 0;
     let lastPercent = -1;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        fileStream.write(Buffer.from(value));
-        bytesReceived += value.length;
-        const now = Date.now();
-        const percent = totalBytes > 0 ? Math.round((bytesReceived / totalBytes) * 100) : 0;
-        if (onProgress && (percent !== lastPercent || now - lastProgressEmit > 150)) {
-          lastPercent = percent;
-          lastProgressEmit = now;
-          onProgress({ percent, bytesReceived, totalBytes });
+    const pump = async (body: ReadableStream<Uint8Array>) => {
+      const reader = body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          fileStream.write(Buffer.from(value));
+          bytesReceived += value.length;
+          const now = Date.now();
+          const percent = totalBytes > 0 ? Math.round((bytesReceived / totalBytes) * 100) : 0;
+          if (onProgress && (percent !== lastPercent || now - lastProgressEmit > 150)) {
+            lastPercent = percent;
+            lastProgressEmit = now;
+            onProgress({ percent, bytesReceived, totalBytes: Math.max(totalBytes, bytesReceived) });
+          }
         }
+      }
+    };
+
+    await pump(response.body);
+
+    // If Google Video throttled and closed connection before sending all bytes, resume using Range header
+    let resumeAttempts = 0;
+    while (totalBytes > 0 && bytesReceived < totalBytes && resumeAttempts < 5) {
+      resumeAttempts++;
+      try {
+        const resumeHeaders = { ...headers, Range: `bytes=${bytesReceived}-${totalBytes - 1}` };
+        const resumeRes = await fetch(streamUrl, { headers: resumeHeaders });
+        if (resumeRes.ok && resumeRes.body) {
+          await pump(resumeRes.body);
+        } else {
+          break;
+        }
+      } catch {
+        break;
       }
     }
 

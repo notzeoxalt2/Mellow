@@ -120,8 +120,9 @@ function Transport() {
 }
 
 // Close, browser full screen, the column toggles and the speaker, in the corners.
-const chromeButton =
-  'grid size-8 place-items-center rounded-[8px] text-secondary transition-[background-color,color] duration-100 ease-in hover:bg-quinary hover:text-primary';
+const iconButton =
+  'flex size-8 items-center justify-center bg-transparent border-0 text-white/70 transition-all duration-150 ease-out hover:text-white active:scale-90 cursor-pointer';
+const chromeButton = iconButton;
 const chrome = `pointer-events-auto absolute z-20 ${chromeButton}`;
 const artworkLayer = 'absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-300 ease-in';
 
@@ -346,8 +347,8 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         />
       )}
       {theater && (
-        <div className="pointer-events-none absolute inset-0 z-1 animate-fade-in">
-          <VideoSurface fit="contain" className="size-full" />
+        <div className="pointer-events-none absolute inset-0 z-10 animate-fade-in">
+          <VideoSurface fit="contain" className="size-full" priority={10} />
         </div>
       )}
       {resolvingVideo && (
@@ -564,7 +565,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
                   className="absolute inset-0 size-full rounded-[10px] object-cover"
                 />
               ) : null}
-              {video && !theater && <VideoSurface className="absolute inset-0 overflow-hidden rounded-[10px] bg-black" />}
+              {video && !theater && <VideoSurface className="absolute inset-0 overflow-hidden rounded-[10px] bg-black" priority={10} />}
             </div>
           </div>
 

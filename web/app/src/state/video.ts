@@ -82,23 +82,30 @@ export function getVideoElement(): HTMLVideoElement {
 
 export type VideoFit = 'cover' | 'contain';
 
-const stack: { host: HTMLElement; fit: VideoFit }[] = [];
+const stack: { host: HTMLElement; fit: VideoFit; priority: number }[] = [];
 
 function place() {
-  const top = stack[stack.length - 1];
-  const video = getVideoElement();
-  if (!top) {
-    video.remove();
+  if (stack.length === 0) {
+    getVideoElement().remove();
     return;
   }
+  // Find entry with highest priority; if tied, take the latest one added
+  let top = stack[0]!;
+  for (let i = 1; i < stack.length; i++) {
+    const item = stack[i];
+    if (item && item.priority >= top.priority) {
+      top = item;
+    }
+  }
+  const video = getVideoElement();
   // The video is a visual layer. Custom player chrome owns the hit targets.
   video.className = top.fit === 'contain' ? 'pointer-events-none block size-full object-contain' : 'pointer-events-none block size-full object-cover';
   if (video.parentElement !== top.host) top.host.append(video);
 }
 
 /** Puts the picture in [host] until the returned release is called. */
-export function claimVideoSurface(host: HTMLElement, fit: VideoFit): () => void {
-  const entry = { host, fit };
+export function claimVideoSurface(host: HTMLElement, fit: VideoFit, priority = 0): () => void {
+  const entry = { host, fit, priority };
   stack.push(entry);
   place();
   useVideo.setState((s) => ({ surfaces: s.surfaces + 1 }));
@@ -106,6 +113,6 @@ export function claimVideoSurface(host: HTMLElement, fit: VideoFit): () => void 
     const at = stack.indexOf(entry);
     if (at >= 0) stack.splice(at, 1);
     place();
-    useVideo.setState((s) => ({ surfaces: s.surfaces - 1 }));
+    useVideo.setState((s) => ({ surfaces: Math.max(0, s.surfaces - 1) }));
   };
 }

@@ -562,6 +562,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   jumpTo(target) {
     const { queue, index } = get();
     if (target === index) return;
+    cancelCrossfade();
     const jumped = applyJump(queue, index, target);
     if (!jumped) return;
     set({ queue: jumped.timeline });
@@ -595,12 +596,22 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   next() {
-    getAudio()?.pause();
+    cancelCrossfade();
+    if (decks) {
+      for (const d of decks) {
+        d.audio.pause();
+      }
+    }
     void advance(false).then(intent);
   },
 
   previous() {
-    getAudio()?.pause();
+    cancelCrossfade();
+    if (decks) {
+      for (const d of decks) {
+        d.audio.pause();
+      }
+    }
     const { index, queue, repeat } = get();
     const target = previousTrackIndex(index, queue.length, repeat);
     if (target === null) return;
@@ -811,8 +822,27 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   const state = usePlayer.getState();
   const entry = state.queue[at];
   if (!entry) return;
-  
-  // Cut any currently playing audio and video immediately so the song switch is instant
+
+  // 1. Instantly update Discord RPC and OS MediaSession (0ms latency, immediate feedback)
+  const hint = hintOf(entry.track);
+  if (typeof window !== 'undefined' && window.electronAPI?.updateNowPlaying) {
+    window.electronAPI.updateNowPlaying({
+      videoId: entry.track.videoId,
+      title: hint.title,
+      artist: hint.artist,
+      album: entry.track.album?.name || '',
+      artworkUrl: hint.artworkUrl,
+      durationSec: hint.durationSec,
+      status: autoplay ? 'playing' : 'paused',
+      shuffle: state.shuffle,
+      repeat: state.repeat,
+      positionSec: startSec,
+    });
+  }
+  updateMediaSession(hint);
+
+  // 2. Zero crossover: instantly cancel any crossfade or automix blend, cut audio immediately
+  cancelCrossfade();
   if (decks) {
     try {
       for (const d of decks) {
@@ -821,7 +851,6 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
       }
     } catch {}
   }
-  cancelCrossfade();
   void import('@/playback/youtube/videoDeck').then((m) => m.stopVideo()).catch(() => {});
   const token = ++loadToken;
 
@@ -868,7 +897,6 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     if (autoplay) {
       void deck.audio.play().catch(() => {});
     }
-    updateMediaSession(usePlayer.getState().nowPlaying);
     afterTrackStarted();
     syncAutomix();
     return;
@@ -880,24 +908,7 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     preloadedNext = null;
   }
 
-  const hint = hintOf(entry.track);
   usePlayer.setState({ index: at, nowPlaying: hint, status: 'loading', error: null });
-  updateMediaSession(hint);
-  // Instantly sync Discord presence as soon as next/shift is triggered
-  if (typeof window !== 'undefined' && window.electronAPI?.updateNowPlaying) {
-    window.electronAPI.updateNowPlaying({
-      videoId: entry.track.videoId,
-      title: hint.title,
-      artist: hint.artist,
-      album: entry.track.album?.name || '',
-      artworkUrl: hint.artworkUrl,
-      durationSec: hint.durationSec,
-      status: 'playing',
-      shuffle: state.shuffle,
-      repeat: state.repeat,
-      positionSec: 0,
-    });
-  }
   try {
     const all = await getDecks();
     const deck = all[active]!;
@@ -1252,17 +1263,15 @@ function maybeCrossfade() {
 }
 
 function cleanDisplayTitle(t: string, artist?: string): string {
+  if (!t) return t;
   let cleaned = t.replace(/\s*[([](?:official\s*(?:music\s*)?video|official\s*audio|lyrics?|sub\s*español|hd|4k|visualizer|remastered)[^)\]]*[)\]]/gi, '').trim();
-  if (cleaned.includes(' - ')) {
-    const parts = cleaned.split(' - ');
-    const part0 = parts[0];
-    const part1 = parts[1];
-    if (parts.length === 2 && part0 && part1?.trim() && !/[()[\]{}]/.test(part0)) {
-      const p0 = part0.trim().toLowerCase();
-      const a = (artist || '').toLowerCase();
-      if (a && (p0.includes(a) || a.includes(p0))) {
-        cleaned = part1.trim();
-      }
+  const firstHyphen = cleaned.indexOf(' - ');
+  if (firstHyphen > 0 && !cleaned.slice(0, firstHyphen).includes('(') && !cleaned.slice(0, firstHyphen).includes('"')) {
+    const prefix = cleaned.slice(0, firstHyphen).trim().toLowerCase();
+    const rest = cleaned.slice(firstHyphen + 3).trim();
+    const a = (artist || '').toLowerCase();
+    if (a && rest && (prefix.includes(a) || a.includes(prefix))) {
+      cleaned = rest;
     }
   }
   return cleaned || t;

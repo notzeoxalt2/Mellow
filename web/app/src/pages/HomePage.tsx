@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Download, FolderOpen, Shuffle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getLocalHistory } from '@/state/localHistory';
 import { PageHeader } from '@/components/PageHeader';
 import { Shelves, ShelfView, TrackShelf } from '@/components/music/ShelfView';
 import { EmptyState, LoadError, LoadMoreError, NeedsExtension, YouTubeAuthPrompt } from '@/components/music/States';
 import { DeferredSpotifyShelf, SpotifyConnectPrompt } from '@/components/music/SpotifyShelf';
+import { TrackList } from '@/components/music/TrackList';
+import { PlayIcon } from '@/components/icons/Transport';
+import { playList, shuffleList } from '@/components/music/play';
+import { useDownloads } from '@/lib/download';
 import { useHome, useLibrary, useYouTubeReady } from '@/data/music/queries';
 import type { Track } from '@/data/music/types';
 import { fetchSpotifyTrackPage, LIKED_ID, matchToYouTube } from '@/data/spotify/api';
@@ -36,7 +41,7 @@ function useRecentlyPlayed(): Track[] {
 }
 
 export default function HomePage() {
-  const [filter, setFilter] = useState<'all' | 'spotify' | 'yt' | 'blend'>('all');
+  const [filter, setFilter] = useState<'all' | 'spotify' | 'yt' | 'downloads' | 'blend'>('all');
   const [hiddenRecommendations, setHiddenRecommendations] = useState(getNotInterestedIds);
   const { ready: ytReady, missing } = useYouTubeReady();
   const ytAuth = useYtAuth();
@@ -45,6 +50,31 @@ export default function HomePage() {
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => subscribeNotInterested(() => setHiddenRecommendations(getNotInterestedIds())), []);
+
+  const [downloadedTracks, setDownloadedTracks] = useState<Track[]>([]);
+  const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
+  const downloadedIds = useDownloads((s) => s.downloadedIds);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electronAPI?.getDownloadedTracks) {
+      void window.electronAPI.getDownloadedTracks().then((items: any) => {
+        if (Array.isArray(items)) {
+          const mapped: Track[] = items.map((item: any, i: number) => ({
+            videoId: item.videoId,
+            title: item.title,
+            artists: item.artist ? [{ name: item.artist, id: null, channelId: null }] : [],
+            album: item.album ? { name: item.album, id: null } : null,
+            durationSec: 0,
+            thumbnail: item.thumbnail || null,
+            explicit: false,
+            index: i,
+            plays: null,
+          }));
+          setDownloadedTracks(mapped);
+        }
+      });
+    }
+  }, [downloadedIds, filter]);
 
   const spotifySignedIn = useSpotifySignedIn();
   const spotifyQuery = useSpotifyPlaylists();
@@ -192,11 +222,11 @@ export default function HomePage() {
           YouTube Music
         </button>
         <button
-          onClick={() => setFilter('blend')}
-          className={`shrink-0 whitespace-nowrap rounded-[8px] px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'blend' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
-          aria-pressed={filter === 'blend'}
+          onClick={() => setFilter('downloads')}
+          className={`shrink-0 whitespace-nowrap rounded-[8px] px-3.5 py-1.5 text-xs font-semibold transition-all duration-200 cursor-pointer ${filter === 'downloads' ? 'bg-white/[0.12] text-primary shadow-sm ring-1 ring-white/[0.08]' : 'text-secondary hover:bg-white/[0.06] hover:text-primary'}`}
+          aria-pressed={filter === 'downloads'}
         >
-          Your blend
+          Downloads
         </button>
       </div>
 
@@ -235,21 +265,63 @@ export default function HomePage() {
         </>
       )}
 
-      {filter === 'blend' && (
-        <>
-          {blendedTracks.length > 0 && (
-            <TrackShelf
-              title="Your listening blend"
-              tracks={blendedTracks}
-              source={{ title: 'Your listening blend', type: 'home' }}
-            />
+      {/* FILTER: DOWNLOADS (Full Playlist Layout matching screenshot) */}
+      {filter === 'downloads' && (
+        <div className="flex flex-col gap-6 pt-2">
+          <div className="mx-(--body-gutter) mb-4 grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr_auto] gap-x-[34px] pt-4 [grid-template-areas:'artwork_headings'_'artwork_description'_'artwork_actions'] max-md:grid-cols-[1fr] max-md:grid-rows-[auto] max-md:justify-items-center max-md:text-center max-md:[grid-template-areas:'artwork'_'headings'_'actions'_'description']">
+            <div className="relative size-[230px] self-start rounded-[12px] shadow-2xl overflow-hidden [grid-area:artwork] max-md:size-[180px] bg-gradient-to-br from-indigo-600 via-purple-600 to-emerald-500 flex items-center justify-center">
+              <Download size={76} className="text-white drop-shadow-md" />
+            </div>
+            <div className="flex flex-col justify-center [grid-area:headings] max-md:items-center max-md:pt-4">
+              <h1 className="type-large-title-emphasized text-white text-3xl font-bold">Downloads</h1>
+              <p className="type-callout-emphasized text-white/70 mt-1 font-medium">Mellow Offline Storage</p>
+              <div className="mt-1 type-callout text-secondary">
+                {downloadedTracks.length} {downloadedTracks.length === 1 ? 'song' : 'songs'} • Available offline
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-3.5 self-end [grid-area:actions]">
+              <button
+                className="grid size-10 place-items-center rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all cursor-pointer"
+                aria-label="Shuffle"
+                onClick={() => shuffleList(downloadedTracks, { source: { title: 'Downloads', type: 'playlist' } })}
+                disabled={downloadedTracks.length === 0}
+              >
+                <Shuffle size={18} />
+              </button>
+              <button
+                className="inline-flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-full bg-white px-5 font-semibold text-black hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-40"
+                onClick={() => playList(downloadedTracks, 0, { source: { title: 'Downloads', type: 'playlist' } })}
+                disabled={downloadedTracks.length === 0}
+              >
+                <PlayIcon size={18} fill="currentColor" />
+                <span>Play</span>
+              </button>
+              <button
+                type="button"
+                onClick={openDownloadsFolder}
+                className="flex items-center gap-2 px-3.5 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer border border-white/10"
+                title="Open Downloads Folder"
+              >
+                <FolderOpen size={16} />
+                <span>Open Folder</span>
+              </button>
+            </div>
+          </div>
+
+          {downloadedTracks.length > 0 ? (
+            <TrackList tracks={downloadedTracks} variant="playlist" source={{ title: 'Downloads', type: 'playlist' }} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center gap-3 text-secondary">
+              <div className="size-14 grid place-items-center rounded-[12px] bg-white/[0.05] border border-white/10 text-white/50">
+                <Download size={26} />
+              </div>
+              <h3 className="type-title-3 text-primary mt-1">No Offline Songs Yet</h3>
+              <p className="type-body text-secondary max-w-sm">
+                Download any song using the Download button in the player or contextual track menu to play it offline.
+              </p>
+            </div>
           )}
-          {blendedSpotifyTracks.isLoading && <ShelfSkeleton kind="tracks" />}
-          {!spotifySignedIn && <SpotifyConnectPrompt onConnect={handleConnectSpotify} />}
-          {spotifySignedIn && !blendedSpotifyTracks.isLoading && blendedTracks.length === 0 && recent.length === 0 && (
-            <LoadError error={new Error('Play or like a few songs on Spotify and YouTube Music to build your blend.')} onRetry={() => void blendedSpotifyTracks.refetch()} />
-          )}
-        </>
+        </div>
       )}
 
       {/* FILTER: YOUTUBE MUSIC ONLY */}

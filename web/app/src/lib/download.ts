@@ -50,8 +50,14 @@ export async function resolveDownloadStreamUrl(videoId: string): Promise<{ url: 
     throw new Error('No audio format available for this track');
   }
 
-  // Pick highest bitrate stream
-  audioFormats.sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
+  // Pick highest bitrate stream: prefer Itag 141 (256kbps AAC) or Itag 251 (160kbps Opus)
+  audioFormats.sort((a, b) => {
+    if (a.itag === 141) return -1;
+    if (b.itag === 141) return 1;
+    const aRate = (a as any).average_bitrate || a.bitrate || 0;
+    const bRate = (b as any).average_bitrate || b.bitrate || 0;
+    return bRate - aRate;
+  });
   const best = audioFormats[0]!;
 
   let rawUrl = best.url;

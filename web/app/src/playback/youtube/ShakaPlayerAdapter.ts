@@ -496,9 +496,7 @@ export class ShakaPlayerAdapter implements SabrPlayerAdapter {
         networkingEngine.unregisterResponseFilter(this.responseFilter);
       }
 
-      shaka.net.NetworkingEngine.unregisterScheme('http');
-      shaka.net.NetworkingEngine.unregisterScheme('https');
-
+      // Do NOT unregister http/https globally as it breaks videoDeck and other players
       this.player = null;
     }
   }

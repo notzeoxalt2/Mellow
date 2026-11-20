@@ -40,14 +40,22 @@ let listening: HTMLAudioElement | null = null;
 async function ensurePlayer(): Promise<shaka.Player> {
   // Re-register Shaka's standard http/https schemes in case SABR unregistered them
   for (const scheme of ['http', 'https']) {
-    shaka.net.NetworkingEngine.registerScheme(
-      scheme,
-      shaka.net.HttpFetchPlugin.parse,
-      shaka.net.NetworkingEngine.PluginPriority.FALLBACK,
-    );
+    try {
+      shaka.net.NetworkingEngine.registerScheme(
+        scheme,
+        shaka.net.HttpFetchPlugin.parse,
+        shaka.net.NetworkingEngine.PluginPriority.APPLICATION,
+      );
+    } catch {}
   }
 
-  if (player) return player;
+  const video = getVideoElement();
+  if (player) {
+    if (player.getMediaElement() !== video) {
+      await player.attach(video).catch(() => {});
+    }
+    return player;
+  }
   const created = new shaka.Player();
   created.configure({
     manifest: { disableAudio: true, disableText: true, disableThumbnails: true },
@@ -61,7 +69,7 @@ async function ensurePlayer(): Promise<shaka.Player> {
       retryParameters: { maxAttempts: 3, baseDelay: 1000, backoffFactor: 2, fuzzFactor: 0.5, timeout: 30_000 },
     },
   });
-  await created.attach(getVideoElement());
+  await created.attach(video);
   created.addEventListener('error', (event) => {
     const error = (event as unknown as { detail: shaka.util.Error }).detail;
     trackLog.d(`video: Shaka error ${error.code} (severity ${error.severity})`, loaded);
@@ -255,7 +263,6 @@ async function unload(keepPicture = false): Promise<void> {
     const video = getVideoElement();
     if (video) {
       video.pause();
-      video.removeAttribute('src');
     }
   } catch {}
   await player?.unload().catch(() => {});

@@ -8,12 +8,12 @@ import { claimVideoSurface, type VideoFit } from '@/state/video';
  * it also tells the player the picture is wanted: with no surface mounted, a
  * music video's picture isn't streamed at all.
  */
-export function VideoSurface({ fit = 'cover', className }: { fit?: VideoFit; className?: string }) {
+export function VideoSurface({ fit = 'cover', className, priority = 0 }: { fit?: VideoFit; className?: string; priority?: number }) {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const node = host.current;
     if (!node) return;
-    return claimVideoSurface(node, fit);
-  }, [fit]);
+    return claimVideoSurface(node, fit, priority);
+  }, [fit, priority]);
   return <div ref={host} className={`pointer-events-none ${className ?? ''}`} aria-hidden="true" />;
 }
