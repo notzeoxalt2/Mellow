@@ -63,7 +63,8 @@ export function CanvasArtwork({
     }
   }, [playing]);
 
-  // Pause during system minimization or blur to conserve CPU/RAM
+  // Pause only when window/app is fully hidden (minimized).
+  // Never pause on window blur or multi-monitor focus loss so Spotify Canvas plays smoothly.
   useEffect(() => {
     const handleVisibility = () => {
       const el = videoRef.current;
@@ -74,28 +75,10 @@ export function CanvasArtwork({
         void el.play().catch(() => undefined);
       }
     };
-    const handleBlur = () => {
-      if (readAppearancePreferences().smartMemorySaving && videoRef.current) {
-        videoRef.current.pause();
-      }
-    };
-    const handleFocus = () => {
-      if (videoRef.current && playing && !document.hidden) {
-        void videoRef.current.play().catch(() => undefined);
-      }
-    };
 
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('mellow:window-blur', handleBlur);
-    window.addEventListener('mellow:window-focus', handleFocus);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('mellow:window-blur', handleBlur);
-      window.removeEventListener('mellow:window-focus', handleFocus);
     };
   }, [playing]);
 
@@ -112,6 +95,8 @@ export function CanvasArtwork({
       preload="auto"
       style={{
         transform: 'translateZ(0)',
+        borderRadius: 'inherit',
+        WebkitMaskImage: '-webkit-radial-gradient(white, black)',
         imageRendering: 'high-quality' as any,
       }}
       className={`${className} transition-opacity duration-700 ease-in-out will-change-[opacity] ${

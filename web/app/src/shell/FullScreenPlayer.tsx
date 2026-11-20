@@ -360,17 +360,17 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       <button ref={close} className={closeCorner} aria-label="Close" title="Close player" onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
         <X size={20} />
       </button>
-      {/* Top right clean icon controls (Apple Music minimalist glass design, pure Lucide icons) */}
-      <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-2">
+      {/* Top right clean icon controls (frameless, matching bottom right clean icons) */}
+      <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-1.5">
         {/* Button 0: Offline Download */}
         <button
           type="button"
-          className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+          className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
             isDownloaded
-              ? 'bg-green-500/20 text-green-400 border-green-500/40 shadow-[0_0_12px_rgba(34,197,94,0.2)]'
+              ? 'text-green-400 hover:text-green-300 hover:bg-white/10'
               : downloadProgress?.status === 'downloading' || downloadProgress?.status === 'resolving'
-              ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50'
-              : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+              ? 'text-(--theme-accent) hover:bg-white/10'
+              : 'text-white/70 hover:text-white hover:bg-white/10'
           }`}
           onClick={() => {
             if (isDownloaded) {
@@ -391,56 +391,56 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
           aria-label="Download Song"
         >
           {downloadProgress?.status === 'downloading' || downloadProgress?.status === 'resolving' ? (
-            <Loader2 size={17} className="animate-spin text-(--theme-accent)" />
+            <Loader2 size={18} className="animate-spin text-(--theme-accent)" />
           ) : isDownloaded ? (
-            <Check size={17} className="text-green-400" />
+            <Check size={18} className="text-green-400" />
           ) : (
-            <Download size={17} />
+            <Download size={18} />
           )}
         </button>
 
         {/* Button 1: Official Music Video (Click to watch, click again while active to stop) */}
         <button
           type="button"
-          className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+          className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
             video
-              ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
-              : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+              ? 'text-(--theme-accent) hover:text-white hover:bg-white/10'
+              : 'text-white/70 hover:text-white hover:bg-white/10'
           }`}
           onClick={handleToggleOrFindVideo}
           title={video ? 'Stop Official Video' : 'Watch Official Music Video'}
           aria-label={video ? 'Stop Official Video' : 'Watch Official Music Video'}
         >
           {resolvingVideo ? (
-            <Loader2 size={17} className="animate-spin text-white" />
+            <Loader2 size={18} className="animate-spin text-white" />
           ) : (
-            <Video size={17} />
+            <Video size={18} />
           )}
         </button>
 
         {/* Button 2: Spotify Canvas visual toggle */}
         <button
           type="button"
-          className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+          className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
             !canvasDisabled && canvas
-              ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
-              : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+              ? 'text-(--theme-accent) hover:text-white hover:bg-white/10'
+              : 'text-white/70 hover:text-white hover:bg-white/10'
           }`}
           onClick={toggleCanvasMode}
           title={canvasDisabled ? 'Enable Spotify Canvas' : 'Disable Spotify Canvas'}
           aria-label={canvasDisabled ? 'Enable Spotify Canvas' : 'Disable Spotify Canvas'}
         >
-          <Sparkles size={17} />
+          <Sparkles size={18} />
         </button>
 
         {/* Button 3: Ambient Mode (Apple Music radiant mesh vs Clean Dark) + Spread Slider */}
         <div className="relative flex flex-col items-center group">
           <button
             type="button"
-            className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+            className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
               fullScreenPlayerAmbient
-                ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
-                : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+                ? 'text-(--theme-accent) hover:text-white hover:bg-white/10'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
             }`}
             onClick={() => {
               updateAppearancePreferences({ fullScreenPlayerAmbient: !fullScreenPlayerAmbient });
@@ -448,7 +448,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
             title={fullScreenPlayerAmbient ? 'Ambient Active (Hover to adjust spread)' : 'Switch to Radiant Ambient Mode'}
             aria-label="Ambient Glow"
           >
-            <SunMedium size={17} />
+            <SunMedium size={18} />
           </button>
           {fullScreenPlayerAmbient && (
             <div className="absolute top-10 right-0 flex flex-col items-center gap-1.5 rounded-[8px] bg-[#121319]/95 backdrop-blur-xl border border-white/10 p-2.5 shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 w-40">
@@ -535,11 +535,19 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
             )}
 
             {/* The clipped card containing album cover art and looping canvas */}
-            <div className={`relative size-full rounded-[10px] overflow-hidden ${video ? 'bg-black' : 'bg-[#ffffff12] shadow-[0_4px_10px_#0000001a]'}`}>
+            <div
+              className={`relative size-full rounded-[10px] overflow-hidden isolate ${
+                video ? 'bg-black' : (canvasDisabled || !canvas) && !motion ? 'shadow-[0_8px_24px_rgba(0,0,0,0.35)]' : ''
+              }`}
+              style={{
+                transform: 'translateZ(0)',
+                WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+              }}
+            >
               {nowPlaying.artworkUrl && (
                 <img
                   key={nowPlaying.artworkUrl}
-                  className="absolute inset-0 size-full object-cover"
+                  className="absolute inset-0 size-full rounded-[10px] object-cover"
                   src={sizedArtwork(nowPlaying.artworkUrl, 600)}
                   alt=""
                   referrerPolicy="no-referrer"
@@ -551,7 +559,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
                 <MotionArtwork
                   key={motion.url}
                   motion={motion}
-                  className="absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-1000 ease-in data-ready:opacity-100"
+                  className="absolute inset-0 size-full rounded-[10px] object-cover opacity-0 transition-opacity duration-1000 ease-in data-ready:opacity-100"
                   playing={playing}
                 />
               ) : !canvasDisabled && canvas ? (
@@ -560,10 +568,10 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
                   url={canvas}
                   playing={playing}
                   minPosterMs={1200}
-                  className="absolute inset-0 size-full object-cover"
+                  className="absolute inset-0 size-full rounded-[10px] object-cover"
                 />
               ) : null}
-              {video && !theater && <VideoSurface className="absolute inset-0 overflow-hidden bg-black" />}
+              {video && !theater && <VideoSurface className="absolute inset-0 overflow-hidden rounded-[10px] bg-black" />}
             </div>
           </div>
 

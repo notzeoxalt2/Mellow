@@ -115,26 +115,34 @@ export function NowPlayingPanel() {
       {/* Panel Scroll Body */}
       <div className="mellow-panel-scroll min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-12">
         {/* 1. Media Artwork / Canvas / Video Card */}
-        <div className="relative mb-3 aspect-[4/5] w-full overflow-hidden rounded-[10px] border border-white/[0.08] bg-black/40 shadow-[0_12px_28px_-16px_rgba(0,0,0,0.5)]">
+        <div
+          className="relative mb-3 aspect-[4/5] w-full overflow-hidden rounded-[10px] bg-black shadow-[0_12px_28px_-16px_rgba(0,0,0,0.5)] isolate"
+          style={{
+            transform: 'translateZ(0)',
+            WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+          }}
+        >
           {videoActive ? (
-            <VideoSurface fit="cover" className="size-full bg-black" />
+            <VideoSurface fit="cover" className="size-full bg-black rounded-[10px]" />
           ) : artwork ? (
             <>
               <img
                 src={sizedArtwork(artwork, 720)}
                 alt=""
-                className="absolute inset-0 size-full object-cover"
+                className="absolute inset-0 size-full rounded-[10px] object-cover"
                 referrerPolicy="no-referrer"
                 decoding="async"
               />
-              {canvas && <CanvasArtwork url={canvas} playing={playing} className="absolute inset-0 size-full object-cover" />}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
+              {canvas && <CanvasArtwork url={canvas} playing={playing} className="absolute inset-0 size-full rounded-[10px] object-cover" />}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[10px] bg-gradient-to-t from-black/70 to-transparent" />
             </>
           ) : (
             <div className="grid size-full place-items-center text-secondary">
               <Disc3 size={44} />
             </div>
           )}
+          {/* Subtle clean inner highlight */}
+          <div className="pointer-events-none absolute inset-0 rounded-[10px] ring-1 ring-inset ring-white/10" />
 
           {/* Spotify "Switch to video" Pill Button */}
           {nowPlaying && (
