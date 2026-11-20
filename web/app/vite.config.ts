@@ -45,5 +45,8 @@ export default defineConfig(({ command, mode }) => {
       port: 5173,
       strictPort: true,
     },
+    test: {
+      pool: 'threads',
+    },
   };
 });
