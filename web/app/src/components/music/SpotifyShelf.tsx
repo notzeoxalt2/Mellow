@@ -114,7 +114,7 @@ export function SpotifyConnectPrompt({ onConnect }: { onConnect: () => void }) {
         <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
           <button
             onClick={onConnect}
-            className="rounded-full border border-white/10 bg-white/[0.08] px-5 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-white/[0.13] active:scale-95"
+            className="rounded-[8px] border border-white/10 bg-white/[0.08] px-5 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-white/[0.13] active:scale-95"
             style={{ boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 8%)' }}
           >
             Connect Spotify
@@ -122,7 +122,7 @@ export function SpotifyConnectPrompt({ onConnect }: { onConnect: () => void }) {
           {isDesktop && (
             <button
               onClick={handleChromeSync}
-              className="flex items-center gap-2 rounded-full bg-white/10 hover:bg-white/15 px-4 py-2.5 text-sm font-medium text-primary transition-all border border-white/10 hover:border-white/20"
+              className="flex items-center gap-2 rounded-[8px] bg-white/10 hover:bg-white/15 px-4 py-2.5 text-sm font-medium text-primary transition-all border border-white/10 hover:border-white/20"
               title="Sync session from Google Chrome"
             >
               <ExternalLink size={15} className="text-(--theme-accent)" />

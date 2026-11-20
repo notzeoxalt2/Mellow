@@ -1,4 +1,4 @@
-import { ArrowDownCircle, CheckCircle2, ChevronRight, RefreshCw, Sparkles, Users } from 'lucide-react';
+import { ArrowDownCircle, CheckCircle2, ChevronRight, FolderDown, RefreshCw, Sparkles, Users } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
 import { SiApplemusic, SiSpotify, SiYoutubemusic } from 'react-icons/si';
@@ -499,6 +499,29 @@ export default function SettingsPage() {
           <div className={settingsUi.controlRow}>
             <span>Bit-Perfect Audio Output</span>
             <span className="type-[500_12px/16px] text-tertiary">Exclusive Hardware Clock • DRC Dynamic Range Compression Bypassed</span>
+          </div>
+        </section>
+
+        {/* ---- Offline Downloads ---- */}
+        <h2 className={settingsUi.sectionHeader}>Offline Downloads</h2>
+        <section className={settingsUi.group}>
+          <div className={settingsUi.row}>
+            <div className={settingsUi.rowText}>
+              <span>Storage Location</span>
+              <span className={settingsUi.rowDetail}>%USERPROFILE%\Music\Mellow (High-bitrate audio with synchronized .lrc lyrics)</span>
+            </div>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer"
+              onClick={() => {
+                if (window.electronAPI?.openDownloadsFolder) {
+                  window.electronAPI.openDownloadsFolder();
+                }
+              }}
+            >
+              <FolderDown size={14} />
+              <span>Open Downloads Folder</span>
+            </button>
           </div>
         </section>
 

@@ -49,6 +49,13 @@ interface ElectronAPI {
   onUpdateAvailable?: (callback: (info: any) => void) => () => void;
   onUpdateProgress?: (callback: (progress: { percent: number; transferred: number; total: number }) => void) => () => void;
   onUpdateDownloaded?: (callback: (info: any) => void) => () => void;
+  // Offline Downloads
+  downloadTrack?: (track: any, streamUrl: string, ext?: string, lrcContent?: string) => Promise<{ success: boolean; filePath?: string; filename?: string; error?: string }>;
+  getDownloadedTracks?: () => Promise<any[]>;
+  isTrackDownloaded?: (videoId: string) => Promise<boolean>;
+  openDownloadsFolder?: () => Promise<void>;
+  deleteDownloadedTrack?: (videoId: string) => Promise<boolean>;
+  onDownloadProgress?: (callback: (data: { videoId: string; percent: number; status: string; filePath?: string; error?: string }) => void) => () => void;
 }
 
 interface Window {

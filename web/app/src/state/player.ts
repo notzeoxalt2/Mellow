@@ -934,7 +934,7 @@ function afterTrackStarted() {
   const prefs = readAppearancePreferences();
   if (prefs.lowResourceMode) return;
 
-  // Wait 6 seconds after current track begins to ensure current playback is stable
+  // Wait 2.5 seconds after current track begins to ensure current playback is stable
   preloadNextTimer = setTimeout(async () => {
     preloadNextTimer = null;
     const cur = usePlayer.getState();
@@ -969,10 +969,32 @@ function afterTrackStarted() {
         };
         trackLog.i(`Smart preloaded next track: ${nextEntry.track.title}`, nextPlayId);
       }
+
+      // 3. Prefetch lyrics for upcoming track so lyrics display instantly with 0 loading delay
+      try {
+        const { queryClient } = await import('@/lib/queryClient');
+        const { lookupLyrics } = await import('@/lyrics/repository');
+        const { useLyricsSettings } = await import('@/lyrics/settings');
+        const lyricsSettings = useLyricsSettings.getState();
+        const lyricsOrder = lyricsSettings.order.filter((id) => !lyricsSettings.disabled.includes(id)).join(',');
+        const trackTitle = nextEntry.track.title;
+        const trackArtist = nextEntry.track.artists.map((a) => a.name).join(', ');
+        void queryClient.prefetchQuery({
+          queryKey: ['lyrics', nextPlayId, trackTitle, trackArtist, null, lyricsOrder, lyricsSettings.preferSyllables],
+          queryFn: () => lookupLyrics({
+            videoId: nextPlayId,
+            title: trackTitle,
+            artist: trackArtist,
+            durationMs: Math.round((nextEntry.track.durationSec ?? 0) * 1000),
+            album: nextEntry.track.album?.name ?? null,
+          }),
+          staleTime: Infinity,
+        });
+      } catch {}
     } catch (err) {
       trackLog.w(`Preload ahead skipped or unavailable: ${String(err)}`, nextEntry.track.videoId);
     }
-  }, 6000);
+  }, 2500);
 }
 
 // ---- AutoPlay ---------------------------------------------------------------------

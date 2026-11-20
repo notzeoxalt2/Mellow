@@ -27,6 +27,13 @@ import { discordRpc } from './discordRpc.js';
 import { mergeYouTubeCookies, prioritizeYouTubeSigningCookie, resetYouTubeChannelForSessionChange } from './ytCookies.js';
 import { isDesktopYouTubeSignedIn, shouldVerifyDesktopYouTubeAtStartup, validateYouTubeAccountMenu } from './ytAuthValidation.js';
 import { setupAutoUpdater } from './updater.js';
+import {
+  downloadTrackStream,
+  getDownloadedTracks,
+  isTrackDownloaded,
+  openDownloadsFolder,
+  deleteDownloadedTrack,
+} from './downloads.js';
 
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=512');
 app.commandLine.appendSwitch('disable-web-security');
@@ -730,13 +737,103 @@ function updateThumbarButtons(isPlaying: boolean) {
   }
 }
 
+interface WindowBoundsState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isMaximized: boolean;
+}
+
+const WINDOW_STATE_PATH = path.join(app.getPath('userData'), 'window-state.json');
+
+function loadWindowState(): WindowBoundsState {
+  const defaultState: WindowBoundsState = {
+    width: 1320,
+    height: 880,
+    x: 0,
+    y: 0,
+    isMaximized: false,
+  };
+
+  try {
+    if (fs.existsSync(WINDOW_STATE_PATH)) {
+      const data = JSON.parse(fs.readFileSync(WINDOW_STATE_PATH, 'utf8'));
+      if (typeof data.width === 'number' && typeof data.height === 'number') {
+        const bounds = {
+          x: typeof data.x === 'number' ? data.x : 0,
+          y: typeof data.y === 'number' ? data.y : 0,
+          width: Math.max(960, data.width),
+          height: Math.max(640, data.height),
+          isMaximized: !!data.isMaximized,
+        };
+
+        // Multi-monitor safety check: Verify the window coordinates are actually visible on one of the connected displays!
+        const displays = screen.getAllDisplays();
+        const isVisible = displays.some((d) => {
+          const area = d.bounds;
+          // Check if at least a 100x100 area of the window intersects the display
+          return (
+            bounds.x + 100 >= area.x &&
+            bounds.x <= area.x + area.width - 100 &&
+            bounds.y + 100 >= area.y &&
+            bounds.y <= area.y + area.height - 100
+          );
+        });
+
+        if (isVisible) {
+          return bounds;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Mellow] Could not load window state:', err);
+  }
+
+  // Fallback to centered on primary display
+  try {
+    const primary = screen.getPrimaryDisplay();
+    return {
+      ...defaultState,
+      x: Math.round(primary.bounds.x + (primary.bounds.width - defaultState.width) / 2),
+      y: Math.round(primary.bounds.y + (primary.bounds.height - defaultState.height) / 2),
+    };
+  } catch {
+    return defaultState;
+  }
+}
+
+let saveWindowStateTimer: ReturnType<typeof setTimeout> | null = null;
+function saveWindowState(win: BrowserWindow) {
+  if (saveWindowStateTimer) clearTimeout(saveWindowStateTimer);
+  saveWindowStateTimer = setTimeout(() => {
+    try {
+      if (win.isDestroyed()) return;
+      const isMaximized = win.isMaximized();
+      // If maximized, save normal bounds so when restored or unmaximized later, it has the exact position on that monitor
+      const bounds = isMaximized ? win.getNormalBounds() : win.getBounds();
+      const state: WindowBoundsState = {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        isMaximized,
+      };
+      fs.writeFileSync(WINDOW_STATE_PATH, JSON.stringify(state, null, 2), 'utf8');
+    } catch {}
+  }, 300);
+}
+
 function createMainWindow() {
   const appIcon = getAppIcon();
   const iconImage = appIcon ? nativeImage.createFromPath(appIcon) : undefined;
+  const windowState = loadWindowState();
 
   mainWindow = new BrowserWindow({
-    width: 1320,
-    height: 880,
+    x: windowState.x,
+    y: windowState.y,
+    width: windowState.width,
+    height: windowState.height,
     minWidth: 960,
     minHeight: 640,
     frame: false,
@@ -754,11 +851,30 @@ function createMainWindow() {
 
   mainWindow.setMenu(null);
 
-  // Track maximize state and notify renderer
-  mainWindow.on('maximize', () => mainWindow?.webContents.send('window-maximize-changed', true));
-  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window-maximize-changed', false));
+  // Track resize, move, maximize, unmaximize to continuously persist window monitor & position
+  mainWindow.on('resize', () => saveWindowState(mainWindow!));
+  mainWindow.on('move', () => saveWindowState(mainWindow!));
+  mainWindow.on('maximize', () => {
+    saveWindowState(mainWindow!);
+    mainWindow?.webContents.send('window-maximize-changed', true);
+  });
+  mainWindow.on('unmaximize', () => {
+    saveWindowState(mainWindow!);
+    mainWindow?.webContents.send('window-maximize-changed', false);
+  });
 
   mainWindow.on('close', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        const isMaximized = mainWindow.isMaximized();
+        const bounds = isMaximized ? mainWindow.getNormalBounds() : mainWindow.getBounds();
+        fs.writeFileSync(
+          WINDOW_STATE_PATH,
+          JSON.stringify({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, isMaximized }, null, 2),
+          'utf8'
+        );
+      } catch {}
+    }
     shutdownApp();
   });
 
@@ -867,6 +983,9 @@ function createMainWindow() {
   }
 
   mainWindow.once('ready-to-show', () => {
+    if (windowState.isMaximized) {
+      mainWindow?.maximize();
+    }
     mainWindow?.show();
     updateThumbarButtons(false);
   });
@@ -961,6 +1080,33 @@ ipcMain.handle('auth-spotify-login', async () => {
 
 ipcMain.handle('auth-google-login', async () => {
   openGoogleAuthWindow();
+});
+
+// Offline Downloads IPC handlers
+ipcMain.handle('track-download', async (event, { track, streamUrl, ext = 'opus', lrcContent }) => {
+  return downloadTrackStream(track, streamUrl, ext, lrcContent, (progress) => {
+    event.sender.send('track-download-progress', {
+      videoId: track.videoId,
+      ...progress,
+      status: 'downloading',
+    });
+  });
+});
+
+ipcMain.handle('track-get-downloads', () => {
+  return getDownloadedTracks();
+});
+
+ipcMain.handle('track-is-downloaded', (_, videoId: string) => {
+  return isTrackDownloaded(videoId);
+});
+
+ipcMain.handle('track-open-downloads-folder', () => {
+  openDownloadsFolder();
+});
+
+ipcMain.handle('track-delete-download', (_, videoId: string) => {
+  return deleteDownloadedTrack(videoId);
 });
 
 // Bridge request dispatcher - CRITICAL: direction MUST be 'to-page' for isBridgeResponse!

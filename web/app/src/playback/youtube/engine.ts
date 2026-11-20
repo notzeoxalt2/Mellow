@@ -314,7 +314,13 @@ export class YouTubeEngine {
    * manifest cut down to them.
    */
   async videoStream(height: number | null = null): Promise<VideoStream | null> {
-    const resolved = this.direct;
+    let resolved = this.direct;
+    if (!resolved && this.current?.videoId) {
+      try {
+        const yt = this.yt || (await getInnertube());
+        resolved = await resolvePlayer(yt, this.current.videoId);
+      } catch {}
+    }
     if (!resolved) return null;
     let { videoId, client, info, yt } = resolved;
     let pictures = (info.streaming_data?.adaptive_formats ?? []).filter(

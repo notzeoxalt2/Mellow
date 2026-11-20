@@ -1,7 +1,8 @@
-import { Loader2, Maximize, Minimize, Sparkles, SunMedium, Video, VideoOff, X } from 'lucide-react';
+import { Check, Download, Loader2, Maximize, Minimize, Sparkles, SunMedium, Video, VideoOff, X } from 'lucide-react';
 import type { Track } from '@/data/music/types';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router';
+import { useDownloads } from '@/lib/download';
 import {
   BackwardIcon,
   ForwardIcon,
@@ -78,7 +79,7 @@ function Scrubber() {
 }
 
 const transportButton =
-  'grid place-items-center rounded-full transition-[background-color,scale] duration-100 ease-in enabled:hover:bg-quinary enabled:active:scale-90 disabled:opacity-40';
+  'grid place-items-center rounded-[10px] transition-[background-color,scale] duration-100 ease-in enabled:hover:bg-quinary enabled:active:scale-90 disabled:opacity-40';
 // Shuffle and repeat, when on: full white on the mesh, where red would clash.
 const toggle = `${transportButton} size-9 text-tertiary aria-pressed:text-primary`;
 const skip = `${transportButton} size-12 text-primary`;
@@ -120,7 +121,7 @@ function Transport() {
 
 // Close, browser full screen, the column toggles and the speaker, in the corners.
 const chromeButton =
-  'grid size-8 place-items-center rounded-full text-secondary transition-[background-color,color] duration-100 ease-in hover:bg-quinary hover:text-primary';
+  'grid size-8 place-items-center rounded-[8px] text-secondary transition-[background-color,color] duration-100 ease-in hover:bg-quinary hover:text-primary';
 const chrome = `pointer-events-auto absolute z-20 ${chromeButton}`;
 const artworkLayer = 'absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-300 ease-in';
 
@@ -156,6 +157,10 @@ export function FullScreenPlayer() {
   const videoPreviewEnabled = useMusicVideosEnabled();
   const lowResourceMode = useLowResourceMode();
   const fullScreenPlayerAmbient = useFullScreenPlayerAmbient();
+  const isDownloaded = useDownloads((s) => (nowPlaying?.videoId ? s.isDownloaded(nowPlaying.videoId) : false));
+  const downloadProgress = useDownloads((s) => (nowPlaying?.videoId ? s.getProgress(nowPlaying.videoId) : null));
+  const downloadTrack = useDownloads((s) => s.downloadTrack);
+  const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
   // The right-hand column: the lyrics, Up Next, or nothing. Lyrics toggle bottom left, Up Next bottom right.
   // A music video opens on its own, without the lyrics.
   const [panel, setPanel] = useState<'lyrics' | 'queue' | null>(() =>
@@ -210,10 +215,16 @@ export function FullScreenPlayer() {
     setVideoStatusNotice(null);
     try {
       const { findOfficialMusicVideo } = await import('@/playback/youtube/officialVideo');
+      const { loadOfficialVideo } = await import('@/playback/youtube/videoDeck');
       const matchedId = await findOfficialMusicVideo(nowPlaying.title, nowPlaying.artist, nowPlaying.durationSec);
       if (matchedId) {
-        useVideo.setState({ surfaces: 1 });
-        setPanel(null);
+        const ok = await loadOfficialVideo(matchedId);
+        if (ok) {
+          setPanel(null);
+        } else {
+          setVideoStatusNotice('Video playback error');
+          setTimeout(() => setVideoStatusNotice(null), 3000);
+        }
       } else {
         setVideoStatusNotice('No official music video found');
         setTimeout(() => setVideoStatusNotice(null), 3000);
@@ -311,7 +322,9 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
     <div
       // Over everything but menus and dialogs, which portal above it. The on-dark colours come from tokens.css (data-full-screen).
       // --art, the artwork's side: Apple's 461px at 1440px wide, and never taller than the screen leaves room for.
-      className="fixed inset-0 z-[calc(var(--z-contextual-menus)-2)] isolate animate-enter overflow-hidden bg-[#0c0d12] text-primary [--art:min(32vw,calc(100dvh-330px),720px)] motion-reduce:[animation-name:fade-in] max-md:[--art:min(84vw,calc(100dvh-330px),420px)]"
+      className={`fixed inset-0 z-[calc(var(--z-contextual-menus)-2)] isolate animate-enter overflow-hidden ${
+        theater ? 'bg-black' : 'bg-[#0c0d12]'
+      } text-primary [--art:min(32vw,calc(100dvh-330px),720px)] motion-reduce:[animation-name:fade-in] max-md:[--art:min(84vw,calc(100dvh-330px),420px)]`}
       role="dialog"
       aria-modal="true"
       aria-label="Now Playing"
@@ -342,10 +355,47 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       </button>
       {/* Top right clean icon controls (Apple Music minimalist glass design, pure Lucide icons) */}
       <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-2">
+        {/* Button 0: Offline Download */}
+        <button
+          type="button"
+          className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+            isDownloaded
+              ? 'bg-green-500/20 text-green-400 border-green-500/40 shadow-[0_0_12px_rgba(34,197,94,0.2)]'
+              : downloadProgress?.status === 'downloading' || downloadProgress?.status === 'resolving'
+              ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50'
+              : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
+          }`}
+          onClick={() => {
+            if (isDownloaded) {
+              openDownloadsFolder();
+            } else if (nowPlaying) {
+              void downloadTrack(nowPlaying as any);
+            }
+          }}
+          title={
+            isDownloaded
+              ? 'Downloaded to Music/Mellow (Click to Open Folder)'
+              : downloadProgress?.status === 'downloading'
+              ? `Downloading (${downloadProgress.percent}%)`
+              : downloadProgress?.status === 'resolving'
+              ? 'Preparing download…'
+              : 'Download Song for Offline Listening'
+          }
+          aria-label="Download Song"
+        >
+          {downloadProgress?.status === 'downloading' || downloadProgress?.status === 'resolving' ? (
+            <Loader2 size={17} className="animate-spin text-(--theme-accent)" />
+          ) : isDownloaded ? (
+            <Check size={17} className="text-green-400" />
+          ) : (
+            <Download size={17} />
+          )}
+        </button>
+
         {/* Button 1: Official Music Video (Click to watch, click again while active to stop) */}
         <button
           type="button"
-          className={`size-9 grid place-items-center rounded-full transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+          className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
             video
               ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
               : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
@@ -364,7 +414,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         {/* Button 2: Spotify Canvas visual toggle */}
         <button
           type="button"
-          className={`size-9 grid place-items-center rounded-full transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+          className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
             !canvasDisabled && canvas
               ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
               : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
@@ -380,7 +430,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         {!theater && (
           <button
             type="button"
-            className={`size-9 grid place-items-center rounded-full transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
+            className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
               fullScreenPlayerAmbient
                 ? 'bg-(--theme-accent)/30 text-white border-(--theme-accent)/50 shadow-[0_0_12px_rgba(255,255,255,0.2)]'
                 : 'bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border-white/10'
@@ -398,7 +448,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         {video && <VideoQuality />}
         {(document.fullscreenEnabled || isDesktop) && (
           <button
-            className={`${chromeButton} size-9 cursor-pointer rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors`}
+            className={`${chromeButton} size-9 cursor-pointer rounded-[8px] text-white/70 hover:text-white hover:bg-white/10 transition-colors`}
             aria-label={isDesktop ? (isDesktopMaximized ? 'Restore window' : 'Maximize window') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
             title={isDesktop ? (isDesktopMaximized ? 'Restore' : 'Maximize') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
             onClick={toggleBrowserFullScreen}
@@ -540,7 +590,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
               return effectiveTrack ? (
                 <TrackMenu
                   track={effectiveTrack}
-                  className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary cursor-pointer"
+                  className="grid size-8 flex-none place-items-center rounded-[8px] bg-quinary text-primary hover:bg-quaternary cursor-pointer"
                   placement="above-end"
                 />
               ) : null;

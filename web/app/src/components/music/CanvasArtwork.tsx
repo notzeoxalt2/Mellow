@@ -102,6 +102,10 @@ export function CanvasArtwork({
       loop
       playsInline
       preload="auto"
+      style={{
+        transform: 'translateZ(0)',
+        imageRendering: 'high-quality' as any,
+      }}
       className={`${className} transition-opacity duration-700 ease-in-out will-change-[opacity] ${
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}

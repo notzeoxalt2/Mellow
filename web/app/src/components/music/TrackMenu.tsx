@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, EyeOff, Film, ListEnd, ListPlus, ListStart, MoreHorizontal, Plus, Star } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, EyeOff, Film, ListEnd, ListPlus, ListStart, Loader2, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator, type MenuPlacement } from '@/components/Menu';
+import { useDownloads } from '@/lib/download';
 import {
   useAddToPlaylist,
   useLikeStatus,
@@ -169,6 +170,11 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
     return <PlaylistChoices track={track} onDone={onClose} onBack={() => setView('main')} />;
   }
   const { playNext, addToQueue } = usePlayer.getState();
+  const isDownloaded = useDownloads((s) => s.isDownloaded(track.videoId));
+  const progress = useDownloads((s) => s.getProgress(track.videoId));
+  const downloadTrack = useDownloads((s) => s.downloadTrack);
+  const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
+
   return (
     <>
       <MenuItem icon={<ListStart size={15} />} onSelect={() => (onClose(), playNext([track]))}>
@@ -176,6 +182,33 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
       </MenuItem>
       <MenuItem icon={<ListEnd size={15} />} onSelect={() => (onClose(), addToQueue([track]))}>
         Add to Queue
+      </MenuItem>
+      <MenuItem
+        icon={
+          progress?.status === 'downloading' || progress?.status === 'resolving' ? (
+            <Loader2 size={15} className="animate-spin text-(--theme-accent)" />
+          ) : isDownloaded ? (
+            <Check size={15} className="text-green-400" />
+          ) : (
+            <Download size={15} />
+          )
+        }
+        onSelect={() => {
+          if (isDownloaded) {
+            openDownloadsFolder();
+          } else {
+            void downloadTrack(track);
+          }
+          onClose();
+        }}
+      >
+        {progress?.status === 'downloading'
+          ? `Downloading (${progress.percent}%)`
+          : progress?.status === 'resolving'
+          ? 'Preparing download…'
+          : isDownloaded
+          ? 'Downloaded (Open in Folder)'
+          : 'Download Song'}
       </MenuItem>
       <MenuItem
         icon={<Film size={15} />}

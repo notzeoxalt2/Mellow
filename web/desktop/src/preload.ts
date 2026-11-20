@@ -61,6 +61,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('app-update-downloaded', handler);
     return () => ipcRenderer.removeListener('app-update-downloaded', handler);
   },
+  // Offline Downloads API
+  downloadTrack: (track: any, streamUrl: string, ext = 'opus', lrcContent?: string) =>
+    ipcRenderer.invoke('track-download', { track, streamUrl, ext, lrcContent }),
+  getDownloadedTracks: () => ipcRenderer.invoke('track-get-downloads'),
+  isTrackDownloaded: (videoId: string) => ipcRenderer.invoke('track-is-downloaded', videoId),
+  openDownloadsFolder: () => ipcRenderer.invoke('track-open-downloads-folder'),
+  deleteDownloadedTrack: (videoId: string) => ipcRenderer.invoke('track-delete-download', videoId),
+  onDownloadProgress: (callback: (data: { videoId: string; percent: number; status: string; filePath?: string; error?: string }) => void) => {
+    const handler = (_: unknown, data: any) => callback(data);
+    ipcRenderer.on('track-download-progress', handler);
+    return () => ipcRenderer.removeListener('track-download-progress', handler);
+  },
 });
 
 

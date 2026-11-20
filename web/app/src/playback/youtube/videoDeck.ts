@@ -90,7 +90,75 @@ export function followVideo(engine: YouTubeEngine, audio: HTMLAudioElement): voi
 /** Nothing is playing: drop the picture. */
 export function stopVideo(): void {
   source = null;
-  void refresh();
+  void unload();
+}
+
+/** Loads and displays an authentic official music video stream, synchronized to the playing audio. */
+export async function loadOfficialVideo(videoId: string): Promise<boolean> {
+  const run = ++generation;
+  const quality = useVideo.getState().quality;
+  try {
+    const { getInnertube } = await import('./innertube');
+    const { resolvePlayer } = await import('./resolver');
+    const yt = await getInnertube();
+    const resolved = await resolvePlayer(yt, videoId);
+    if (!resolved || run !== generation) return false;
+
+    const { info } = resolved;
+    const pictures = (info.streaming_data?.adaptive_formats ?? []).filter(
+      (f) => f.has_video && !f.has_audio && f.width && f.height && (f.url || f.signature_cipher || f.cipher),
+    );
+    if (!pictures.length) return false;
+
+    const largest = pictures.sort((a, b) => b.width! * b.height! - a.width! * a.height!)[0]!;
+    const heights = [...new Set(pictures.map((f) => f.height!))].sort((a, b) => b - a);
+    const wantedHeight = quality !== 'auto' && heights.includes(quality) ? quality : null;
+
+    const manifest = await info.toDash({
+      format_filter: (f) => !f.has_video || f.has_audio || (wantedHeight !== null && f.height !== wantedHeight),
+      manifest_options: { include_thumbnails: false },
+    });
+
+    const { getAudio } = await import('@/state/player');
+    const audio = source?.audio || getAudio();
+    const resumeAt = audio?.currentTime ?? 0;
+
+    await unload(false);
+    loaded = videoId;
+    loadedQuality = quality;
+
+    const shakaPlayer = await ensurePlayer();
+    configureQuality(shakaPlayer, quality);
+    await shakaPlayer.load(`data:application/dash+xml;base64,${btoa(manifest)}`, resumeAt, 'application/dash+xml');
+    if (run !== generation) return false;
+
+    const video = getVideoElement();
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      await new Promise<void>((resolve) => video.addEventListener('loadeddata', () => resolve(), { once: true }));
+    }
+    if (run !== generation) return false;
+
+    const active = shakaPlayer.getVariantTracks().find((t) => t.active);
+    trackLog.i(`video: loaded official video ${videoId} at ${active?.height ?? '?'}p`, videoId);
+    useVideo.setState({
+      videoId,
+      aspect: largest.width! / largest.height!,
+      heights,
+      activeHeight: active?.height ?? null,
+      surfaces: 1,
+    });
+
+    if (audio) {
+      listen(audio);
+      sync();
+    }
+    timer ??= setInterval(sync, SYNC_EVERY_MS);
+    return true;
+  } catch (err) {
+    trackLog.w(`video: failed to load official video: ${String(err)}`, videoId);
+    await unload();
+    return false;
+  }
 }
 
 useVideo.subscribe((state, previous) => {
@@ -104,6 +172,7 @@ async function refresh(): Promise<void> {
   const stream = wanted ? await wanted.engine.videoStream(quality === 'auto' ? null : quality).catch(() => null) : null;
   if (run !== generation) return;
   if (!stream) {
+    if (loaded && useVideo.getState().videoId === loaded && useVideo.getState().surfaces > 0) return;
     await unload();
     return;
   }
