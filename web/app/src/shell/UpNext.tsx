@@ -71,7 +71,7 @@ function Row({
       <div className="relative grid items-center justify-items-end">
         <span className="type-body tabular-nums text-secondary group-hover/row:invisible group-has-[[data-open]]/row:invisible">{formatDuration(track.durationSec)}</span>
         <button
-          className="absolute inset-y-0 right-0 my-auto hidden size-7 place-items-center rounded-full text-key group-hover/row:grid data-open:grid"
+          className="absolute inset-y-0 right-0 my-auto hidden size-7 place-items-center rounded-[8px] text-key group-hover/row:grid data-open:grid"
           aria-label={`More options for ${track.title}`}
           aria-haspopup="menu"
           data-open={anchor !== null || undefined}

@@ -574,7 +574,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
             <FavoriteButton
               videoId={nowPlaying.videoId}
               track={{ title: nowPlaying.title, artist: nowPlaying.artist }}
-              className="grid size-8 flex-none place-items-center rounded-full bg-quinary text-primary hover:bg-quaternary cursor-pointer"
+              className="grid size-8 flex-none place-items-center rounded-[8px] bg-quinary text-primary hover:bg-quaternary cursor-pointer"
               size={18}
             />
             {(() => {
