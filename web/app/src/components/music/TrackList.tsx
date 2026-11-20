@@ -1,9 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { Check, Download, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PauseIcon, PlayIcon } from '@/components/icons/Transport';
 import type { ArtistRef, Track } from '@/data/music/types';
 import { usePlayer } from '@/state/player';
+import { useDownloads } from '@/lib/download';
 import { Artwork } from './Artwork';
 import { ExplicitBadge } from './ExplicitBadge';
 import { EqualizerBars } from './EqualizerBars';
@@ -91,6 +93,54 @@ interface RowProps {
   position: number;
   fallbackArtwork: string | null | undefined;
   onPlayRow: () => void;
+}
+
+function RowDownloadButton({ track }: { track: Track }) {
+  const isDownloaded = useDownloads((s) => s.isDownloaded(track.videoId));
+  const progress = useDownloads((s) => s.activeProgress[track.videoId]);
+  const downloadTrack = useDownloads((s) => s.downloadTrack);
+  const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDownloaded) {
+      openDownloadsFolder();
+    } else {
+      void downloadTrack(track);
+    }
+  };
+
+  if (progress?.status === 'downloading' || progress?.status === 'resolving') {
+    return (
+      <div className="grid size-7 place-items-center rounded-full text-(--theme-accent)" title={`Downloading ${progress.percent || 0}%`}>
+        <Loader2 size={13} className="animate-spin" />
+      </div>
+    );
+  }
+
+  if (isDownloaded) {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        className="grid size-7 place-items-center rounded-full text-emerald-400 hover:bg-quinary transition-colors cursor-pointer"
+        title="Downloaded (Click to open folder)"
+      >
+        <Check size={13} strokeWidth={2.4} />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="grid size-7 place-items-center rounded-full text-secondary hover:text-primary hover:bg-quinary transition-colors cursor-pointer"
+      title="Download offline"
+    >
+      <Download size={13} strokeWidth={2} />
+    </button>
+  );
 }
 
 function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps) {
@@ -185,15 +235,18 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
         </>
       )}
       <div className={`${cell} ${time[variant]} ${dimmed}`}>
-        {/* The ⋯ button (TrackMenu) takes the time's place on hover, as Apple's rows do. */}
+        {/* The ⋯ button (TrackMenu) and quick download take the time's place on hover */}
         <span className={unavailable ? undefined : 'group-focus-within/row:invisible group-hover/row:invisible group-has-[[data-open]]/row:invisible'}>
           {unavailable === 'missing' ? 'Not found' : formatDuration(track.durationSec)}
         </span>
         {!unavailable && (
-          <TrackMenu
-            track={track}
-            className="absolute end-2.5 hidden size-7 place-items-center rounded-full text-key group-focus-within/row:grid group-hover/row:grid hover:bg-quinary data-open:grid"
-          />
+          <div className="absolute end-1.5 hidden items-center gap-0.5 group-focus-within/row:flex group-hover/row:flex group-has-[[data-open]]/row:flex">
+            <RowDownloadButton track={track} />
+            <TrackMenu
+              track={track}
+              className="grid size-7 place-items-center rounded-full text-key hover:bg-quinary data-open:grid"
+            />
+          </div>
         )}
       </div>
     </div>

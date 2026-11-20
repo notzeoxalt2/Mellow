@@ -598,9 +598,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   next() {
     cancelCrossfade();
     if (decks) {
-      for (const d of decks) {
-        d.audio.pause();
-      }
+      decks[active]?.audio.pause();
     }
     void advance(false).then(intent);
   },
@@ -608,9 +606,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   previous() {
     cancelCrossfade();
     if (decks) {
-      for (const d of decks) {
-        d.audio.pause();
-      }
+      decks[active]?.audio.pause();
     }
     const { index, queue, repeat } = get();
     const target = previousTrackIndex(index, queue.length, repeat);
@@ -845,10 +841,7 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   cancelCrossfade();
   if (decks) {
     try {
-      for (const d of decks) {
-        d.audio.pause();
-        void d.engine.stop().catch(() => {});
-      }
+      decks[active]?.audio.pause();
     } catch {}
   }
   void import('@/playback/youtube/videoDeck').then((m) => m.stopVideo()).catch(() => {});

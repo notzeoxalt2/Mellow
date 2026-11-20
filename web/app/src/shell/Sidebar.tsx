@@ -40,7 +40,6 @@ const PRIMARY: NavItem[] = [
   { to: '/search', label: 'Search', Icon: SearchIcon },
   { to: '/home', label: 'Home', Icon: HomeIcon },
   { to: '/new', label: 'New', Icon: NewIcon },
-  { to: '/downloads', label: 'Downloads', Icon: DownloadsIcon },
 ];
 
 const LIBRARY_ICONS: Record<Exclude<LibrarySection, 'playlists'>, NavItem['Icon']> = {
@@ -51,11 +50,14 @@ const LIBRARY_ICONS: Record<Exclude<LibrarySection, 'playlists'>, NavItem['Icon'
   'made-for-you': MadeForYouIcon,
 };
 
-const LIBRARY: NavItem[] = (Object.keys(LIBRARY_ICONS) as (keyof typeof LIBRARY_ICONS)[]).map((section) => ({
-  to: `/library/${section}`,
-  label: LIBRARY_SECTIONS[section].title,
-  Icon: LIBRARY_ICONS[section],
-}));
+const LIBRARY: NavItem[] = [
+  ...(Object.keys(LIBRARY_ICONS) as (keyof typeof LIBRARY_ICONS)[]).map((section) => ({
+    to: `/library/${section}`,
+    label: LIBRARY_SECTIONS[section].title,
+    Icon: LIBRARY_ICONS[section],
+  })),
+  { to: '/downloads', label: 'Downloads', Icon: DownloadsIcon },
+];
 
 // A sidebar row; NavLink sets aria-current on the page's own row.
 const item =
@@ -180,9 +182,9 @@ function LibraryNav({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <>
-      <h2 className={sectionHeader}>YouTube Library</h2>
+      <h2 className={sectionHeader}>Library</h2>
       <NavList items={LIBRARY} onNavigate={onNavigate} />
-      <h2 className={sectionHeader}>YouTube Playlists</h2>
+      <h2 className={sectionHeader}>Playlists</h2>
       <ul className={list}>
         <li>
           <PrefetchNavLink to="/library/playlists" className={item} onClick={onNavigate}>
@@ -305,7 +307,9 @@ export function Sidebar() {
         {showSidebarGlow && <div className="mellow-sidebar-edge-glow pointer-events-none absolute inset-0 z-0" aria-hidden="true" />}
         <div className="mellow-sidebar-scroll relative z-1 min-h-0 flex-1 overflow-y-auto pr-3 pl-5 pt-1">
           <NavList items={PRIMARY} onNavigate={close} />
-          {/* Spotify Playlists elevated to top of user libraries */}
+
+          {(signedIn || isDesktop) && <LibraryNav onNavigate={close} />}
+
           {spotifySignedIn ? (
             <SpotifyNav onNavigate={close} />
           ) : (
@@ -319,8 +323,6 @@ export function Sidebar() {
               </button>
             </div>
           )}
-
-          {(signedIn || isDesktop) && <LibraryNav onNavigate={close} />}
         </div>
         <div className="relative z-1 flex flex-col gap-2 border-t border-white/[0.06] bg-transparent pt-3 pr-3 pb-4 pl-5">
           {!isDesktop && (

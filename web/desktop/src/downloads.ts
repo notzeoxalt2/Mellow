@@ -8,6 +8,7 @@ export interface DownloadedItem {
   artist: string;
   album?: string | null;
   artworkUrl?: string | null;
+  durationSec?: number | null;
   filePath: string;
   filename: string;
   sizeBytes: number;
@@ -45,14 +46,21 @@ export function getMellowMusicDir(): string {
 export function getDownloadedTracks(): DownloadedItem[] {
   const store = getStore();
   const list = Object.values(store);
-  // Verify that files still exist on disk
-  return list.filter((item) => {
-    try {
-      return fs.existsSync(item.filePath);
-    } catch {
-      return false;
-    }
-  });
+  // Verify that files still exist on disk and ensure artworkUrl is populated
+  return list
+    .filter((item) => {
+      try {
+        return fs.existsSync(item.filePath);
+      } catch {
+        return false;
+      }
+    })
+    .map((item) => {
+      if (!item.artworkUrl && item.videoId) {
+        item.artworkUrl = `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`;
+      }
+      return item;
+    });
 }
 
 export function isTrackDownloaded(videoId: string): boolean {
@@ -189,6 +197,7 @@ export async function downloadTrackStream(
       artist: track.artist,
       album: track.album ?? null,
       artworkUrl: track.artworkUrl ?? null,
+      durationSec: track.durationSec ?? null,
       filePath,
       filename,
       sizeBytes: bytesReceived,

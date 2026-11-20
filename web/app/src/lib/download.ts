@@ -156,13 +156,16 @@ export const useDownloads = create<DownloadState>((set, get) => {
 
         // Fetch synchronized lyrics if available to save alongside audio (LastWave style)
         let lrcContent: string | undefined = undefined;
+        const durationSec = (track as any).durationSec || 0;
+        const artworkUrl = (track as any).artworkUrl ?? (track as any).thumbnail ?? (track.videoId ? `https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg` : null);
+
         try {
           const { lookupLyrics } = await import('@/lyrics/repository');
           const lrcRes = await lookupLyrics({
             videoId,
             title: track.title,
             artist: artistName,
-            durationMs: 0,
+            durationMs: Math.round(durationSec * 1000),
             album: (track as any).album?.name ?? null,
           });
           if (lrcRes?.lines && lrcRes.lines.length > 0) {
@@ -192,7 +195,8 @@ export const useDownloads = create<DownloadState>((set, get) => {
               title: track.title,
               artist: artistName,
               album: (track as any).album?.name ?? null,
-              artworkUrl: (track as any).thumbnail ?? null,
+              artworkUrl,
+              durationSec,
             },
             url,
             ext,

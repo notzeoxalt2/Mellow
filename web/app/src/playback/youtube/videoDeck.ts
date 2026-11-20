@@ -38,13 +38,13 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let listening: HTMLAudioElement | null = null;
 
 async function ensurePlayer(): Promise<shaka.Player> {
-  // Re-register Shaka's standard http/https schemes in case SABR unregistered them
+  // Ensure Shaka's standard http/https schemes are registered as FALLBACK
   for (const scheme of ['http', 'https']) {
     try {
       shaka.net.NetworkingEngine.registerScheme(
         scheme,
         shaka.net.HttpFetchPlugin.parse,
-        shaka.net.NetworkingEngine.PluginPriority.APPLICATION,
+        shaka.net.NetworkingEngine.PluginPriority.FALLBACK,
       );
     } catch {}
   }

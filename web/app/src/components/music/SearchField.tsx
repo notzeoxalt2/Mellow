@@ -58,9 +58,9 @@ export function SearchField({ initial, onSearch }: { initial: string; onSearch: 
   };
 
   return (
-    <div className="relative w-[min(492px,100%)]">
+    <div className="relative w-[min(492px,100%)] cursor-text">
       <form
-        className="relative flex items-center"
+        className="relative flex items-center cursor-text"
         role="search"
         onSubmit={(e) => {
           e.preventDefault();
