@@ -119,7 +119,6 @@ export function NowPlayingPanel() {
           className="relative mb-3 aspect-[4/5] w-full overflow-hidden rounded-[10px] bg-black shadow-[0_12px_28px_-16px_rgba(0,0,0,0.5)] isolate"
           style={{
             transform: 'translateZ(0)',
-            WebkitMaskImage: '-webkit-radial-gradient(white, black)',
           }}
         >
           {videoActive ? (

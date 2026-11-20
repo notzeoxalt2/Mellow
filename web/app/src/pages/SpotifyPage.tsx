@@ -25,6 +25,7 @@ export default function SpotifyPage() {
 
   if (extension.state === 'missing') return <NeedsExtension what="your Spotify playlists" />;
   if (auth.state === 'checking') return <PlainSkeleton />;
+  if (sectionParam && homeSections.isLoading) return <PlainSkeleton />;
   if (auth.state === 'unavailable') {
     return (
       <>
@@ -59,16 +60,32 @@ export default function SpotifyPage() {
       </>
     );
   }
-  if (playlists.isError && !playlists.data) return <LoadError error={playlists.error} onRetry={() => void playlists.refetch()} />;
-  if (!playlists.data) return <PlainSkeleton />;
+  if (playlists.isError && !playlists.data && !homeSections.data) return <LoadError error={playlists.error} onRetry={() => void playlists.refetch()} />;
+  if (!playlists.data && !homeSections.data) return <PlainSkeleton />;
+
+  // Normalize punctuation (straight vs curly apostrophes, special characters, whitespace)
+  const normalize = (str: string) =>
+    str
+      .toLowerCase()
+      .replace(/[\u2018\u2019']/g, "'")
+      .replace(/[\u201C\u201D"]/g, '"')
+      .replace(/[^\w\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
   // If viewing a specific section (e.g. "It's New Music Friday!"), show that section's playlists 1:1 with Spotify
-  const matchedSection = sectionParam
-    ? homeSections.data?.sections?.find((s) => s.title.toLowerCase().trim() === sectionParam.toLowerCase().trim())
+  const normParam = sectionParam ? normalize(sectionParam) : '';
+  const matchedSection = normParam
+    ? homeSections.data?.sections?.find((s) => {
+        const normS = normalize(s.title);
+        return normS === normParam || normS.includes(normParam) || normParam.includes(normS);
+      })
     : null;
 
-  const displayTitle = matchedSection ? matchedSection.title : 'All Spotify Playlists';
-  const targetPlaylists = matchedSection ? matchedSection.playlists : playlists.data;
+  const displayTitle = sectionParam ? (matchedSection?.title ?? sectionParam) : 'All Spotify Playlists';
+  const targetPlaylists = sectionParam
+    ? (matchedSection?.playlists ?? [])
+    : (playlists.data ?? []);
 
   const items: MusicItem[] = targetPlaylists.map((p) => ({
     kind: 'spotify-playlist',

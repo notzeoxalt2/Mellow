@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { resumeSession } from '@/party/listenTogether';
 import { startPartySync } from '@/party/partySync';
 import { startHistoryReporting } from '@/playback/historyReporting';
@@ -16,6 +16,8 @@ import { sizedArtwork } from '@/lib/artwork';
 import { applyThemeAccent, getActiveThemeId, getThemeById, initTheme, isDynamicAccentSyncEnabled } from '@/lib/themeManager';
 import { applyAppearancePreferences, readAppearancePreferences } from '@/lib/appearance';
 import { startMusicBeatSync, stopMusicBeatSync } from '@/lib/musicBeat';
+import { getMasterCanvasElement } from '@/components/music/CanvasArtwork';
+import { getVideoElement } from '@/state/video';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { AppTitleBar } from './AppTitleBar';
 import { Banner, bannerButtonClass } from './Banner';
@@ -35,6 +37,56 @@ const FullScreenPlayer = lazy(() => import('./FullScreenPlayer').then((m) => ({ 
  */
 import { queryClient } from '@/lib/queryClient';
 import { setTrackLiked } from '@/data/music/api';
+
+// Real-time canvas and official video mirror for the home and page ambient background
+function HomeAmbientMirror({ playing }: { playing: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    let animId: number;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
+    if (!ctx) return;
+
+    let lastDraw = 0;
+    const FPS_INTERVAL = 1000 / 30;
+
+    const render = (now: number) => {
+      animId = requestAnimationFrame(render);
+      if (!playing) return;
+      if (now - lastDraw < FPS_INTERVAL) return;
+      lastDraw = now;
+
+      try {
+        const masterCanvas = getMasterCanvasElement();
+        const video = getVideoElement();
+        const source =
+          video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !video.paused
+            ? video
+            : masterCanvas && masterCanvas.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !masterCanvas.paused
+            ? masterCanvas
+            : null;
+
+        if (source) {
+          ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+        }
+      } catch {}
+    };
+
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, [playing]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={96}
+      height={54}
+      className="pointer-events-none absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[50px] saturate-[1.8] brightness-120 opacity-85 transition-opacity duration-700 will-change-transform"
+    />
+  );
+}
 
 export function AppShell() {
   useKeyboardShortcuts();
@@ -249,6 +301,7 @@ export function AppShell() {
         {/* The page scrolls under the fixed sidebar and the floating player. */}
         <main
           id="scrollable-page"
+          data-paused={!isPlaying || undefined}
           className="absolute inset-0 overflow-x-hidden overflow-y-auto pl-(--web-navigation-width) max-sm:pt-(--mobile-top-bar-height) max-sm:pl-0 transition-colors duration-500"
           style={{
             background: 'var(--app-bg, #0c0d12)',
@@ -264,21 +317,24 @@ export function AppShell() {
                 }}
                 aria-hidden="true"
               >
-                {/* Lightweight, zero-CPU artwork bloom: blurred image wash eliminates 15% CPU overhead from video decoding */}
+                {/* Lightweight artwork bloom & synced real-time canvas/video ambient mirror */}
                 {!appearance.lowResourceMode && (
-                  <img
-                    key={nowPlaying.artworkUrl}
-                    src={sizedArtwork(nowPlaying.artworkUrl, 320)}
-                    alt=""
-                    className="absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[44px] saturate-[1.5] brightness-125 will-change-transform"
-                    style={{
-                      opacity: 'clamp(0, calc(var(--artwork-glow-art-opacity, 0.728) * var(--music-beat-opacity, 1)), 1)',
-                      transform: 'scale(var(--music-beat-scale, 1))',
-                      transformOrigin: 'center top',
-                    }}
-                    referrerPolicy="no-referrer"
-                    decoding="async"
-                  />
+                  <>
+                    <img
+                      key={nowPlaying.artworkUrl}
+                      src={sizedArtwork(nowPlaying.artworkUrl, 320)}
+                      alt=""
+                      className="absolute -inset-[72px] size-[calc(100%+144px)] object-cover blur-[44px] saturate-[1.5] brightness-125 will-change-transform"
+                      style={{
+                        opacity: 'clamp(0, calc(var(--artwork-glow-art-opacity, 0.728) * var(--music-beat-opacity, 1)), 1)',
+                        transform: 'scale(var(--music-beat-scale, 1))',
+                        transformOrigin: 'center top',
+                      }}
+                      referrerPolicy="no-referrer"
+                      decoding="async"
+                    />
+                    {isPlaying && <HomeAmbientMirror playing={isPlaying} />}
+                  </>
                 )}
                 <div
                   className="absolute inset-0 will-change-transform"

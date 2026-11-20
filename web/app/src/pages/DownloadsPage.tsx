@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Download, FolderOpen, Music, Trash2 } from 'lucide-react';
+import { Download, FolderOpen, Monitor, Smartphone } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { TrackList } from '@/components/music/TrackList';
 import type { Track } from '@/data/music/types';
 import { useDownloads } from '@/lib/download';
+import { config } from '@/config';
 
 export default function DownloadsPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -50,6 +51,39 @@ export default function DownloadsPage() {
           <FolderOpen size={15} />
           <span>Open Folder</span>
         </button>
+      </div>
+
+      {/* Download the full application card */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-[10px] bg-white/[0.04] border border-white/[0.08] backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-[8px] bg-(--theme-accent)/20 text-(--theme-accent) border border-(--theme-accent)/30">
+            <Download size={20} />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white">Get Mellow App</h3>
+            <p className="text-xs text-secondary">Listen without limits on PC or Android with full offline support & lossless audio.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="https://github.com/kushagrasinghx/BitChord/releases/latest"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-white/10 hover:bg-white/20 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer border border-white/10"
+          >
+            <Monitor size={14} />
+            <span>Windows App</span>
+          </a>
+          <a
+            href={config.androidAppUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-(--theme-accent) hover:opacity-90 active:scale-95 text-xs font-medium text-white transition-all cursor-pointer shadow-sm"
+          >
+            <Smartphone size={14} />
+            <span>Android APK</span>
+          </a>
+        </div>
       </div>
 
       {tracks.length > 0 ? (

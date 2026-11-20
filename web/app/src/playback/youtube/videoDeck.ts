@@ -38,18 +38,27 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let listening: HTMLAudioElement | null = null;
 
 async function ensurePlayer(): Promise<shaka.Player> {
+  // Re-register Shaka's standard http/https schemes in case SABR unregistered them
+  for (const scheme of ['http', 'https']) {
+    shaka.net.NetworkingEngine.registerScheme(
+      scheme,
+      shaka.net.HttpFetchPlugin.parse,
+      shaka.net.NetworkingEngine.PluginPriority.FALLBACK,
+    );
+  }
+
   if (player) return player;
   const created = new shaka.Player();
   created.configure({
     manifest: { disableAudio: true, disableText: true, disableThumbnails: true },
-    // Highest quality first: AV1 and VP9 offer dramatically higher bitrates and sharpness than base H.264.
-    preferredVideoCodecs: ['av01', 'vp9', 'avc1'],
+    // Highly reliable, universally hardware-accelerated video codecs first
+    preferredVideoCodecs: ['vp9', 'avc1', 'av01'],
     preferredDecodingAttributes: ['smooth', 'powerEfficient'],
     streaming: {
       bufferingGoal: 30,
       rebufferingGoal: 0.5,
       bufferBehind: 30,
-      retryParameters: { maxAttempts: 2, baseDelay: 1000, backoffFactor: 2, fuzzFactor: 0.5, timeout: 30_000 },
+      retryParameters: { maxAttempts: 3, baseDelay: 1000, backoffFactor: 2, fuzzFactor: 0.5, timeout: 30_000 },
     },
   });
   await created.attach(getVideoElement());
@@ -140,7 +149,8 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
 
     const shakaPlayer = await ensurePlayer();
     configureQuality(shakaPlayer, quality);
-    await shakaPlayer.load(`data:application/dash+xml;base64,${btoa(manifest)}`, resumeAt, 'application/dash+xml');
+    const base64Manifest = btoa(unescape(encodeURIComponent(manifest)));
+    await shakaPlayer.load(`data:application/dash+xml;base64,${base64Manifest}`, resumeAt, 'application/dash+xml');
     if (run !== generation) return false;
 
     const video = getVideoElement();
@@ -204,7 +214,8 @@ async function refresh(): Promise<void> {
   try {
     const shakaPlayer = await ensurePlayer();
     configureQuality(shakaPlayer, quality);
-    await shakaPlayer.load(`data:application/dash+xml;base64,${btoa(stream.manifest)}`, resumeAt, 'application/dash+xml');
+    const base64Manifest = btoa(unescape(encodeURIComponent(stream.manifest)));
+    await shakaPlayer.load(`data:application/dash+xml;base64,${base64Manifest}`, resumeAt, 'application/dash+xml');
     if (run !== generation) return;
     if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
       await Promise.race([

@@ -51,6 +51,18 @@ export function getActiveExtension(): DetectedExtension | null {
 
 export function useExtension(): ExtensionStatus {
   const desktop = getDesktopBridge();
+  const query = useQuery({
+    queryKey: extensionQueryKey,
+    queryFn: detect,
+    enabled: !desktop,
+    staleTime: 30_000,
+    gcTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: (q) =>
+      q.state.data === null ? (q.state.dataUpdateCount <= RECHECKS ? RECHECK_MS : SLOW_RECHECK_MS) : false,
+  });
+
   if (desktop) {
     const ext: DetectedExtension = {
       bridge: desktop,
@@ -65,16 +77,6 @@ export function useExtension(): ExtensionStatus {
     };
   }
 
-  const query = useQuery({
-    queryKey: extensionQueryKey,
-    queryFn: detect,
-    staleTime: 30_000,
-    gcTime: Infinity,
-    retry: false,
-    refetchOnWindowFocus: true,
-    refetchInterval: (q) =>
-      q.state.data === null ? (q.state.dataUpdateCount <= RECHECKS ? RECHECK_MS : SLOW_RECHECK_MS) : false,
-  });
   if (query.isPending) return { state: 'checking' };
   if (!query.data) return { state: 'missing' };
   return { state: 'present', extension: query.data };

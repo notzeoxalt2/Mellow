@@ -89,6 +89,7 @@ export function CanvasArtwork({
       ref={videoRef}
       key={url}
       src={url}
+      autoPlay
       muted
       loop
       playsInline
@@ -96,7 +97,6 @@ export function CanvasArtwork({
       style={{
         transform: 'translateZ(0)',
         borderRadius: 'inherit',
-        WebkitMaskImage: '-webkit-radial-gradient(white, black)',
         imageRendering: 'high-quality' as any,
       }}
       className={`${className} transition-opacity duration-700 ease-in-out will-change-[opacity] ${

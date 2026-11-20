@@ -699,6 +699,11 @@ button, a, input, select, textarea, [role="button"], [role="slider"], .mellow-wi
   }
 
   :root[data-ambient-motion='off'] .mellow-ambient-bloom,
+  :root[data-low-resource='on'] .mellow-ambient-bloom,
+  [data-paused] .mellow-ambient-bloom {
+    animation-play-state: paused;
+  }
+  :root[data-ambient-motion='off'] .mellow-ambient-bloom,
   :root[data-low-resource='on'] .mellow-ambient-bloom {
     animation: none;
     opacity: 0.9;

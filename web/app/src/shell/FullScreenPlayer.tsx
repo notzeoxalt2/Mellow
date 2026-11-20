@@ -346,7 +346,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         />
       )}
       {theater && (
-        <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in">
+        <div className="pointer-events-none absolute inset-0 z-1 animate-fade-in">
           <VideoSurface fit="contain" className="size-full" />
         </div>
       )}
@@ -360,17 +360,17 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       <button ref={close} className={closeCorner} aria-label="Close" title="Close player" onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
         <X size={20} />
       </button>
-      {/* Top right clean icon controls (frameless, matching bottom right clean icons) */}
+      {/* Top right clean icon controls (frameless bare icons, matching bottom right clean icons) */}
       <div className="pointer-events-auto absolute top-4 right-5 z-30 flex items-center gap-1.5">
         {/* Button 0: Offline Download */}
         <button
           type="button"
-          className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
+          className={`${chromeButton} cursor-pointer active:scale-95 ${
             isDownloaded
-              ? 'text-green-400 hover:text-green-300 hover:bg-white/10'
+              ? 'text-green-400 hover:text-green-300'
               : downloadProgress?.status === 'downloading' || downloadProgress?.status === 'resolving'
-              ? 'text-(--theme-accent) hover:bg-white/10'
-              : 'text-white/70 hover:text-white hover:bg-white/10'
+              ? 'text-(--theme-accent)'
+              : ''
           }`}
           onClick={() => {
             if (isDownloaded) {
@@ -402,10 +402,8 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         {/* Button 1: Official Music Video (Click to watch, click again while active to stop) */}
         <button
           type="button"
-          className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
-            video
-              ? 'text-(--theme-accent) hover:text-white hover:bg-white/10'
-              : 'text-white/70 hover:text-white hover:bg-white/10'
+          className={`${chromeButton} cursor-pointer active:scale-95 ${
+            video ? 'text-(--theme-accent)' : ''
           }`}
           onClick={handleToggleOrFindVideo}
           title={video ? 'Stop Official Video' : 'Watch Official Music Video'}
@@ -421,10 +419,8 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         {/* Button 2: Spotify Canvas visual toggle */}
         <button
           type="button"
-          className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
-            !canvasDisabled && canvas
-              ? 'text-(--theme-accent) hover:text-white hover:bg-white/10'
-              : 'text-white/70 hover:text-white hover:bg-white/10'
+          className={`${chromeButton} cursor-pointer active:scale-95 ${
+            !canvasDisabled && canvas ? 'text-(--theme-accent)' : ''
           }`}
           onClick={toggleCanvasMode}
           title={canvasDisabled ? 'Enable Spotify Canvas' : 'Disable Spotify Canvas'}
@@ -437,10 +433,8 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         <div className="relative flex flex-col items-center group">
           <button
             type="button"
-            className={`grid size-9 place-items-center rounded-[8px] transition-colors active:scale-95 cursor-pointer ${
-              fullScreenPlayerAmbient
-                ? 'text-(--theme-accent) hover:text-white hover:bg-white/10'
-                : 'text-white/70 hover:text-white hover:bg-white/10'
+            className={`${chromeButton} cursor-pointer active:scale-95 ${
+              fullScreenPlayerAmbient ? 'text-(--theme-accent)' : ''
             }`}
             onClick={() => {
               updateAppearancePreferences({ fullScreenPlayerAmbient: !fullScreenPlayerAmbient });
@@ -472,7 +466,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
         {video && <VideoQuality />}
         {(document.fullscreenEnabled || isDesktop) && (
           <button
-            className={`${chromeButton} size-9 cursor-pointer rounded-[8px] text-white/70 hover:text-white hover:bg-white/10 transition-colors`}
+            className={`${chromeButton} cursor-pointer active:scale-95`}
             aria-label={isDesktop ? (isDesktopMaximized ? 'Restore window' : 'Maximize window') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
             title={isDesktop ? (isDesktopMaximized ? 'Restore' : 'Maximize') : (browserFullScreen ? 'Exit full screen' : 'Enter full screen')}
             onClick={toggleBrowserFullScreen}
@@ -541,7 +535,6 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
               }`}
               style={{
                 transform: 'translateZ(0)',
-                WebkitMaskImage: '-webkit-radial-gradient(white, black)',
               }}
             >
               {nowPlaying.artworkUrl && (

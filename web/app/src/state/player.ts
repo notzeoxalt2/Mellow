@@ -812,11 +812,13 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   const entry = state.queue[at];
   if (!entry) return;
   
-  // Cut any currently playing audio immediately so the song switch is instant
+  // Cut any currently playing audio and video immediately so the song switch is instant
   if (decks) {
     try {
-      decks[active]?.audio.pause();
-      decks[1 - active]?.audio.pause();
+      for (const d of decks) {
+        d.audio.pause();
+        void d.engine.stop().catch(() => {});
+      }
     } catch {}
   }
   cancelCrossfade();
@@ -878,8 +880,24 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     preloadedNext = null;
   }
 
-  usePlayer.setState({ index: at, nowPlaying: hintOf(entry.track), status: 'loading', error: null });
-  updateMediaSession(usePlayer.getState().nowPlaying);
+  const hint = hintOf(entry.track);
+  usePlayer.setState({ index: at, nowPlaying: hint, status: 'loading', error: null });
+  updateMediaSession(hint);
+  // Instantly sync Discord presence as soon as next/shift is triggered
+  if (typeof window !== 'undefined' && window.electronAPI?.updateNowPlaying) {
+    window.electronAPI.updateNowPlaying({
+      videoId: entry.track.videoId,
+      title: hint.title,
+      artist: hint.artist,
+      album: entry.track.album?.name || '',
+      artworkUrl: hint.artworkUrl,
+      durationSec: hint.durationSec,
+      status: 'playing',
+      shuffle: state.shuffle,
+      repeat: state.repeat,
+      positionSec: 0,
+    });
+  }
   try {
     const all = await getDecks();
     const deck = all[active]!;
@@ -1233,12 +1251,18 @@ function maybeCrossfade() {
     });
 }
 
-function cleanDisplayTitle(t: string): string {
-  let cleaned = t.replace(/\s*[([](?:official|music|video|audio|lyrics?|sub\s*español|hd|4k|visualizer|remastered)[^)\]]*[)\]]/gi, '').trim();
+function cleanDisplayTitle(t: string, artist?: string): string {
+  let cleaned = t.replace(/\s*[([](?:official\s*(?:music\s*)?video|official\s*audio|lyrics?|sub\s*español|hd|4k|visualizer|remastered)[^)\]]*[)\]]/gi, '').trim();
   if (cleaned.includes(' - ')) {
     const parts = cleaned.split(' - ');
-    if (parts.length === 2 && parts[1]?.trim()) {
-      cleaned = parts[1].trim();
+    const part0 = parts[0];
+    const part1 = parts[1];
+    if (parts.length === 2 && part0 && part1?.trim() && !/[()[\]{}]/.test(part0)) {
+      const p0 = part0.trim().toLowerCase();
+      const a = (artist || '').toLowerCase();
+      if (a && (p0.includes(a) || a.includes(p0))) {
+        cleaned = part1.trim();
+      }
     }
   }
   return cleaned || t;
@@ -1246,9 +1270,9 @@ function cleanDisplayTitle(t: string): string {
 
 function applyTrack(track: LoadedTrack, from?: Track) {
   const current = usePlayer.getState().nowPlaying;
-  const rawTitle = from?.title || current?.title || track.title;
-  const title = cleanDisplayTitle(rawTitle);
   const artist = (from && artistNames(from)) || current?.artist || track.author.replace(/ - Topic$/, '');
+  const rawTitle = from?.title || current?.title || track.title;
+  const title = cleanDisplayTitle(rawTitle, artist);
 
   const nowPlaying: NowPlaying = {
     videoId: track.videoId,
