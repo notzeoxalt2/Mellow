@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Track } from '@/data/music/types';
+import type { MusicItem, Track } from '@/data/music/types';
 import { getLocalHistory } from '@/state/localHistory';
 import { Navigate, useParams } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
@@ -8,6 +8,7 @@ import { EmptyState, LoadError, LoadMoreError, NeedsExtension, YouTubeAuthPrompt
 import { TrackList } from '@/components/music/TrackList';
 import { isLibrarySection, LIBRARY_SECTIONS } from '@/data/music/library';
 import { useLibrary, useSignedIn, useYouTubeReady } from '@/data/music/queries';
+import { useSpotifyFollowedArtists } from '@/data/spotify/queries';
 import { useYtAuth } from '@/extension/useYtAuth';
 import { PlainSkeleton } from '@/skeletons/PageSkeletons';
 import { seeAllGrid, seeAllTracks } from './pageStyles';
@@ -38,6 +39,7 @@ export default function LibraryPage() {
   const auth = useYtAuth();
   const signedIn = useSignedIn();
   const library = useLibrary(validSection ? section : 'playlists');
+  const spotifyArtists = useSpotifyFollowedArtists();
 
   const [localHistory, setLocalHistory] = useState<Track[]>(() => (section === 'recent' ? getLocalHistory() : []));
   useEffect(() => {
@@ -54,7 +56,37 @@ export default function LibraryPage() {
       : null,
   );
 
-  const grid = library.data?.pages.flatMap((page) => page.data.grid) ?? [];
+  const grid = useMemo(() => {
+    const rawGrid = library.data?.pages.flatMap((page) => page.data.grid) ?? [];
+    if (section !== 'artists' || !spotifyArtists.data?.length) return rawGrid;
+
+    const seenNames = new Set(rawGrid.map((i) => i.title.toLowerCase().trim()));
+    const extraArtists: MusicItem[] = [];
+
+    for (const a of spotifyArtists.data) {
+      const norm = a.name.toLowerCase().trim();
+      if (!seenNames.has(norm)) {
+        seenNames.add(norm);
+        extraArtists.push({
+          id: `artist:${a.name}`,
+          title: a.name,
+          subtitle: a.followers > 0
+            ? `${a.followers >= 1_000_000 ? (a.followers / 1_000_000).toFixed(1) + 'M' : (a.followers / 1_000).toFixed(0) + 'K'} followers • Spotify`
+            : 'Spotify Artist',
+          kind: 'artist',
+          artists: [{ name: a.name, id: null }],
+          album: null,
+          thumbnail: a.imageUrl,
+          explicit: false,
+          wide: false,
+          durationSec: null,
+        });
+      }
+    }
+
+    return [...rawGrid, ...extraArtists];
+  }, [library.data, section, spotifyArtists.data]);
+
   const cloudTracks = library.data?.pages.flatMap((page) => page.data.tracks) ?? [];
   const tracks = useMemo(() => {
     if (section !== 'recent') return cloudTracks;
@@ -74,7 +106,9 @@ export default function LibraryPage() {
   if (!validSection) return <Navigate to="/home" replace />;
   if (missing) return <NeedsExtension what="your library" />;
 
-  if (auth.state === 'ready' && !signedIn && (section !== 'recent' || !localHistory.length)) {
+  const hasSpotifyArtists = section === 'artists' && (spotifyArtists.data?.length ?? 0) > 0;
+
+  if (auth.state === 'ready' && !signedIn && (section !== 'recent' || !localHistory.length) && !hasSpotifyArtists) {
     return (
       <>
         <PageHeader title={title} />
@@ -86,7 +120,7 @@ export default function LibraryPage() {
     );
   }
 
-  if (library.isError && !library.data && (section !== 'recent' || !localHistory.length)) {
+  if (library.isError && !library.data && (section !== 'recent' || !localHistory.length) && !hasSpotifyArtists) {
     const message = library.error instanceof Error ? library.error.message : String(library.error);
     const expiredSession = /\b401\b|unauthori[sz]ed|session.*reject/i.test(message);
     return (
@@ -97,7 +131,7 @@ export default function LibraryPage() {
     );
   }
 
-  if (!library.data && (section !== 'recent' || !localHistory.length)) {
+  if (!library.data && (section !== 'recent' || !localHistory.length) && !hasSpotifyArtists) {
     return <PlainSkeleton />;
   }
 

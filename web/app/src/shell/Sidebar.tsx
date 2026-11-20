@@ -1,12 +1,15 @@
-import { ListMusic, Settings, Sparkles } from 'lucide-react';
+import { ListMusic, Settings, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { readAppearancePreferences } from '@/lib/appearance';
 import { PrefetchLink, PrefetchNavLink } from '@/components/PrefetchLink';
 import { LogoMark } from '@/components/icons/LogoMark';
+import { Menu, MenuItem } from '@/components/Menu';
+import { queryClient } from '@/lib/queryClient';
 import {
   AlbumsIcon,
   AllPlaylistsIcon,
   ArtistsIcon,
+  DownloadsIcon,
   HomeIcon,
   MadeForYouIcon,
   NewIcon,
@@ -37,6 +40,7 @@ const PRIMARY: NavItem[] = [
   { to: '/search', label: 'Search', Icon: SearchIcon },
   { to: '/home', label: 'Home', Icon: HomeIcon },
   { to: '/new', label: 'New', Icon: NewIcon },
+  { to: '/downloads', label: 'Downloads', Icon: DownloadsIcon },
 ];
 
 const LIBRARY_ICONS: Record<Exclude<LibrarySection, 'playlists'>, NavItem['Icon']> = {
@@ -55,9 +59,10 @@ const LIBRARY: NavItem[] = (Object.keys(LIBRARY_ICONS) as (keyof typeof LIBRARY_
 
 // A sidebar row; NavLink sets aria-current on the page's own row.
 const item =
-  'group flex h-9 items-center gap-2 mb-0.5 p-1 rounded-nav type-body-reduced text-primary hover:bg-quinary aria-[current=page]:bg-nav-selected';
-// Apple's glyphs, drawn at 24px (their 24-unit box), which the user preferred to Apple's own 28px.
-const icon = 'inline-grid size-6 flex-none place-items-center text-primary group-aria-[current=page]:text-key';
+  'group flex h-9 items-center gap-2.5 mb-0.5 px-2.5 py-1.5 rounded-[8px] type-body-reduced text-secondary hover:text-white hover:bg-white/[0.06] aria-[current=page]:bg-white/[0.12] aria-[current=page]:text-white transition-all duration-200';
+// Smooth animated color transition on hover and active page, with subtle scale animation
+const icon =
+  'inline-grid size-5 flex-none place-items-center text-secondary transition-all duration-300 ease-out group-hover:text-(--theme-accent) group-hover:scale-110 group-aria-[current=page]:text-(--theme-accent) group-aria-[current=page]:scale-110';
 const navLabel = 'min-w-0 truncate';
 // "Library", "Playlists" (report §1: 12px/15px 600, secondary, padding 4px 8px).
 const sectionHeader = 'mt-4 px-2 py-1 type-callout-emphasized text-secondary flex items-center justify-between';
@@ -84,6 +89,24 @@ function SpotifyNav({ onNavigate }: { onNavigate: () => void }) {
   const currentSourceId = usePlayer((s) => s.queue[s.index]?.source?.id);
   const status = usePlayer((s) => s.status);
   const isPlaying = status === 'playing' || status === 'buffering';
+  const [contextItem, setContextItem] = useState<{ id: string; name: string; anchor: HTMLElement } | null>(null);
+
+  const handleUnfollow = async () => {
+    if (!contextItem) return;
+    const { id, name } = contextItem;
+    if (!window.confirm(`Unfollow Spotify playlist "${name}"?`)) {
+      setContextItem(null);
+      return;
+    }
+    try {
+      const { getBridge } = await import('@/extension/bridge');
+      const b = getBridge() as any;
+      await b?.call('spotify.unfollowPlaylist', { playlistId: id }).catch(() => null);
+      void queryClient.invalidateQueries({ queryKey: ['spotify'] });
+    } catch {}
+    setContextItem(null);
+  };
+
   return (
     <>
       <h2 className={sectionHeader}>Spotify</h2>
@@ -103,6 +126,10 @@ function SpotifyNav({ onNavigate }: { onNavigate: () => void }) {
                 className={item}
                 style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--theme-accent) 16%, transparent)' } : undefined}
                 onClick={onNavigate}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextItem({ id: playlist.id, name: playlist.name, anchor: e.currentTarget });
+                }}
               >
                 <span className={icon}>
                   {isActive ? (
@@ -117,6 +144,13 @@ function SpotifyNav({ onNavigate }: { onNavigate: () => void }) {
           );
         })}
       </ul>
+      {contextItem && (
+        <Menu anchor={contextItem.anchor} onClose={() => setContextItem(null)} label={contextItem.name}>
+          <MenuItem icon={<Trash2 size={16} className="text-red-400" />} destructive onSelect={handleUnfollow}>
+            Unfollow Playlist
+          </MenuItem>
+        </Menu>
+      )}
     </>
   );
 }
@@ -127,6 +161,23 @@ function LibraryNav({ onNavigate }: { onNavigate: () => void }) {
   const currentSourceId = usePlayer((s) => s.queue[s.index]?.source?.id);
   const status = usePlayer((s) => s.status);
   const isPlaying = status === 'playing' || status === 'buffering';
+  const [contextItem, setContextItem] = useState<{ id: string; title: string; anchor: HTMLElement } | null>(null);
+
+  const handleDelete = async () => {
+    if (!contextItem) return;
+    const { id, title } = contextItem;
+    if (!window.confirm(`Delete YouTube playlist "${title}"?`)) {
+      setContextItem(null);
+      return;
+    }
+    try {
+      const { deletePlaylist } = await import('@/data/music/api');
+      await deletePlaylist(id);
+      void queryClient.invalidateQueries({ queryKey: ['music'] });
+    } catch {}
+    setContextItem(null);
+  };
+
   return (
     <>
       <h2 className={sectionHeader}>YouTube Library</h2>
@@ -148,6 +199,10 @@ function LibraryNav({ onNavigate }: { onNavigate: () => void }) {
                 className={item}
                 style={isActive ? { backgroundColor: 'color-mix(in srgb, var(--theme-accent) 16%, transparent)' } : undefined}
                 onClick={onNavigate}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextItem({ id: playlist.id, title: playlist.title, anchor: e.currentTarget });
+                }}
               >
                 <span className={icon}>
                   {isActive ? (
@@ -162,6 +217,13 @@ function LibraryNav({ onNavigate }: { onNavigate: () => void }) {
           );
         })}
       </ul>
+      {contextItem && (
+        <Menu anchor={contextItem.anchor} onClose={() => setContextItem(null)} label={contextItem.title}>
+          <MenuItem icon={<Trash2 size={16} className="text-red-400" />} destructive onSelect={handleDelete}>
+            Delete Playlist
+          </MenuItem>
+        </Menu>
+      )}
     </>
   );
 }
@@ -201,7 +263,7 @@ export function Sidebar() {
     <>
       {/* Below 484px the sidebar is a drawer opened from the top bar's menu button. */}
       <nav
-        className="absolute inset-y-0 left-0 z-(--z-web-chrome) isolate flex w-(--web-navigation-width) flex-col border-r border-white/[0.08] bg-[#0c0d12]/88 shadow-[inset_-1px_0_0_rgb(255_255_255/2%)] backdrop-blur-2xl max-sm:w-[min(300px,82vw)] max-sm:-translate-x-full max-sm:shadow-glass max-sm:transition-transform max-sm:duration-(--duration-panel) max-sm:ease-panel max-sm:data-[open=true]:translate-none"
+        className="absolute inset-y-0 left-0 z-(--z-web-chrome) isolate flex w-(--web-navigation-width) flex-col bg-[#0c0d12]/75 backdrop-blur-2xl max-sm:w-[min(300px,82vw)] max-sm:-translate-x-full max-sm:shadow-glass max-sm:transition-transform max-sm:duration-(--duration-panel) max-sm:ease-panel max-sm:data-[open=true]:translate-none"
         data-open={drawerOpen}
         aria-label="Main"
       >
@@ -276,7 +338,7 @@ export function Sidebar() {
           )}
           <div className="flex min-w-0 items-center gap-2 pt-1">
             <div className="min-w-0 flex-1"><AccountButton /></div>
-            <PrefetchNavLink to="/settings" className="grid size-9 flex-none place-items-center rounded-full text-secondary hover:bg-white/[0.08] hover:text-primary aria-[current=page]:text-primary transition-colors" aria-label="Settings" title="Settings" onClick={close}>
+            <PrefetchNavLink to="/settings" className="grid size-9 flex-none place-items-center rounded-[8px] text-secondary hover:bg-white/[0.08] hover:text-primary aria-[current=page]:text-primary transition-colors cursor-pointer" aria-label="Settings" title="Settings" onClick={close}>
               <Settings size={18} strokeWidth={1.9} />
             </PrefetchNavLink>
           </div>

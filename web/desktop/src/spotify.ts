@@ -27,6 +27,20 @@ let CURRENT_SECRET = {
   ]
 };
 
+/** Select the largest image by width/height from Spotify's sources for peak original artwork resolution */
+export function largestImage(sources: any[] | undefined): string | null {
+  if (!Array.isArray(sources) || !sources.length) return null;
+  let best: { url: string; width: number } | null = null;
+  for (const s of sources) {
+    if (!s?.url) continue;
+    const w = typeof s.width === 'number' ? s.width : (typeof s.height === 'number' ? s.height : 0);
+    if (!best || w > best.width) {
+      best = { url: s.url, width: w };
+    }
+  }
+  return best?.url ?? sources[0]?.url ?? null;
+}
+
 async function refreshLiveSecret(): Promise<void> {
   try {
     const html = await (await fetch('https://open.spotify.com/', {
@@ -191,7 +205,7 @@ export async function fetchPlaylists(spDc: string, offset = 0): Promise<SpotifyP
       if (item.__typename === 'Playlist') {
         const uri = item.uri ?? '';
         const id = uri.split(':').pop() ?? '';
-        const image = item.images?.items?.[0]?.sources?.[0]?.url ?? null;
+        const image = largestImage(item.images?.items?.[0]?.sources);
         return {
           id,
           name: item.name ?? 'Untitled Playlist',
@@ -236,7 +250,7 @@ export async function fetchPlaylistInfo(spDc: string, playlistId: string): Promi
   });
 
   const playlist = data?.data?.playlistV2;
-  const image = playlist?.images?.items?.[0]?.sources?.[0]?.url ?? null;
+  const image = largestImage(playlist?.images?.items?.[0]?.sources);
 
   return {
     name: playlist?.name ?? 'Spotify Playlist',
@@ -264,7 +278,7 @@ export async function fetchPlaylistTracks(spDc: string, playlistId: string, offs
           artist: track.artists?.items?.map((a: any) => a.profile?.name).filter(Boolean).join(', ') ?? 'Unknown',
           album: track.albumOfTrack?.name ?? null,
           durationMs: track.duration?.totalMilliseconds ?? 0,
-          imageUrl: track.albumOfTrack?.coverArt?.sources?.[0]?.url ?? null,
+          imageUrl: largestImage(track.albumOfTrack?.coverArt?.sources),
         };
       })
       .filter((t: any): t is SpotifyTrack => t !== null);
@@ -295,7 +309,7 @@ export async function fetchPlaylistTracks(spDc: string, playlistId: string, offs
         artist: track.artists?.items?.map((a: any) => a.profile?.name).filter(Boolean).join(', ') ?? 'Unknown',
         album: track.albumOfTrack?.name ?? null,
         durationMs: track.trackDuration?.totalMilliseconds ?? track.duration?.totalMilliseconds ?? 0,
-        imageUrl: track.albumOfTrack?.coverArt?.sources?.[0]?.url ?? null,
+        imageUrl: largestImage(track.albumOfTrack?.coverArt?.sources),
       };
     })
     .filter((t: any): t is SpotifyTrack => t !== null);
@@ -327,7 +341,7 @@ export async function searchTracks(spDc: string, query: string, offset = 0): Pro
           artist: track.artists?.items?.map((a: any) => a.profile?.name).filter(Boolean).join(', ') ?? 'Unknown',
           album: track.albumOfTrack?.name ?? null,
           durationMs: track.duration?.totalMilliseconds ?? track.trackDuration?.totalMilliseconds ?? 0,
-          imageUrl: track.albumOfTrack?.coverArt?.sources?.[0]?.url ?? null,
+          imageUrl: largestImage(track.albumOfTrack?.coverArt?.sources),
         };
       })
       .filter((t: any): t is SpotifyTrack => t !== null);
@@ -671,7 +685,7 @@ export async function searchSpotifyAll(spDc: string, query: string): Promise<{
       artist: t.artists?.map((a: any) => a.name).join(', ') ?? '',
       album: t.album?.name ?? '',
       durationMs: t.duration_ms ?? 0,
-      imageUrl: t.album?.images?.[0]?.url ?? null,
+      imageUrl: largestImage(t.album?.images),
     }));
 
     const playlists: SpotifyPlaylist[] = (data.playlists?.items ?? [])
@@ -679,7 +693,7 @@ export async function searchSpotifyAll(spDc: string, query: string): Promise<{
       .map((p: any) => ({
         id: p.id,
         name: p.name,
-        imageUrl: p.images?.[0]?.url ?? null,
+        imageUrl: largestImage(p.images),
         owner: p.owner?.display_name ?? null,
         total: p.tracks?.total ?? 0,
       }));
@@ -688,14 +702,14 @@ export async function searchSpotifyAll(spDc: string, query: string): Promise<{
       id: a.id,
       name: a.name,
       artist: a.artists?.map((art: any) => art.name).join(', ') ?? '',
-      imageUrl: a.images?.[0]?.url ?? null,
+      imageUrl: largestImage(a.images),
       totalTracks: a.total_tracks ?? 0,
     }));
 
     const artists = (data.artists?.items ?? []).map((a: any) => ({
       id: a.id,
       name: a.name,
-      imageUrl: a.images?.[0]?.url ?? null,
+      imageUrl: largestImage(a.images),
       followers: a.followers?.total ?? 0,
     }));
 
@@ -703,6 +717,81 @@ export async function searchSpotifyAll(spDc: string, query: string): Promise<{
   } catch (err: any) {
     console.warn('[Mellow] Spotify searchAll failed:', err?.message);
     return { tracks: [], playlists: [], albums: [], artists: [] };
+  }
+}
+
+/** Fetch followed artists from Spotify library */
+export async function fetchFollowedArtists(spDc: string): Promise<{ id: string; name: string; imageUrl: string | null; followers: number }[]> {
+  try {
+    const token = await mintAccessToken(spDc);
+    const res = await fetch('https://api.spotify.com/v1/me/following?type=artist&limit=50', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return (data?.artists?.items ?? []).map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        imageUrl: largestImage(a.images),
+        followers: a.followers?.total ?? 0,
+      }));
+    }
+  } catch (e: any) {
+    console.warn('[Mellow] fetchFollowedArtists via API failed, trying libraryV3:', e?.message);
+  }
+
+  // Fallback to libraryV3
+  try {
+    const data = await queryGraphQL(spDc, 'libraryV3', {
+      filters: ['Artists'],
+      order: 'Alphabetical',
+      textFilter: '',
+      features: [],
+      limit: 50,
+      offset: 0,
+      flatten: false,
+    });
+    const rawItems = data?.data?.me?.libraryV3?.items ?? [];
+    return rawItems
+      .map((w: any) => {
+        const item = w?.item?.data;
+        if (!item) return null;
+        const uri = item.uri ?? '';
+        const id = uri ? uri.split(':').pop()! : (item.id ?? '');
+        const name = item.profile?.name ?? item.name ?? '';
+        const sources = item.visuals?.avatarImage?.sources;
+        return {
+          id,
+          name,
+          imageUrl: largestImage(sources),
+          followers: 0,
+        };
+      })
+      .filter((a: any): a is { id: string; name: string; imageUrl: string | null; followers: number } => !!a && !!a.id && !!a.name);
+  } catch (err: any) {
+    console.warn('[Mellow] fetchFollowedArtists failed:', err?.message);
+    return [];
+  }
+}
+
+/** Unfollow a playlist on Spotify */
+export async function unfollowPlaylist(spDc: string, playlistId: string): Promise<boolean> {
+  try {
+    const cleanId = playlistId.replace(/^spotify:playlist:/, '');
+    const token = await mintAccessToken(spDc);
+    const res = await fetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(cleanId)}/followers`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

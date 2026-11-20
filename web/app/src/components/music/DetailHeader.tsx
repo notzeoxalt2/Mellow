@@ -1,8 +1,11 @@
-import { Check, Plus, Shuffle } from 'lucide-react';
+import { Check, MoreHorizontal, Plus, Shuffle, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PlayIcon } from '@/components/icons/Transport';
+import { Menu, MenuItem, MenuSeparator } from '@/components/Menu';
 import { useSetListSaved, useSignedIn } from '@/data/music/queries';
+import { queryClient } from '@/lib/queryClient';
 import type { AppleMotion } from '@/data/apple/motionArt';
 import type { HeaderInfo } from '@/data/music/types';
 import { Artwork } from './Artwork';
@@ -15,28 +18,61 @@ interface DetailHeaderProps {
   onPlay: () => void;
   onShuffle: () => void;
   canPlay: boolean;
+  /** Playlist ID for playlist pages, enabling delete / unfollow options */
+  playlistId?: string;
+  isSpotifyPlaylist?: boolean;
   /** More actions after the library toggle (a Spotify playlist's Import). */
   extra?: React.ReactNode;
   /** Apple's motion artwork for an album, over the cover once it plays. */
   motion?: AppleMotion | null;
 }
 
-/** Shuffle (circle) · Play (pill), report §14; also the Spotify playlist's Import button. */
+/** Shuffle · Play squircle buttons, report §14; also the Spotify playlist's Import button. */
 export const detailButton = {
-  pill: 'inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-[24px] bg-pill-bg px-3 type-title-3-emphasized text-pill disabled:opacity-40 enabled:hover:opacity-90',
+  pill: 'inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-[10px] bg-pill-bg px-3 type-title-3-emphasized text-pill disabled:opacity-40 enabled:hover:opacity-90 cursor-pointer active:scale-95 transition-all',
   circle:
-    'grid size-9 place-items-center rounded-full border-[0.75px] border-quaternary bg-quinary text-primary disabled:opacity-40 enabled:hover:bg-quaternary',
+    'grid size-9 place-items-center rounded-[10px] border-[0.75px] border-quaternary bg-quinary text-primary disabled:opacity-40 enabled:hover:bg-quaternary cursor-pointer active:scale-95 transition-all',
 };
 
 /**
  * Album and playlist header (report §3, §14): artwork with its glow, title,
  * artist, metadata, a three-line description, then Shuffle · Play.
  */
-export function DetailHeader({ info, onPlay, onShuffle, canPlay, extra, motion }: DetailHeaderProps) {
+export function DetailHeader({ info, onPlay, onShuffle, canPlay, playlistId, isSpotifyPlaylist, extra, motion }: DetailHeaderProps) {
   const [expanded, setExpanded] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLButtonElement | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
   const signedIn = useSignedIn();
   const setSaved = useSetListSaved();
   const library = signedIn ? info.library : null;
+
+  const handleDeletePlaylist = async () => {
+    if (!playlistId || deleting) return;
+    if (!window.confirm(`Are you sure you want to ${isSpotifyPlaylist ? 'unfollow' : 'delete'} "${info.title}"?`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      if (isSpotifyPlaylist) {
+        const { getBridge } = await import('@/extension/bridge');
+        const b = getBridge() as any;
+        await b?.call('spotify.unfollowPlaylist', { playlistId }).catch(() => null);
+        void queryClient.invalidateQueries({ queryKey: ['spotify'] });
+        navigate('/spotify');
+      } else {
+        const { deletePlaylist } = await import('@/data/music/api');
+        await deletePlaylist(playlistId);
+        void queryClient.invalidateQueries({ queryKey: ['music'] });
+        navigate('/library/playlists');
+      }
+    } catch (e) {
+      console.warn('Failed to delete playlist:', e);
+    } finally {
+      setDeleting(false);
+      setMenuAnchor(null);
+    }
+  };
   return (
     // Artwork beside the headings, description and actions; stacked and centred below 768px.
     <div className="mx-(--body-gutter) mb-10 grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr_auto] gap-x-[34px] pt-11 [grid-template-areas:'artwork_headings'_'artwork_description'_'artwork_actions'] max-md:grid-cols-[1fr] max-md:grid-rows-[auto] max-md:justify-items-center max-md:pt-4 max-md:text-center max-md:[grid-template-areas:'artwork'_'headings'_'actions'_'description']">
@@ -114,6 +150,30 @@ export function DetailHeader({ info, onPlay, onShuffle, canPlay, extra, motion }
           >
             {library.saved ? <Check size={18} strokeWidth={2.4} /> : <Plus size={18} strokeWidth={2.4} />}
           </button>
+        )}
+        {playlistId && (
+          <>
+            <button
+              className={detailButton.circle}
+              aria-label="Playlist options"
+              title="Playlist options"
+              onClick={(e) => setMenuAnchor(menuAnchor ? null : e.currentTarget)}
+            >
+              <MoreHorizontal size={18} strokeWidth={2} />
+            </button>
+            {menuAnchor && (
+              <Menu anchor={menuAnchor} onClose={() => setMenuAnchor(null)} label={info.title}>
+                <MenuItem
+                  icon={<Trash2 size={16} className="text-red-400" />}
+                  destructive
+                  disabled={deleting}
+                  onSelect={handleDeletePlaylist}
+                >
+                  {deleting ? 'Deleting…' : isSpotifyPlaylist ? 'Unfollow Playlist' : 'Delete Playlist'}
+                </MenuItem>
+              </Menu>
+            )}
+          </>
         )}
         {extra}
       </div>

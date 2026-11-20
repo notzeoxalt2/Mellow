@@ -27,6 +27,7 @@ export const pages: PageRoute[] = [
   { path: '/home', load: () => import('@/pages/HomePage'), skeleton: <HomeSkeleton /> },
   { path: '/new', load: () => import('@/pages/NewPage'), skeleton: <NewSkeleton /> },
   { path: '/search', load: () => import('@/pages/SearchPage'), skeleton: <SearchSkeleton /> },
+  { path: '/downloads', load: () => import('@/pages/DownloadsPage'), skeleton: <PlainSkeleton /> },
   { path: '/album/:id', load: () => import('@/pages/AlbumPage'), skeleton: <AlbumSkeleton /> },
   { path: '/artist/:id', load: () => import('@/pages/ArtistPage'), skeleton: <ArtistSkeleton /> },
   { path: '/playlist/:id', load: () => import('@/pages/PlaylistPage'), skeleton: <PlaylistSkeleton /> },

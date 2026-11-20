@@ -90,6 +90,8 @@ export function followVideo(engine: YouTubeEngine, audio: HTMLAudioElement): voi
 /** Nothing is playing: drop the picture. */
 export function stopVideo(): void {
   source = null;
+  loaded = null;
+  loadedQuality = null;
   void unload();
 }
 
@@ -134,7 +136,10 @@ export async function loadOfficialVideo(videoId: string): Promise<boolean> {
 
     const video = getVideoElement();
     if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-      await new Promise<void>((resolve) => video.addEventListener('loadeddata', () => resolve(), { once: true }));
+      await Promise.race([
+        new Promise<void>((resolve) => video.addEventListener('loadeddata', () => resolve(), { once: true })),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ]);
     }
     if (run !== generation) return false;
 
@@ -172,7 +177,6 @@ async function refresh(): Promise<void> {
   const stream = wanted ? await wanted.engine.videoStream(quality === 'auto' ? null : quality).catch(() => null) : null;
   if (run !== generation) return;
   if (!stream) {
-    if (loaded && useVideo.getState().videoId === loaded && useVideo.getState().surfaces > 0) return;
     await unload();
     return;
   }
@@ -191,7 +195,10 @@ async function refresh(): Promise<void> {
     await shakaPlayer.load(`data:application/dash+xml;base64,${btoa(stream.manifest)}`, resumeAt, 'application/dash+xml');
     if (run !== generation) return;
     if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-      await new Promise<void>((resolve) => video.addEventListener('loadeddata', () => resolve(), { once: true }));
+      await Promise.race([
+        new Promise<void>((resolve) => video.addEventListener('loadeddata', () => resolve(), { once: true })),
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+      ]);
     }
     if (run !== generation) return;
     const active = shakaPlayer.getVariantTracks().find((t) => t.active);
@@ -219,8 +226,22 @@ async function unload(keepPicture = false): Promise<void> {
   timer = null;
   loaded = null;
   loadedQuality = null;
-  if (!keepPicture) useVideo.setState({ videoId: null, heights: [], activeHeight: null });
+  if (!keepPicture) useVideo.setState({ videoId: null, heights: [], activeHeight: null, surfaces: 0 });
+  try {
+    const video = getVideoElement();
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+    }
+  } catch {}
   await player?.unload().catch(() => {});
+}
+
+function handleWindowBlur() {
+  const video = getVideoElement();
+  if (video && !video.paused) {
+    video.pause();
+  }
 }
 
 function listen(audio: HTMLAudioElement) {
@@ -231,12 +252,20 @@ function listen(audio: HTMLAudioElement) {
   }
   document.removeEventListener('visibilitychange', sync);
   document.addEventListener('visibilitychange', sync);
+  window.removeEventListener('blur', handleWindowBlur);
+  window.addEventListener('blur', handleWindowBlur);
+  window.removeEventListener('mellow:window-blur', handleWindowBlur);
+  window.addEventListener('mellow:window-blur', handleWindowBlur);
+  window.removeEventListener('focus', sync);
+  window.addEventListener('focus', sync);
+  window.removeEventListener('mellow:window-focus', sync);
+  window.addEventListener('mellow:window-focus', sync);
   listening = audio;
 }
 
 /** Holds the picture to the audio: same play state, same rate, the same moment. */
 function sync() {
-  const audio = source?.audio;
+  const audio = listening ?? source?.audio ?? (typeof window !== 'undefined' ? (window as any).__bcAudio : null);
   const video = getVideoElement();
   if (!audio || !loaded || useVideo.getState().videoId !== loaded || video.readyState < HTMLMediaElement.HAVE_METADATA) return;
   const drift = video.currentTime - audio.currentTime;
@@ -248,7 +277,8 @@ function sync() {
     const nudge = Math.abs(drift) > IGNORE_DRIFT_SEC ? Math.max(-0.1, Math.min(0.1, -drift)) : 0;
     video.playbackRate = audio.playbackRate * (1 + nudge);
   }
-  // Smart throttling: auto pause video decoding when window/tab is hidden to save GPU/CPU for games
-  if ((audio.paused || document.hidden) && !video.paused) video.pause();
-  else if (!audio.paused && !document.hidden && video.paused) void video.play().catch(() => {});
+  // Smart throttling: auto pause video decoding when window/tab is hidden or app is in background to save GPU/CPU for other apps/games
+  const isBackgrounded = typeof document !== 'undefined' && (document.hidden || !document.hasFocus());
+  if ((audio.paused || isBackgrounded) && !video.paused) video.pause();
+  else if (!audio.paused && !isBackgrounded && video.paused) void video.play().catch(() => {});
 }

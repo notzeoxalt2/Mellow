@@ -52,68 +52,56 @@ function VideoBackdrop({ playing }: { playing: boolean }) {
       ref={canvasRef}
       width={96}
       height={54}
-      className="pointer-events-none absolute inset-0 size-full object-cover scale-[1.7] blur-[60px] saturate-[200%] brightness-110 opacity-80 transition-opacity duration-700"
+      style={{ transform: 'scale(var(--fullscreen-ambient-spread, 1.7))' }}
+      className="pointer-events-none absolute inset-0 size-full object-cover blur-[60px] saturate-[200%] brightness-110 opacity-80 transition-opacity duration-700 will-change-transform"
     />
   );
 }
 
 /**
  * Real-time Spotify Canvas ambient backdrop.
- * Smoothly plays the looping Canvas video with extreme blur and saturation,
- * matching the visual colors of the card Canvas across the entire display.
+ * Mirrors the active playing Canvas video onto a low-cost canvas without allocating
+ * a second video decoder or streaming twice, ensuring 100% frame sync and zero lag.
  */
-function CanvasBackdrop({ url, playing }: { url: string; playing: boolean }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [ready, setReady] = useState(false);
+function CanvasBackdrop({ playing }: { playing: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (playing && ready) {
-      void video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [playing, ready]);
-
-  // Keep background video in 100% frame synchronization with the card canvas video
   useEffect(() => {
     let animId: number;
-    const sync = () => {
-      animId = requestAnimationFrame(sync);
-      const bg = videoRef.current;
-      const master = getMasterCanvasElement();
-      if (bg && master && !master.paused && !bg.paused) {
-        if (Math.abs(bg.currentTime - master.currentTime) > 0.06) {
-          bg.currentTime = master.currentTime;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false });
+    if (!ctx) return;
+
+    let lastDraw = 0;
+    const FPS_INTERVAL = 1000 / 30;
+
+    const render = (now: number) => {
+      animId = requestAnimationFrame(render);
+      if (!playing) return;
+      if (now - lastDraw < FPS_INTERVAL) return;
+      lastDraw = now;
+
+      try {
+        const master = getMasterCanvasElement();
+        if (master && master.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !master.paused) {
+          ctx.drawImage(master, 0, 0, canvas.width, canvas.height);
         }
-      }
+      } catch {}
     };
-    animId = requestAnimationFrame(sync);
+
+    animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [playing]);
 
   return (
     <div className="pointer-events-none absolute inset-0 size-full overflow-hidden">
-      <video
-        ref={videoRef}
-        key={`ambient-canvas-${url}`}
-        src={url}
-        autoPlay
-        muted
-        loop
-        playsInline
-        className={`pointer-events-none absolute inset-0 size-full object-cover scale-[1.7] blur-[55px] saturate-[195%] brightness-110 transition-opacity duration-700 ${
-          ready ? 'opacity-85' : 'opacity-0'
-        }`}
-        onCanPlay={(e) => {
-          setReady(true);
-          if (playing) void e.currentTarget.play().catch(() => {});
-        }}
-        onLoadedData={(e) => {
-          setReady(true);
-          if (playing) void e.currentTarget.play().catch(() => {});
-        }}
+      <canvas
+        ref={canvasRef}
+        width={96}
+        height={96}
+        style={{ transform: 'scale(var(--fullscreen-ambient-spread, 1.7))' }}
+        className="pointer-events-none absolute inset-0 size-full object-cover blur-[55px] saturate-[195%] brightness-110 opacity-85 transition-opacity duration-700 will-change-transform"
       />
       <div className="absolute inset-0 bg-black/15 pointer-events-none" />
     </div>
@@ -146,7 +134,7 @@ export function AmbientBackdrop({
       {videoActive && <VideoBackdrop playing={playing} />}
 
       {/* When Spotify Canvas is active and video is not playing, mirror the Canvas video */}
-      {!videoActive && hasCanvas && <CanvasBackdrop url={canvasUrl} playing={playing} />}
+      {!videoActive && hasCanvas && <CanvasBackdrop playing={playing} />}
 
       {/* Subtle vignette overlay so lyrics and transport controls stay readable */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/35 pointer-events-none" />

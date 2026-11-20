@@ -11,30 +11,54 @@ const BOOTLEG_PATTERNS = [
 function clean(s: string): string {
   return s
     .toLowerCase()
-    .replace(/\b(?:vevo|official|music|records|recordings|channel|topic)\b/gi, '')
+    .replace(/\b(?:vevo|official|music|records|recordings|channel|topic|visualizer|video)\b/gi, '')
     .replace(/[^\p{L}\p{N}]+/gu, '')
     .trim();
 }
 
 /** Check if channel looks like an official artist channel, label, or VEVO */
-function isOfficialChannel(channelName: string, targetArtist: string): boolean {
+function isOfficialChannel(channelName: string, artists: string[]): boolean {
   const cn = clean(channelName);
-  const ta = clean(targetArtist);
-  if (!cn || !ta) return false;
+  if (!cn) return false;
 
-  // Major record labels that host official music videos
-  const MAJOR_LABELS = ['atlanticrecords', 'columbiarecords', 'warnermusic', 'universalmusic', 'republicrecords', 'interscope', 'rcarecords', 'defjam'];
+  // Major record labels and authentic video directors/distributors
+  const MAJOR_LABELS = [
+    'atlanticrecords', 'columbiarecords', 'warnermusic', 'universalmusic', 'republicrecords',
+    'interscope', 'rcarecords', 'defjam', 'lyricallemonade', 'worldstarhiphop', 'spinninrecords',
+    'fueledbyramen', 'epitaphrecords', 'sumerian', 'sonymusic', 'vevo'
+  ];
   if (MAJOR_LABELS.some((l) => cn.includes(l))) return true;
 
-  return cn.includes(ta) || ta.includes(cn);
+  return artists.some((a) => {
+    const ca = clean(a);
+    return ca && (cn.includes(ca) || ca.includes(cn));
+  });
 }
 
-const videoCache = new Map<string, string | null>();
+const memoryCache = new Map<string, string | null>();
+
+function getCachedVideo(key: string): string | null | undefined {
+  if (memoryCache.has(key)) return memoryCache.get(key);
+  try {
+    const raw = localStorage.getItem(`mellow:video:${key}`);
+    if (raw !== null) {
+      memoryCache.set(key, raw || null);
+      return raw || null;
+    }
+  } catch {}
+  return undefined;
+}
+
+function setCachedVideo(key: string, id: string | null) {
+  memoryCache.set(key, id);
+  try {
+    localStorage.setItem(`mellow:video:${key}`, id || '');
+  } catch {}
+}
 
 /**
  * Searches YouTube for the legitimate official music video of a song.
- * Uses strict heuristic scoring to prevent selecting fan bootlegs, TikTok edits, lyric videos, or reuploads.
- * If no authentic official video exists, returns null rather than displaying poor-quality reuploads.
+ * Uses smart heuristic scoring to select authentic music videos and avoid fan edits.
  */
 export async function findOfficialMusicVideo(
   title: string,
@@ -42,32 +66,45 @@ export async function findOfficialMusicVideo(
   durationSec?: number | null,
 ): Promise<string | null> {
   const cacheKey = `${title.toLowerCase()}:::${artist.toLowerCase()}`;
-  if (videoCache.has(cacheKey)) {
-    return videoCache.get(cacheKey)!;
-  }
+  const cached = getCachedVideo(cacheKey);
+  if (cached !== undefined) return cached;
 
   const cleanTitle = title
     .replace(/\s*[([](?:official|music|video|audio|lyrics?|sub\s*español|hd|4k)[^)\]]*[)\]]/gi, '')
+    .replace(/\s*[([](?:feat\.?|ft\.?|with)\s+[^)\]]+[)\]]/gi, '')
     .replace(/\s*-\s*.*$/, '') // Remove secondary hyphens
     .trim();
 
+  // Split artist names (e.g. "IDK, Eminem, J Dilla" -> ["IDK", "Eminem", "J Dilla"])
+  const artistParts = artist
+    .split(/[,&/]|(?:\s+(?:feat\.?|ft\.?|with|and|x)\s+)/i)
+    .map((a) => a.trim())
+    .filter(Boolean);
+
+  const primaryArtist = artistParts[0] || artist;
+
   const queries = [
-    `"${cleanTitle}" "${artist}" official music video`,
-    `${cleanTitle} ${artist} official video`,
+    `${cleanTitle} ${primaryArtist} official music video`,
+    `${cleanTitle} ${artist} official music video`,
+    `${cleanTitle} ${primaryArtist} official video`,
+    `${title} official video`,
   ];
 
   try {
     const yt = await getInnertube();
     const candidates: { id: string; title: string; author: string; score: number }[] = [];
+    const seenIds = new Set<string>();
 
     for (const q of queries) {
       try {
         const search = await yt.search(q);
         const videos = search.videos ?? [];
-        for (const v of videos.slice(0, 10)) {
+        for (const v of videos.slice(0, 8)) {
           const vid = v as any;
           const id = vid.id;
-          if (!id) continue;
+          if (!id || seenIds.has(id)) continue;
+          seenIds.add(id);
+
           const vTitle = vid.title?.text || vid.title?.toString() || '';
           const author = vid.author?.name || vid.author?.toString() || '';
           const isOfficialArtist = !!(vid.author?.is_official_artist || vid.author?.is_verified);
@@ -87,14 +124,13 @@ export async function findOfficialMusicVideo(
           if (hasBootleg) continue;
 
           // 1. Author scoring
-          const channelOfficial = isOfficialChannel(author, artist);
+          const channelOfficial = isOfficialChannel(author, [artist, ...artistParts]);
           if (channelOfficial) {
-            score += 65;
+            score += 60;
           } else if (isOfficialArtist) {
             score += 45;
           } else {
-            // Unrelated author (e.g. "Marco Antonio", "AnimeEdits") -> strictly penalize
-            score -= 60;
+            score -= 20;
           }
 
           // 2. Title matching
@@ -103,12 +139,13 @@ export async function findOfficialMusicVideo(
           if (cleanVTitle.includes(cleanTarget)) {
             score += 35;
           } else {
-            // Title doesn't even contain the track name -> skip
             continue;
           }
 
           if (lowerTitle.includes('official music video') || lowerTitle.includes('official video')) {
             score += 30;
+          } else if (lowerTitle.includes('music video') || lowerTitle.includes('m/v')) {
+            score += 20;
           } else if (lowerTitle.includes('official audio') || lowerTitle.includes('audio')) {
             score -= 15;
           }
@@ -118,29 +155,32 @@ export async function findOfficialMusicVideo(
             const diff = Math.abs(durSec - durationSec);
             if (diff <= 25) score += 20;
             else if (diff <= 60) score += 10;
-            else if (diff > 100) score -= 40;
+            else if (diff > 120) score -= 30;
           }
 
           candidates.push({ id, title: vTitle, author, score });
+          // Fast path: high confidence match returns immediately
+          if (score >= 65) {
+            setCachedVideo(cacheKey, id);
+            return id;
+          }
         }
       } catch {}
 
-      if (candidates.some((c) => c.score >= 70)) break;
+      if (candidates.some((c) => c.score >= 55)) break;
     }
 
-    // Sort by highest score
     candidates.sort((a, b) => b.score - a.score);
     const best = candidates[0];
 
-    // High threshold ensures only authentic official releases are selected
-    if (best && best.score >= 50) {
-      videoCache.set(cacheKey, best.id);
+    if (best && best.score >= 35) {
+      setCachedVideo(cacheKey, best.id);
       return best.id;
     }
   } catch (err) {
     console.warn('[Mellow] Failed to search official video:', err);
   }
 
-  videoCache.set(cacheKey, null);
+  setCachedVideo(cacheKey, null);
   return null;
 }

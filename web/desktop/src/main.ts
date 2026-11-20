@@ -21,6 +21,8 @@ import {
   addTracksToPlaylist,
   searchSpotifyAll,
   reportPlaybackToSpotify,
+  fetchFollowedArtists,
+  unfollowPlaylist,
   LIKED_ID,
 } from './spotify.js';
 import { discordRpc } from './discordRpc.js';
@@ -771,13 +773,12 @@ function loadWindowState(): WindowBoundsState {
         // Multi-monitor safety check: Verify the window coordinates are actually visible on one of the connected displays!
         const displays = screen.getAllDisplays();
         const isVisible = displays.some((d) => {
-          const area = d.bounds;
-          // Check if at least a 100x100 area of the window intersects the display
+          const { x, y, width, height } = d.bounds;
           return (
-            bounds.x + 100 >= area.x &&
-            bounds.x <= area.x + area.width - 100 &&
-            bounds.y + 100 >= area.y &&
-            bounds.y <= area.y + area.height - 100
+            bounds.x < x + width - 50 &&
+            bounds.x + bounds.width > x + 50 &&
+            bounds.y < y + height - 50 &&
+            bounds.y + bounds.height > y + 50
           );
         });
 
@@ -861,6 +862,12 @@ function createMainWindow() {
   mainWindow.on('unmaximize', () => {
     saveWindowState(mainWindow!);
     mainWindow?.webContents.send('window-maximize-changed', false);
+  });
+  mainWindow.on('blur', () => {
+    mainWindow?.webContents.send('window-blur');
+  });
+  mainWindow.on('focus', () => {
+    mainWindow?.webContents.send('window-focus');
   });
 
   mainWindow.on('close', () => {
@@ -983,10 +990,10 @@ function createMainWindow() {
   }
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
     if (windowState.isMaximized) {
       mainWindow?.maximize();
     }
-    mainWindow?.show();
     updateThumbarButtons(false);
   });
 
@@ -1248,6 +1255,16 @@ ipcMain.handle('bitchord-bridge-call', async (_, request) => {
         if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success(false);
         const ok = await reportPlaybackToSpotify(currentAuth.spDc, params.trackId, params.positionSec ?? 0);
         return success(ok);
+      }
+
+      case 'spotify.followedArtists': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success([]);
+        return success(await fetchFollowedArtists(currentAuth.spDc));
+      }
+
+      case 'spotify.unfollowPlaylist': {
+        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success(false);
+        return success(await unfollowPlaylist(currentAuth.spDc, params.playlistId));
       }
 
       case 'discordRpc.setEnabled': {

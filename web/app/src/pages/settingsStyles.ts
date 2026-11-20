@@ -42,7 +42,7 @@ export const settingsUi = {
   /** Settings: an integration row that opens a page of its own. */
   linkRow: 'w-full cursor-pointer text-start hover:bg-quaternary',
   /** A row's own action, after its status (Connect, Disconnect). */
-  inlineButton: 'ml-2 rounded-[12px] bg-quaternary px-2.5 py-[3px] type-callout-emphasized text-primary disabled:opacity-50',
+  inlineButton: 'ml-2 rounded-[8px] bg-quaternary px-2.5 py-[5px] type-callout-emphasized text-primary disabled:opacity-50 hover:bg-white/10 active:scale-95 transition-all cursor-pointer',
   inlineLink: 'text-key',
 
   switch: [

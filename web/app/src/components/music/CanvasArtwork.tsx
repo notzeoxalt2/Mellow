@@ -23,11 +23,11 @@ export function CanvasArtwork({
   url,
   className = 'absolute inset-0 size-full rounded-[inherit] object-cover',
   playing = true,
-  minPosterMs = 1200,
+  minPosterMs = 0,
 }: CanvasArtworkProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
-  const [posterElapsed, setPosterElapsed] = useState(false);
+  const [posterElapsed, setPosterElapsed] = useState(true);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -40,12 +40,16 @@ export function CanvasArtwork({
     };
   }, []);
 
-  // Ensure minimum poster display time so the high-res cover is enjoyed before animation starts
+  // When URL changes, reset ready until first frame of new video decodes
   useEffect(() => {
     setReady(false);
-    setPosterElapsed(false);
-    const timer = setTimeout(() => setPosterElapsed(true), minPosterMs);
-    return () => clearTimeout(timer);
+    if (minPosterMs > 0) {
+      setPosterElapsed(false);
+      const timer = setTimeout(() => setPosterElapsed(true), minPosterMs);
+      return () => clearTimeout(timer);
+    } else {
+      setPosterElapsed(true);
+    }
   }, [url, minPosterMs]);
 
   useEffect(() => {
@@ -71,7 +75,7 @@ export function CanvasArtwork({
       }
     };
     const handleBlur = () => {
-      if (readAppearancePreferences().smartMemorySaving && videoRef.current) {
+      if (videoRef.current) {
         videoRef.current.pause();
       }
     };
@@ -84,10 +88,14 @@ export function CanvasArtwork({
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('mellow:window-blur', handleBlur);
+    window.addEventListener('mellow:window-focus', handleFocus);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('mellow:window-blur', handleBlur);
+      window.removeEventListener('mellow:window-focus', handleFocus);
     };
   }, [playing]);
 

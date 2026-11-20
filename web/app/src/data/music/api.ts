@@ -247,7 +247,20 @@ const ARTIST_TOP_SONGS = 20;
  */
 export async function fetchArtist(id: string): Promise<ArtistPage> {
   return withPublicMusicClient(async (yt) => {
-    const page = mapArtist(id, await yt.music.getArtist(id));
+    let browseId = id;
+    if (id.startsWith('artist:')) {
+      const name = id.replace(/^artist:/, '');
+      const found = await findArtistPageId(name);
+      if (found) browseId = found;
+    } else if (id.startsWith('spotify:')) {
+      const name = id.replace(/^spotify:(?:artist:)?/, '');
+      const found = await findArtistPageId(name);
+      if (found) browseId = found;
+    } else if (!id.startsWith('UC') && !id.startsWith('FE')) {
+      const found = await findArtistPageId(id);
+      if (found) browseId = found;
+    }
+    const page = mapArtist(browseId, await yt.music.getArtist(browseId));
     const playlistId = page.topSongsSeeAll?.browseId;
     if (playlistId?.startsWith('VL') && page.topSongs.length < ARTIST_TOP_SONGS) {
       try {
@@ -456,6 +469,23 @@ export async function createPlaylist(title: string, videoIds: string[], descript
   const id = (response.data as { playlistId?: string } | undefined)?.playlistId;
   if (!id) throw new Error('YouTube Music did not make the playlist');
   return id;
+}
+
+/** Deletes a playlist from YouTube Music. */
+export async function deletePlaylist(playlistId: string): Promise<void> {
+  const yt = await getSignedInnertube();
+  const rawId = playlistId.replace(/^VL/, '');
+  try {
+    await yt.actions.execute('/playlist/delete', {
+      playlistId: rawId,
+      client: 'YTMUSIC',
+    });
+  } catch {
+    await yt.actions.execute('/like/removelike', {
+      target: { playlistId: rawId },
+      client: 'YTMUSIC',
+    });
+  }
 }
 
 // ---- AutoPlay (phase 6) -------------------------------------------------------------

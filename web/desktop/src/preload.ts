@@ -112,3 +112,13 @@ ipcRenderer.on('bitchord-bridge-event', (_, payload) => {
     '*',
   );
 });
+
+// Forward window blur/focus events to guarantee canvas and video pause when switching to other apps
+ipcRenderer.on('window-blur', () => {
+  window.dispatchEvent(new Event('blur'));
+  window.dispatchEvent(new CustomEvent('mellow:window-blur'));
+});
+ipcRenderer.on('window-focus', () => {
+  window.dispatchEvent(new Event('focus'));
+  window.dispatchEvent(new CustomEvent('mellow:window-focus'));
+});

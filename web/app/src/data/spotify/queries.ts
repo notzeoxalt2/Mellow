@@ -3,7 +3,17 @@ import { useSyncExternalStore } from 'react';
 import type { SpotifyCategory, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
 import type { Track } from '@/data/music/types';
 import { useSpotifyAuth, useSpotifySignedIn } from '@/extension/useSpotifyAuth';
-import { fetchSpotifyHomeSections, fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack } from './api';
+import { fetchSpotifyFollowedArtists, fetchSpotifyHomeSections, fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack } from './api';
+
+export function useSpotifyFollowedArtists() {
+  const signedIn = useSpotifySignedIn();
+  return useQuery({
+    queryKey: ['spotify', 'data', 'followedArtists'],
+    queryFn: fetchSpotifyFollowedArtists,
+    enabled: signedIn,
+    staleTime: 5 * 60_000,
+  });
+}
 
 export function useSpotifyPlaylists() {
   const signedIn = useSpotifySignedIn();

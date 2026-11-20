@@ -1,4 +1,4 @@
-import type { SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
+import type { SpotifyArtist, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
 import { best, type MatchCandidate } from '@/data/match/trackMatcher';
 import { searchSongs } from '@/data/music/api';
 import type { Track } from '@/data/music/types';
@@ -33,6 +33,14 @@ export async function fetchSpotifyPlaylists(): Promise<SpotifyPlaylist[]> {
 
 export function fetchSpotifyPlaylistInfo(playlistId: string) {
   return bridge().call('spotify.playlist', { playlistId }, { timeoutMs: 30_000 });
+}
+
+export async function fetchSpotifyFollowedArtists(): Promise<SpotifyArtist[]> {
+  try {
+    return await bridge().call('spotify.followedArtists', {}, { timeoutMs: 25_000 });
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchSpotifyHomeSections(): Promise<{

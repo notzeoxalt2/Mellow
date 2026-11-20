@@ -33,6 +33,7 @@ export default function PlaylistPage() {
     <>
       <DetailHeader
         info={header}
+        playlistId={id}
         canPlay={tracks.length > 0}
         onPlay={() => playList(tracks, 0, context)}
         onShuffle={() => shuffleList(tracks, context)}

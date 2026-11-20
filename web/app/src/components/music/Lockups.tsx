@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ListEnd, ListStart, Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Menu, MenuItem, MenuSeparator } from '@/components/Menu';
+import { queryClient } from '@/lib/queryClient';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PauseIcon, PlayIcon } from '@/components/icons/Transport';
 import type { MusicItem } from '@/data/music/types';
@@ -72,7 +74,7 @@ function PlayPlatter({ item }: { item: MusicItem }) {
 
   return (
     <button
-      className="pointer-events-auto absolute right-2.5 bottom-2.5 grid size-10 place-items-center rounded-full bg-white text-black shadow-2xl shadow-black/80 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-neutral-100 opacity-0 translate-y-2 group-hover/card:opacity-100 group-hover/card:translate-y-0 group-focus-visible/card:opacity-100 cursor-pointer"
+      className="pointer-events-auto absolute right-2.5 bottom-2.5 grid size-10 place-items-center rounded-[10px] bg-white text-black shadow-2xl shadow-black/80 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-neutral-100 opacity-0 translate-y-2 group-hover/card:opacity-100 group-hover/card:translate-y-0 group-focus-visible/card:opacity-100 cursor-pointer"
       aria-label={isCurrent && isPlaying ? `Pause ${item.title}` : `Play ${item.title}`}
       onClick={async (e) => {
         e.preventDefault();
@@ -98,6 +100,99 @@ function PlayPlatter({ item }: { item: MusicItem }) {
         <PlayIcon size={22} className="ml-0.5 text-black fill-black" />
       )}
     </button>
+  );
+}
+
+function PlaylistCardMenu({ item, className }: { item: MusicItem; className: string }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { playNext, addToQueue } = usePlayer.getState();
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      if (item.kind === 'spotify-playlist') {
+        const { getBridge } = await import('@/extension/bridge');
+        const b = getBridge() as any;
+        await b?.call('spotify.unfollowPlaylist', { playlistId: item.id }).catch(() => null);
+        void queryClient.invalidateQueries({ queryKey: ['spotify', 'data'] });
+      } else {
+        const { deletePlaylist } = await import('@/data/music/api');
+        await deletePlaylist(item.id);
+        void queryClient.invalidateQueries({ queryKey: ['music', 'library'] });
+        void queryClient.invalidateQueries({ queryKey: ['music', 'playlists'] });
+      }
+    } catch (e) {
+      console.warn('Failed to delete playlist:', e);
+    } finally {
+      setDeleting(false);
+      setAnchor(null);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className={className}
+        data-open={anchor !== null || undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setAnchor(anchor ? null : e.currentTarget);
+        }}
+        aria-label="Playlist options"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {anchor && (
+        <Menu anchor={anchor} onClose={() => setAnchor(null)} label={item.title}>
+          <MenuItem
+            icon={<ListStart size={15} />}
+            onSelect={async () => {
+              setAnchor(null);
+              if (item.kind === 'spotify-playlist') {
+                const { fetchSpotifyTracks, pendingTrack } = await import('@/data/spotify/api');
+                const tracks = await fetchSpotifyTracks(item.id, () => {});
+                if (tracks.length) playNext(tracks.map((t) => pendingTrack(t)));
+              } else {
+                const { fetchPlaylist } = await import('@/data/music/api');
+                const { page } = await fetchPlaylist(item.id);
+                if (page.tracks.length) playNext(page.tracks);
+              }
+            }}
+          >
+            Play Next
+          </MenuItem>
+          <MenuItem
+            icon={<ListEnd size={15} />}
+            onSelect={async () => {
+              setAnchor(null);
+              if (item.kind === 'spotify-playlist') {
+                const { fetchSpotifyTracks, pendingTrack } = await import('@/data/spotify/api');
+                const tracks = await fetchSpotifyTracks(item.id, () => {});
+                if (tracks.length) addToQueue(tracks.map((t) => pendingTrack(t)));
+              } else {
+                const { fetchPlaylist } = await import('@/data/music/api');
+                const { page } = await fetchPlaylist(item.id);
+                if (page.tracks.length) addToQueue(page.tracks);
+              }
+            }}
+          >
+            Add to Queue
+          </MenuItem>
+          <MenuSeparator />
+          <MenuItem
+            icon={deleting ? <Loader2 size={15} className="animate-spin text-red-400" /> : <Trash2 size={15} className="text-red-400" />}
+            destructive
+            disabled={deleting}
+            onSelect={handleDelete}
+          >
+            {deleting ? 'Deleting…' : 'Delete Playlist'}
+          </MenuItem>
+        </Menu>
+      )}
+    </>
   );
 }
 
@@ -134,7 +229,7 @@ function LockupArtwork({
 
       {/* Floating active equalizer indicator when item is playing */}
       {isCurrent && (
-        <div className="pointer-events-none absolute bottom-2.5 left-2.5 z-2 flex items-center justify-center rounded-full bg-black/75 px-2.5 py-1.5 shadow-lg backdrop-blur-md border border-white/10">
+        <div className="pointer-events-none absolute bottom-2.5 left-2.5 z-2 flex items-center justify-center rounded-[8px] bg-black/75 px-2.5 py-1.5 shadow-lg backdrop-blur-md border border-white/10">
           <EqualizerBars size={12} playing={isPlaying} />
         </div>
       )}
@@ -147,13 +242,20 @@ function LockupArtwork({
       >
         {isPlayable(item) && <PlayPlatter item={item} />}
       </div>
-      {/* The track menu */}
+      {/* The track or playlist menu */}
       {isPlayable(item) && (
-        <TrackMenu
-          track={toTrack(item)}
-          onNotInterested={allowNotInterested ? () => markNotInterested(item.id) : undefined}
-          className="absolute top-2 right-2 z-3 grid size-7 place-items-center rounded-full bg-thin-material text-white opacity-0 transition-opacity duration-100 ease-in [backdrop-filter:saturate(180%)_blur(60px)] group-hover/card:opacity-100 focus-visible:opacity-100 hover:bg-key-bg data-open:opacity-100"
-        />
+        item.kind === 'playlist' || item.kind === 'spotify-playlist' ? (
+          <PlaylistCardMenu
+            item={item}
+            className="absolute top-2 right-2 z-3 grid size-7 place-items-center rounded-[8px] bg-thin-material text-white opacity-0 transition-opacity duration-100 ease-in [backdrop-filter:saturate(180%)_blur(60px)] group-hover/card:opacity-100 focus-visible:opacity-100 hover:bg-key-bg data-open:opacity-100 cursor-pointer"
+          />
+        ) : (
+          <TrackMenu
+            track={toTrack(item)}
+            onNotInterested={allowNotInterested ? () => markNotInterested(item.id) : undefined}
+            className="absolute top-2 right-2 z-3 grid size-7 place-items-center rounded-[8px] bg-thin-material text-white opacity-0 transition-opacity duration-100 ease-in [backdrop-filter:saturate(180%)_blur(60px)] group-hover/card:opacity-100 focus-visible:opacity-100 hover:bg-key-bg data-open:opacity-100 cursor-pointer"
+          />
+        )
       )}
     </div>
   );

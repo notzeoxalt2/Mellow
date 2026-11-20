@@ -144,6 +144,35 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let session: Session | null = null;
 let opening: string | null = null;
+let lastSpotifyReportedTrack: string | null = null;
+
+async function reportToSpotifyIfAvailable(nowPlaying: { videoId: string; title: string; artist: string }, positionSec: number) {
+  if (typeof window === 'undefined') return;
+  const bridge = getBridge();
+  if (!bridge) return;
+
+  const trackKey = `${nowPlaying.title}:::${nowPlaying.artist}`;
+  if (lastSpotifyReportedTrack === trackKey) return;
+  lastSpotifyReportedTrack = trackKey;
+
+  try {
+    let spotifyTrackId: string | null = null;
+    if (nowPlaying.videoId.startsWith('spotify:')) {
+      spotifyTrackId = nowPlaying.videoId.replace(/^spotify:(?:track:)?/, '');
+    } else {
+      // Find matching track ID on Spotify to feed recommendations
+      const hits = await bridge.call('spotify.searchTracks', { query: `${nowPlaying.title} ${nowPlaying.artist}` }).catch(() => []);
+      if (hits && hits.length > 0) {
+        spotifyTrackId = hits[0]?.id || null;
+      }
+    }
+
+    if (spotifyTrackId) {
+      await bridge.call('spotify.reportPlayback', { trackId: spotifyTrackId, positionSec }).catch(() => null);
+      trackLog.i(`history: synced playback to Spotify algorithm: ${spotifyTrackId}`);
+    }
+  } catch {}
+}
 
 async function open(videoId: string): Promise<void> {
   for (let attempt = 1; attempt <= OPEN_ATTEMPTS; attempt++) {
@@ -198,8 +227,18 @@ function close(): void {
 function sample(): void {
   const { nowPlaying, status } = usePlayer.getState();
   const videoId = nowPlaying?.videoId ?? null;
-  if (session && session.videoId !== videoId) close();
+  if (session && session.videoId !== videoId) {
+    lastSpotifyReportedTrack = null;
+    close();
+  }
   if (!videoId || status !== 'playing') return;
+
+  const audio = getAudio();
+  if (!audio) return;
+  const position = audio.currentTime;
+  if (position >= 5 && nowPlaying) {
+    void reportToSpotifyIfAvailable(nowPlaying, position);
+  }
 
   if (!session) {
     if (opening === videoId || !VIDEO_ID.test(videoId)) return;
@@ -214,9 +253,6 @@ function sample(): void {
     return;
   }
 
-  const audio = getAudio();
-  if (!audio) return;
-  const position = audio.currentTime;
   session.heard = Math.max(session.heard, position);
   const current = session;
   if (!current.atrSent && position >= current.tracking.atrAfterSec && current.tracking.atr) {

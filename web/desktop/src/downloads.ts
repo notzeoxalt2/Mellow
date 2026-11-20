@@ -113,8 +113,10 @@ export async function downloadTrackStream(
     const totalBytes = Number(response.headers.get('content-length') || 0);
     let bytesReceived = 0;
 
-    const fileStream = fs.createWriteStream(filePath);
+    const fileStream = fs.createWriteStream(filePath, { highWaterMark: 1024 * 1024 });
     const reader = response.body.getReader();
+    let lastProgressEmit = 0;
+    let lastPercent = -1;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -122,11 +124,18 @@ export async function downloadTrackStream(
       if (value) {
         fileStream.write(Buffer.from(value));
         bytesReceived += value.length;
-        if (onProgress) {
-          const percent = totalBytes > 0 ? Math.round((bytesReceived / totalBytes) * 100) : 0;
+        const now = Date.now();
+        const percent = totalBytes > 0 ? Math.round((bytesReceived / totalBytes) * 100) : 0;
+        if (onProgress && (percent !== lastPercent || now - lastProgressEmit > 150)) {
+          lastPercent = percent;
+          lastProgressEmit = now;
           onProgress({ percent, bytesReceived, totalBytes });
         }
       }
+    }
+
+    if (onProgress) {
+      onProgress({ percent: 100, bytesReceived, totalBytes: Math.max(totalBytes, bytesReceived) });
     }
 
     await new Promise((resolve) => fileStream.end(resolve));

@@ -170,6 +170,7 @@ export function applyAppearancePreferences(preferences: AppearancePreferences): 
   root.style.setProperty('--fullscreen-artwork-glow-opacity', String(Math.min(0.95, (preferences.fullScreenArtworkGlow / 100) * 0.85)));
   root.style.setProperty('--fullscreen-ambient-blur', `${preferences.lowResourceMode ? Math.min(preferences.fullScreenAmbientBlur, 26) : preferences.fullScreenAmbientBlur}px`);
   root.style.setProperty('--ambient-spread', `${preferences.ambientSpread}%`);
+  root.style.setProperty('--fullscreen-ambient-spread', String(preferences.ambientSpread / 50));
   root.style.setProperty('--now-playing-glow-opacity', String(preferences.nowPlayingPanelGlow / 100));
   root.style.setProperty('--now-playing-glow-inset', `${-preferences.nowPlayingPanelGlowSpread * 0.36}%`);
   root.style.setProperty('--now-playing-glow-extra', `${preferences.nowPlayingPanelGlowSpread * 0.72}%`);

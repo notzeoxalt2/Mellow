@@ -108,7 +108,8 @@ interface PlayerState extends Settings {
 
 // ---- Settings, kept across visits ---------------------------------------------------
 
-const SETTINGS_KEY = 'bitchord:player';
+const SETTINGS_KEY = 'mellow:player_settings';
+const LEGACY_SETTINGS_KEY = 'bitchord:player';
 const DEFAULT_SETTINGS: Settings = {
   shuffle: false,
   repeat: 'off',
@@ -123,7 +124,8 @@ const DEFAULT_SETTINGS: Settings = {
 
 function loadSettings(): Settings {
   try {
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Partial<Settings>) };
+    const stored = localStorage.getItem(SETTINGS_KEY) || localStorage.getItem(LEGACY_SETTINGS_KEY);
+    return { ...DEFAULT_SETTINGS, ...(stored ? JSON.parse(stored) : {}) };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -135,6 +137,8 @@ interface SavedSession {
   queue: QueueEntry[];
   index: number;
   nowPlaying: NowPlaying | null;
+  shuffle?: boolean;
+  repeat?: 'off' | 'one' | 'all';
 }
 
 function loadSession(): Partial<SavedSession> {
@@ -148,6 +152,8 @@ function loadSession(): Partial<SavedSession> {
         queue: parsed.queue,
         index: typeof parsed.index === 'number' ? parsed.index : 0,
         nowPlaying: parsed.nowPlaying || null,
+        shuffle: typeof parsed.shuffle === 'boolean' ? parsed.shuffle : undefined,
+        repeat: parsed.repeat,
       };
     }
   } catch {}
@@ -158,24 +164,30 @@ function saveSession(state: { queue: QueueEntry[]; index: number; nowPlaying: No
   if (typeof window === 'undefined') return;
   try {
     if (!state.queue || state.queue.length === 0) return;
+    const playerState = usePlayer.getState();
+    const currentSettings = loadSettings();
+    const isShuffle = typeof playerState?.shuffle === 'boolean' ? playerState.shuffle : currentSettings.shuffle;
+    const isRepeat = playerState?.repeat ?? currentSettings.repeat;
     localStorage.setItem(
       SESSION_KEY,
       JSON.stringify({
         queue: state.queue.slice(0, 100),
         index: Math.max(0, state.index),
         nowPlaying: state.nowPlaying,
+        shuffle: isShuffle,
+        repeat: isRepeat,
       }),
     );
   } catch {}
 }
 
-
 function saveSettings(state: Settings) {
   const { shuffle, repeat, autoplay, volume, muted, crossfadeSec, automix, automixBars, showNerdStats } = state;
-  localStorage.setItem(
-    SETTINGS_KEY,
-    JSON.stringify({ shuffle, repeat, autoplay, volume, muted, crossfadeSec, automix, automixBars, showNerdStats }),
-  );
+  const payload = JSON.stringify({ shuffle, repeat, autoplay, volume, muted, crossfadeSec, automix, automixBars, showNerdStats });
+  try {
+    localStorage.setItem(SETTINGS_KEY, payload);
+    localStorage.setItem(LEGACY_SETTINGS_KEY, payload);
+  } catch {}
 }
 
 // ---- Decks: two engines, so a crossfade can play the next track under this one ------------
@@ -472,6 +484,8 @@ let lastAudibleVolume = initialSettings.volume > 0 ? initialSettings.volume : DE
 
 export const usePlayer = create<PlayerState>()((set, get) => ({
   ...initialSettings,
+  shuffle: typeof savedSession.shuffle === 'boolean' ? savedSession.shuffle : initialSettings.shuffle,
+  repeat: savedSession.repeat ?? initialSettings.repeat,
   queue: savedSession.queue ?? [],
   index: savedSession.index ?? -1,
   nowPlaying: savedSession.nowPlaying ?? null,
@@ -581,10 +595,12 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   next() {
+    getAudio()?.pause();
     void advance(false).then(intent);
   },
 
   previous() {
+    getAudio()?.pause();
     const { index, queue, repeat } = get();
     const target = previousTrackIndex(index, queue.length, repeat);
     if (target === null) return;
@@ -646,6 +662,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       set({ shuffle: false, queue: [...head, ...order.map((i) => upcoming[i]!)] });
     }
     saveSettings(get());
+    saveSession(get());
   },
 
   cycleRepeat() {
@@ -672,6 +689,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     set({ volume: nextVolume, muted: false });
     applyVolumes();
     saveSettings(get());
+    saveSession(get());
   },
 
   toggleMute() {
@@ -687,6 +705,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     }
     applyVolumes();
     saveSettings(get());
+    saveSession(get());
   },
 
   setCrossfade(crossfadeSec) {
@@ -711,6 +730,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   setShowNerdStats(showNerdStats) {
     set({ showNerdStats });
     saveSettings(get());
+    saveSession(get());
   },
 }));
 
@@ -792,6 +812,7 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   const entry = state.queue[at];
   if (!entry) return;
   cancelCrossfade();
+  void import('@/playback/youtube/videoDeck').then((m) => m.stopVideo()).catch(() => {});
   const token = ++loadToken;
 
   if (preloadNextTimer) {
@@ -812,6 +833,9 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   // Instant Deck Swap: If upcoming track was preloaded on the idle deck, switch immediately (0.0s latency)
   if (preloadedNext && preloadedNext.at === at && startSec === 0 && preloadedNext.deckIndex === (1 - active)) {
     const all = await getDecks();
+    const oldDeck = all[active]!;
+    oldDeck.audio.pause();
+    void oldDeck.engine.stop().catch(() => {});
     active = 1 - active;
     const deck = all[active]!;
     deck.gain = 1;
@@ -846,6 +870,9 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
   try {
     const all = await getDecks();
     const deck = all[active]!;
+    deck.audio.pause();
+    void deck.engine.stop().catch(() => {});
+    all[1 - active]!.audio.pause();
     all[1 - active]!.engine.stop().catch(() => {});
     deck.gain = 1;
     applyVolumes();
@@ -934,7 +961,7 @@ function afterTrackStarted() {
   const prefs = readAppearancePreferences();
   if (prefs.lowResourceMode) return;
 
-  // Wait 2.5 seconds after current track begins to ensure current playback is stable
+  // Quickly pre-buffer upcoming track (600ms) after playback begins
   preloadNextTimer = setTimeout(async () => {
     preloadNextTimer = null;
     const cur = usePlayer.getState();
@@ -970,26 +997,32 @@ function afterTrackStarted() {
         trackLog.i(`Smart preloaded next track: ${nextEntry.track.title}`, nextPlayId);
       }
 
-      // 3. Prefetch lyrics for upcoming track so lyrics display instantly with 0 loading delay
+      // 3. Smart prefetch up to 3 upcoming tracks (playable IDs and lyrics)
       try {
         const { queryClient } = await import('@/lib/queryClient');
         const { lookupLyrics } = await import('@/lyrics/repository');
         const { useLyricsSettings } = await import('@/lyrics/settings');
         const lyricsSettings = useLyricsSettings.getState();
         const lyricsOrder = lyricsSettings.order.filter((id) => !lyricsSettings.disabled.includes(id)).join(',');
-        const trackTitle = nextEntry.track.title;
-        const trackArtist = nextEntry.track.artists.map((a) => a.name).join(', ');
-        void queryClient.prefetchQuery({
-          queryKey: ['lyrics', nextPlayId, trackTitle, trackArtist, null, lyricsOrder, lyricsSettings.preferSyllables],
-          queryFn: () => lookupLyrics({
-            videoId: nextPlayId,
-            title: trackTitle,
-            artist: trackArtist,
-            durationMs: Math.round((nextEntry.track.durationSec ?? 0) * 1000),
-            album: nextEntry.track.album?.name ?? null,
-          }),
-          staleTime: Infinity,
-        });
+
+        const upcomingBatch = plan.queue.slice(nextAt, nextAt + 3);
+        for (let i = 0; i < upcomingBatch.length; i++) {
+          const entry = upcomingBatch[i]!;
+          const playId = i === 0 ? nextPlayId : await resolvePlayableVideoId(entry, nextAt + i).catch(() => entry.track.videoId);
+          const trackTitle = entry.track.title;
+          const trackArtist = entry.track.artists.map((a) => a.name).join(', ');
+          void queryClient.prefetchQuery({
+            queryKey: ['lyrics', playId, trackTitle, trackArtist, null, lyricsOrder, lyricsSettings.preferSyllables],
+            queryFn: () => lookupLyrics({
+              videoId: playId,
+              title: trackTitle,
+              artist: trackArtist,
+              durationMs: Math.round((entry.track.durationSec ?? 0) * 1000),
+              album: entry.track.album?.name ?? null,
+            }),
+            staleTime: Infinity,
+          });
+        }
       } catch {}
     } catch (err) {
       trackLog.w(`Preload ahead skipped or unavailable: ${String(err)}`, nextEntry.track.videoId);

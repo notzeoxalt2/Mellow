@@ -1,5 +1,5 @@
 import { Check, ChevronLeft, ChevronRight, Download, EyeOff, Film, ListEnd, ListPlus, ListStart, Loader2, MoreHorizontal, Plus, Star } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { Component, type ErrorInfo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator, type MenuPlacement } from '@/components/Menu';
 import { useDownloads } from '@/lib/download';
 import {
@@ -11,14 +11,35 @@ import {
 } from '@/data/music/queries';
 import { useSpotifyPlaylists } from '@/data/spotify/queries';
 import { useSpotifySignedIn } from '@/extension/useSpotifyAuth';
-import { addTracksToSpotifyPlaylist, createSpotifyPlaylist } from '@/data/spotify/api';
+import { addTracksToSpotifyPlaylist, createSpotifyPlaylist, LIKED_ID } from '@/data/spotify/api';
 import { createPlaylist as createYtPlaylist } from '@/data/music/api';
 import { queryClient } from '@/lib/queryClient';
 import type { Track } from '@/data/music/types';
 import { usePlayer } from '@/state/player';
 
+class MenuErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  override state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn('[TrackMenu] Error caught by boundary:', error, info);
+  }
+  override render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-3 text-xs text-secondary">
+          <p>Options currently unavailable</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () => void; onBack: () => void }) {
-  const options = usePlaylistOptions(track.videoId, true);
+  const isSpotifyTrack = track?.videoId?.startsWith('spotify:') ?? false;
+  const options = usePlaylistOptions(track?.videoId ?? '', !isSpotifyTrack && !!track?.videoId);
   const spotifyPlaylists = useSpotifyPlaylists();
   const add = useAddToPlaylist();
   const [creating, setCreating] = useState(false);
@@ -26,10 +47,12 @@ function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () =
 
   const handleCreateNew = async () => {
     const title = playlistName.trim();
-    if (!title) return;
+    if (!title || !track) return;
     try {
-      await createYtPlaylist(title, [track.videoId]);
-      await createSpotifyPlaylist(title, 'Created with Mellow', [`spotify:track:${track.videoId}`]).catch(() => null);
+      if (!isSpotifyTrack && track.videoId) {
+        await createYtPlaylist(title, [track.videoId]);
+      }
+      await createSpotifyPlaylist(title, 'Created with Mellow', [`spotify:track:${track.videoId.replace(/^spotify:/, '')}`]).catch(() => null);
     } catch {}
     void queryClient.invalidateQueries({ queryKey: ['music', 'library'] });
     void queryClient.invalidateQueries({ queryKey: ['music', 'playlist'] });
@@ -87,44 +110,57 @@ function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () =
       <MenuHeader>Add to Playlist</MenuHeader>
       {options.isPending && (
         <MenuItem disabled onSelect={() => {}}>
-          Loading…
+          Loading YouTube playlists…
         </MenuItem>
       )}
       {options.isError && (
         <MenuItem disabled onSelect={() => {}}>
-          Couldn’t load your playlists
+          Couldn’t load YouTube playlists
         </MenuItem>
       )}
-      {options.data?.map((option) => (
+      {options.data && options.data.length > 0 && options.data.map((option, idx) => (
         <MenuItem
-          key={option.playlistId}
+          key={`yt-${option.playlistId || idx}`}
           onSelect={() => {
-            add.mutate({ playlistId: option.playlistId, videoId: track.videoId });
-            void queryClient.invalidateQueries({ queryKey: ['music', 'library'] });
-            void queryClient.invalidateQueries({ queryKey: ['music', 'playlist'] });
+            if (track?.videoId) {
+              add.mutate({ playlistId: option.playlistId, videoId: track.videoId });
+              void queryClient.invalidateQueries({ queryKey: ['music', 'library'] });
+              void queryClient.invalidateQueries({ queryKey: ['music', 'playlist'] });
+            }
             onDone();
           }}
         >
           {option.title}
         </MenuItem>
       ))}
+
+      {spotifyPlaylists.isPending && (
+        <MenuItem disabled onSelect={() => {}}>
+          Loading Spotify playlists…
+        </MenuItem>
+      )}
+
       {spotifyPlaylists.data && spotifyPlaylists.data.length > 0 && (
         <>
           <MenuSeparator />
           <MenuHeader>Spotify Playlists</MenuHeader>
-          {spotifyPlaylists.data.map((sp) => (
-            <MenuItem
-              key={sp.id}
-              onSelect={async () => {
-                const artistName = track.artists.map((a) => a.name).join(' ');
-                await addTracksToSpotifyPlaylist(sp.id, [track.videoId], { title: track.title, artist: artistName });
-                void queryClient.invalidateQueries({ queryKey: ['spotify', 'data'] });
-                onDone();
-              }}
-            >
-              {sp.name}
-            </MenuItem>
-          ))}
+          {spotifyPlaylists.data
+            .filter((sp) => sp.id !== 'liked' && sp.id !== LIKED_ID)
+            .map((sp, idx) => (
+              <MenuItem
+                key={`sp-${sp.id || idx}-${idx}`}
+                onSelect={async () => {
+                  if (track) {
+                    const artistName = track.artists?.map((a) => a.name).join(' ') || '';
+                    await addTracksToSpotifyPlaylist(sp.id, [track.videoId], { title: track.title, artist: artistName });
+                    void queryClient.invalidateQueries({ queryKey: ['spotify', 'data'] });
+                  }
+                  onDone();
+                }}
+              >
+                {sp.name}
+              </MenuItem>
+            ))}
         </>
       )}
     </>
@@ -133,12 +169,12 @@ function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () =
 
 /** Favorite and Add to Playlist: the account's actions, signed in only. */
 function AccountItems({ track, onClose, onPlaylists }: { track: Track; onClose: () => void; onPlaylists: () => void }) {
-  const status = useLikeStatus(track.videoId);
+  const status = useLikeStatus(track?.videoId ?? '');
   const setLiked = useSetLiked();
   const liked = status.data === 'LIKE';
   const effectiveTrack = {
     title: track.title,
-    artist: track.artists.map((a) => a.name).join(', '),
+    artist: track.artists?.map((a) => a.name).join(', ') ?? '',
     durationSec: track.durationSec ?? undefined,
   };
   return (
@@ -166,14 +202,15 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
   const ytSignedIn = useSignedIn();
   const spotifySignedIn = useSpotifySignedIn();
   const signedIn = ytSignedIn || spotifySignedIn;
+  const isDownloaded = useDownloads((s) => s.isDownloaded(track?.videoId ?? ''));
+  const progress = useDownloads((s) => s.getProgress(track?.videoId ?? ''));
+  const downloadTrack = useDownloads((s) => s.downloadTrack);
+  const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
+
   if (view === 'playlists') {
     return <PlaylistChoices track={track} onDone={onClose} onBack={() => setView('main')} />;
   }
   const { playNext, addToQueue } = usePlayer.getState();
-  const isDownloaded = useDownloads((s) => s.isDownloaded(track.videoId));
-  const progress = useDownloads((s) => s.getProgress(track.videoId));
-  const downloadTrack = useDownloads((s) => s.downloadTrack);
-  const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
 
   return (
     <>
@@ -217,7 +254,7 @@ function TrackMenuItems({ track, onClose, onNotInterested }: { track: Track; onC
           try {
             const { findOfficialMusicVideo } = await import('@/playback/youtube/officialVideo');
             const { playTrack } = await import('@/components/music/play');
-            const artistName = track.artists.map((a) => a.name).join(' ');
+            const artistName = track.artists?.map((a) => a.name).join(' ') || '';
             const matchedId = await findOfficialMusicVideo(track.title, artistName, track.durationSec);
             if (matchedId) {
               playTrack({
@@ -296,7 +333,9 @@ export function TrackMenu({
       </button>
       {anchor && (
         <Menu anchor={anchor} placement={placement} onClose={close} label={track.title}>
-          <TrackMenuItems track={track} onClose={close} onNotInterested={onNotInterested} />
+          <MenuErrorBoundary>
+            <TrackMenuItems track={track} onClose={close} onNotInterested={onNotInterested} />
+          </MenuErrorBoundary>
         </Menu>
       )}
     </>

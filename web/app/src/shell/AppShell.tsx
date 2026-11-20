@@ -249,7 +249,7 @@ export function AppShell() {
         {/* The page scrolls under the fixed sidebar and the floating player. */}
         <main
           id="scrollable-page"
-          className="absolute inset-0 overflow-x-hidden overflow-y-auto pl-(--web-navigation-width) [scrollbar-gutter:stable] max-sm:pt-(--mobile-top-bar-height) max-sm:pl-0 transition-colors duration-500"
+          className="absolute inset-0 overflow-x-hidden overflow-y-auto pl-(--web-navigation-width) max-sm:pt-(--mobile-top-bar-height) max-sm:pl-0 transition-colors duration-500"
           style={{
             background: 'var(--app-bg, #0c0d12)',
           }}

@@ -335,18 +335,24 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
       onKeyDown={wake}
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
-      {!theater && !video && fullScreenPlayerAmbient && (
+      {fullScreenPlayerAmbient && (
         <AmbientBackdrop
           artworkUrl={nowPlaying.artworkUrl}
           canvasUrl={canvas}
           canvasDisabled={canvasDisabled}
-          videoActive={false}
+          videoActive={video}
           playing={playing}
         />
       )}
       {theater && (
-        <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in bg-black">
-          <VideoSurface fit="contain" className="size-full bg-black" />
+        <div className="pointer-events-none absolute inset-0 z-0 animate-fade-in">
+          <VideoSurface fit="contain" className="size-full" />
+        </div>
+      )}
+      {resolvingVideo && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <Loader2 size={32} className="animate-spin text-(--theme-accent)" />
+          <p className="type-callout-emphasized text-white/90">Loading official music video…</p>
         </div>
       )}
 
@@ -426,8 +432,8 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
           <Sparkles size={17} />
         </button>
 
-        {/* Button 3: Ambient Mode (Apple Music radiant mesh vs Clean Dark) */}
-        {!theater && (
+        {/* Button 3: Ambient Mode (Apple Music radiant mesh vs Clean Dark) + Spread Slider */}
+        <div className="relative flex flex-col items-center group">
           <button
             type="button"
             className={`size-9 grid place-items-center rounded-[8px] transition-all backdrop-blur-md shadow-sm border active:scale-95 cursor-pointer ${
@@ -438,12 +444,29 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
             onClick={() => {
               updateAppearancePreferences({ fullScreenPlayerAmbient: !fullScreenPlayerAmbient });
             }}
-            title={fullScreenPlayerAmbient ? 'Switch to Clean Dark Mode' : 'Switch to Radiant Ambient Mode'}
-            aria-label={fullScreenPlayerAmbient ? 'Switch to Clean Dark Mode' : 'Switch to Radiant Ambient Mode'}
+            title={fullScreenPlayerAmbient ? 'Ambient Active (Hover to adjust spread)' : 'Switch to Radiant Ambient Mode'}
+            aria-label="Ambient Glow"
           >
             <SunMedium size={17} />
           </button>
-        )}
+          {fullScreenPlayerAmbient && (
+            <div className="absolute top-10 right-0 flex flex-col items-center gap-1.5 rounded-[8px] bg-[#121319]/95 backdrop-blur-xl border border-white/10 p-2.5 shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 w-40">
+              <span className="text-[11px] font-medium text-white/80">Ambient Spread</span>
+              <input
+                type="range"
+                min="40"
+                max="180"
+                step="5"
+                defaultValue={readAppearancePreferences().ambientSpread}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  updateAppearancePreferences({ ambientSpread: val });
+                }}
+                className="h-1.5 w-full appearance-none rounded-full bg-white/20 accent-(--theme-accent) cursor-pointer"
+              />
+            </div>
+          )}
+        </div>
 
         {video && <VideoQuality />}
         {(document.fullscreenEnabled || isDesktop) && (

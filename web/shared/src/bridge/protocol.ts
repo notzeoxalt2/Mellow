@@ -119,6 +119,13 @@ export interface SpotifyCategory {
   imageUrl: string | null;
 }
 
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  followers: number;
+}
+
 /** One page of a Spotify list: `raw` counts the entries before filtering, which is what advances the offset. */
 export interface SpotifyPage<T> {
   items: T[];
@@ -214,6 +221,14 @@ export interface BridgeMethods {
   };
   'spotify.reportPlayback': {
     params: { trackId: string; positionSec?: number };
+    result: boolean;
+  };
+  'spotify.followedArtists': {
+    params: Record<string, never>;
+    result: SpotifyArtist[];
+  };
+  'spotify.unfollowPlaylist': {
+    params: { playlistId: string };
     result: boolean;
   };
   'discordRpc.setEnabled': { params: { enabled: boolean }; result: { enabled: boolean } };

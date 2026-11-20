@@ -57,7 +57,7 @@
   --radius-artwork-large: 10px; /* album header, editorial cards */
   --radius-nav-item: 8px;
   --radius-track-row: 6px;
-  --radius-pill: 1000px;
+  --radius-pill: 10px;
 
   /* ---- Motion ------------------------------------------------------------ */
   --ease-out-panel: cubic-bezier(0.215, 0.61, 0.355, 1);

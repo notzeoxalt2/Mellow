@@ -64,6 +64,8 @@ export default function SpotifyPlaylistPage() {
     <>
       <DetailHeader
         info={headerInfo}
+        playlistId={id}
+        isSpotifyPlaylist={true}
         canPlay={playable.length > 0}
         onPlay={() => playList(playable, 0, context)}
         onShuffle={() => shuffleList(playable, context)}
