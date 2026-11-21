@@ -156,8 +156,20 @@
   box-shadow: 0 8px 22px rgb(0 0 0 / 12%);
 }
 
+.mellow-search-header {
+  z-index: calc(var(--z-web-chrome) + 2) !important;
+  pointer-events: none;
+}
+
+.mellow-search-header > * {
+  pointer-events: auto !important;
+  -webkit-app-region: no-drag !important;
+}
+
 .mellow-search-input {
-  cursor: text;
+  cursor: text !important;
+  -webkit-app-region: no-drag !important;
+  user-select: text !important;
   border-color: color-mix(in srgb, var(--ambient-glow-tint, var(--theme-accent)) 24%, rgb(255 255 255 / 14%));
   background: color-mix(in srgb, #0c0e13 calc(var(--glass-opacity, 82%) - 16%), transparent);
   -webkit-backdrop-filter: saturate(175%) blur(calc(var(--glass-blur, 22px) + 4px));

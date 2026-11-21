@@ -23,6 +23,7 @@ import {
   searchSpotifyAll,
   reportPlaybackToSpotify,
   fetchFollowedArtists,
+  followPlaylist,
   unfollowPlaylist,
   LIKED_ID,
 } from './spotify.js';
@@ -99,6 +100,7 @@ interface AuthStore {
   spDc?: string;
   spotifyConnected?: boolean;
   spotifyUser?: { name: string; avatarUrl: string | null } | null;
+  pinnedPlaylists?: SpotifyPlaylist[];
   sapisid?: string;
   sapisidName?: string;
   /** Cookie snapshots scoped to each YouTube origin; host-only cookies must not cross hosts. */
@@ -1271,6 +1273,13 @@ ipcMain.handle('bitchord-bridge-call', async (_, request) => {
       case 'spotify.playlists': {
         if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return failure('unauthenticated', 'Spotify is paused in Settings or not signed in');
         const page = await fetchPlaylists(currentAuth.spDc, params?.offset ?? 0);
+        if ((params?.offset ?? 0) === 0 && currentAuth.pinnedPlaylists?.length) {
+          for (const pl of currentAuth.pinnedPlaylists) {
+            if (!page.items.some((existing) => existing.id === pl.id)) {
+              page.items.push(pl);
+            }
+          }
+        }
         return success(page);
       }
 
@@ -1349,9 +1358,39 @@ ipcMain.handle('bitchord-bridge-call', async (_, request) => {
         return success(await fetchFollowedArtists(currentAuth.spDc));
       }
 
+      case 'spotify.followPlaylist': {
+        const pl = params?.playlist;
+        const playlistId = (params?.playlistId ?? pl?.id ?? '').replace(/^spotify:playlist:/, '');
+        if (playlistId) {
+          if (!currentAuth.pinnedPlaylists) currentAuth.pinnedPlaylists = [];
+          if (!currentAuth.pinnedPlaylists.some((p) => p.id === playlistId)) {
+            const entry = pl ?? (await fetchPlaylistInfo(currentAuth.spDc || '', playlistId).then((info) => ({
+              id: playlistId,
+              name: info.name,
+              imageUrl: info.imageUrl,
+              owner: info.owner ?? 'Spotify',
+            })).catch(() => ({ id: playlistId, name: 'Spotify Playlist', imageUrl: null, owner: 'Spotify' })));
+            currentAuth.pinnedPlaylists.unshift(entry);
+            writeAuthStore(currentAuth);
+          }
+          if (currentAuth.spDc && currentAuth.spotifyConnected !== false) {
+            void followPlaylist(currentAuth.spDc, playlistId).catch(() => null);
+          }
+          return success({ ok: true });
+        }
+        return failure('invalid-argument', 'Missing playlist or playlistId');
+      }
+
       case 'spotify.unfollowPlaylist': {
-        if (!currentAuth.spDc || currentAuth.spotifyConnected === false) return success(false);
-        return success(await unfollowPlaylist(currentAuth.spDc, params.playlistId));
+        const id = (params?.playlistId ?? '').replace(/^spotify:playlist:/, '');
+        if (id && currentAuth.pinnedPlaylists) {
+          currentAuth.pinnedPlaylists = currentAuth.pinnedPlaylists.filter((p) => p.id !== id);
+          writeAuthStore(currentAuth);
+        }
+        if (currentAuth.spDc && currentAuth.spotifyConnected !== false && id) {
+          void unfollowPlaylist(currentAuth.spDc, id).catch(() => null);
+        }
+        return success({ ok: true });
       }
 
       case 'discordRpc.setEnabled': {

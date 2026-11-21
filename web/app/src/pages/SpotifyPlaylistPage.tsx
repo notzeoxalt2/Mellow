@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { ArrowLeftRight, Check, ListPlus } from 'lucide-react';
+import { ArrowLeftRight, BookmarkCheck, BookmarkPlus, Check, ListPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { DetailHeader, detailButton } from '@/components/music/DetailHeader';
@@ -8,7 +8,8 @@ import { EmptyState, LoadError, NeedsExtension } from '@/components/music/States
 import { TrackList } from '@/components/music/TrackList';
 import { useSignedIn } from '@/data/music/queries';
 import type { HeaderInfo } from '@/data/music/types';
-import { useSpotifyPlaylistInfo, useSpotifyRows } from '@/data/spotify/queries';
+import { useSpotifyPlaylistInfo, useSpotifyPlaylists, useSpotifyRows } from '@/data/spotify/queries';
+import { followSpotifyPlaylist, unfollowSpotifyPlaylist } from '@/data/spotify/api';
 import { useExtension } from '@/extension/useExtension';
 import { useSpotifyAuth, useSpotifySignedIn } from '@/extension/useSpotifyAuth';
 import { findPlaylistSync, syncSpotifyPlaylist } from '@/data/spotify/playlistSync';
@@ -70,14 +71,22 @@ export default function SpotifyPlaylistPage() {
         onPlay={() => playList(playable, 0, context)}
         onShuffle={() => shuffleList(playable, context)}
         extra={
-          <SyncButton
-            account={spotifyAuth.state === 'ready' ? spotifyAuth.auth.user?.name ?? '?' : '?'}
-            spotifyPlaylistId={id}
-            title={info.data.name}
-            source={rows.source}
-            rows={rows.rows}
-            ready={rows.status === 'ready' && rows.matching === 0}
-          />
+          <div className="flex items-center gap-2">
+            <SaveToSidebarButton
+              id={id}
+              name={info.data.name}
+              imageUrl={info.data.imageUrl}
+              owner={info.data.owner}
+            />
+            <SyncButton
+              account={spotifyAuth.state === 'ready' ? spotifyAuth.auth.user?.name ?? '?' : '?'}
+              spotifyPlaylistId={id}
+              title={info.data.name}
+              source={rows.source}
+              rows={rows.rows}
+              ready={rows.status === 'ready' && rows.matching === 0}
+            />
+          </div>
         }
       />
       <TrackList tracks={rows.rows} variant="playlist" source={context.source} />
@@ -85,6 +94,37 @@ export default function SpotifyPlaylistPage() {
         <p>From Spotify. Songs are matched to YouTube Music by title, artist and length.</p>
       </footer>
     </>
+  );
+}
+
+function SaveToSidebarButton({ id, name, imageUrl, owner }: { id: string; name: string; imageUrl: string | null; owner: string | null }) {
+  const playlists = useSpotifyPlaylists();
+  const isSaved = playlists.data?.some((p) => p.id === id);
+  const [loading, setLoading] = useState(false);
+
+  const toggle = async () => {
+    setLoading(true);
+    try {
+      if (isSaved) {
+        await unfollowSpotifyPlaylist(id);
+      } else {
+        await followSpotifyPlaylist({ id, name, imageUrl, owner: owner ?? 'Spotify' });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      className={detailButton.pill}
+      title={isSaved ? 'Remove from Sidebar' : 'Save to Sidebar'}
+      onClick={toggle}
+      disabled={loading}
+    >
+      {isSaved ? <BookmarkCheck size={16} className="text-(--theme-accent)" /> : <BookmarkPlus size={16} />}
+      <span>{isSaved ? 'In Sidebar' : 'Save to Sidebar'}</span>
+    </button>
   );
 }
 

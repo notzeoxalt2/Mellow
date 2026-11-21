@@ -48,9 +48,9 @@ import com.music.bitchord.sync.PcSyncManager
 import com.music.bitchord.sync.SyncPayload
 import kotlinx.coroutines.launch
 
-private val ALERT_WIDTH = 320.dp
-private val ALERT_CORNER = 22.dp
-private val SCRIM_COLOR = Color(0x66000000)
+private val LINK_PC_WIDTH = 320.dp
+private val LINK_PC_CORNER = 22.dp
+private val LINK_PC_SCRIM = Color(0x66000000)
 
 @Composable
 fun LinkPcDialog(
@@ -91,7 +91,7 @@ fun LinkPcDialog(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SCRIM_COLOR)
+            .background(LINK_PC_SCRIM)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
@@ -101,8 +101,8 @@ fun LinkPcDialog(
     ) {
         Column(
             modifier = Modifier
-                .width(ALERT_WIDTH)
-                .clip(RoundedCornerShape(ALERT_CORNER))
+                .width(LINK_PC_WIDTH)
+                .clip(RoundedCornerShape(LINK_PC_CORNER))
                 .background(Color(0xFF1C1E26))
                 .clickable(
                     indication = null,

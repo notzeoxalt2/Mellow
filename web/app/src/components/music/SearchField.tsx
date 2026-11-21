@@ -58,10 +58,11 @@ export function SearchField({ initial, onSearch }: { initial: string; onSearch: 
   };
 
   return (
-    <div className="relative w-[min(492px,100%)] cursor-text">
+    <div className="relative w-[min(492px,100%)] cursor-text select-text" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <form
-        className="relative flex items-center cursor-text"
+        className="relative flex items-center cursor-text select-text"
         role="search"
+        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         onSubmit={(e) => {
           e.preventDefault();
           pick(active >= 0 ? options[active] : undefined);
@@ -70,8 +71,9 @@ export function SearchField({ initial, onSearch }: { initial: string; onSearch: 
         <Search size={15} strokeWidth={2.4} className="pointer-events-none absolute left-2.5 text-secondary" aria-hidden="true" />
         <input
           ref={input}
-          className="mellow-search-input h-[40px] w-full rounded-[12px] border bg-transparent pt-1.5 pr-[30px] pb-[5px] pl-7 type-body text-primary placeholder:text-tertiary [&::-webkit-search-cancel-button]:hidden"
+          className="mellow-search-input h-[40px] w-full rounded-[12px] border bg-transparent pt-1.5 pr-[30px] pb-[5px] pl-7 type-body text-primary placeholder:text-tertiary [&::-webkit-search-cancel-button]:hidden cursor-text select-text"
           type="search"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           value={value}
           placeholder="Artists, Songs, Lyrics, and More"
           aria-label="Search"

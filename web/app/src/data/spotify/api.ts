@@ -247,3 +247,25 @@ export async function addTracksToSpotifyPlaylist(
     return false;
   }
 }
+
+export async function followSpotifyPlaylist(playlist: SpotifyPlaylist): Promise<boolean> {
+  try {
+    const b = bridge();
+    await b.call('spotify.followPlaylist', { playlist, playlistId: playlist.id }, { timeoutMs: 15_000 });
+    void queryClient.invalidateQueries({ queryKey: ['spotify'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function unfollowSpotifyPlaylist(playlistId: string): Promise<boolean> {
+  try {
+    const b = bridge();
+    await b.call('spotify.unfollowPlaylist', { playlistId }, { timeoutMs: 15_000 });
+    void queryClient.invalidateQueries({ queryKey: ['spotify'] });
+    return true;
+  } catch {
+    return false;
+  }
+}

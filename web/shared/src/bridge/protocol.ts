@@ -126,6 +126,14 @@ export interface SpotifyArtist {
   followers: number;
 }
 
+export interface SpotifyUserResult {
+  id: string;
+  name: string;
+  username: string;
+  imageUrl: string | null;
+  uri: string;
+}
+
 /** One page of a Spotify list: `raw` counts the entries before filtering, which is what advances the offset. */
 export interface SpotifyPage<T> {
   items: T[];
@@ -217,6 +225,7 @@ export interface BridgeMethods {
       playlists: SpotifyPlaylist[];
       albums: { id: string; name: string; artist: string; imageUrl: string | null; totalTracks: number }[];
       artists: { id: string; name: string; imageUrl: string | null; followers: number }[];
+      users: SpotifyUserResult[];
     };
   };
   'spotify.reportPlayback': {
@@ -227,9 +236,13 @@ export interface BridgeMethods {
     params: Record<string, never>;
     result: SpotifyArtist[];
   };
+  'spotify.followPlaylist': {
+    params: { playlist?: SpotifyPlaylist; playlistId?: string };
+    result: { ok: boolean };
+  };
   'spotify.unfollowPlaylist': {
     params: { playlistId: string };
-    result: boolean;
+    result: { ok: boolean } | boolean;
   };
   'discordRpc.setEnabled': { params: { enabled: boolean }; result: { enabled: boolean } };
   'discordRpc.getState': { params: Record<string, never>; result: { enabled: boolean } };

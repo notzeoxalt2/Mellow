@@ -1,3 +1,5 @@
+import { BookmarkCheck, BookmarkPlus } from 'lucide-react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { Artwork } from '@/components/music/Artwork';
@@ -7,7 +9,6 @@ import { playTrack, toTrack } from '@/components/music/play';
 import { SearchField } from '@/components/music/SearchField';
 import { Shelves, TrackShelf } from '@/components/music/ShelfView';
 import { useSpotifyCategoryPlaylists, useSpotifySearch, useSpotifySearchAll } from '@/data/spotify/queries';
-import { useState } from 'react';
 import { TrackMenu } from '@/components/music/TrackMenu';
 import { EmptyState, LoadError } from '@/components/music/States';
 import { useSearch, useSearchSongs, useYouTubeReady } from '@/data/music/queries';
@@ -56,12 +57,31 @@ const topText = 'flex min-w-0 flex-col gap-0.5';
 function TopResult({ item }: { item: MusicItem }) {
   const href = hrefFor(item);
   const playable = item.kind === 'song' || item.kind === 'video';
+  const isSpotifyPlaylist = item.kind === 'spotify-playlist';
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      const { followSpotifyPlaylist } = await import('@/data/spotify/api');
+      await followSpotifyPlaylist({
+        id: item.id,
+        name: item.title,
+        imageUrl: item.thumbnail,
+        owner: item.subtitle,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {}
+  };
+
   const body = (
     <>
       <div className="w-[90px]">
         <Artwork src={item.thumbnail} displayWidth={90} radius={item.kind === 'artist' ? '50%' : 'var(--radius-artwork-small)'} />
       </div>
-      <div className={playable ? `${topText} pr-9` : topText}>
+      <div className={playable || isSpotifyPlaylist ? `${topText} pr-9` : topText}>
         <span className="line-clamp-2 type-title-3">{item.title}</span>
         <span className="truncate type-callout text-secondary">
           {[KIND_LABEL[item.kind], item.kind === 'artist' ? null : item.artists.map((a) => a.name).join(', ')].filter(Boolean).join(' · ')}
@@ -81,6 +101,16 @@ function TopResult({ item }: { item: MusicItem }) {
         </button>
       )}
       {playable && <TrackMenu track={toTrack(item)} className={topMenu} />}
+      {isSpotifyPlaylist && (
+        <button
+          type="button"
+          title={saved ? 'Saved to Sidebar!' : 'Save to Sidebar'}
+          onClick={handleSave}
+          className="absolute right-2 bottom-2 z-3 grid size-7 place-items-center rounded-full text-key bg-white/[0.08] hover:bg-white/[0.18] text-white transition-opacity duration-100 ease-in group-hover/top:opacity-100 focus-visible:opacity-100"
+        >
+          {saved ? <BookmarkCheck size={16} className="text-(--theme-accent)" /> : <BookmarkPlus size={16} />}
+        </button>
+      )}
     </div>
   );
 }
@@ -109,6 +139,7 @@ function ResultsSkeleton() {
 }
 
 function Results({ query, initialSource, categoryId }: { query: string; initialSource: 'all' | 'yt' | 'spotify'; categoryId: string | null }) {
+  const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<'all' | 'yt' | 'spotify'>(initialSource);
   const { missing, ready } = useYouTubeReady();
   const search = useSearch(query);
@@ -129,6 +160,7 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
     kind: 'spotify-playlist', id: playlist.id, title: playlist.name, subtitle: playlist.owner ? `Playlist • ${playlist.owner}` : 'Spotify Playlist',
     artists: [], album: null, thumbnail: playlist.imageUrl, wide: false, durationSec: null, explicit: false,
   }));
+  const spotifyUsers = spotifyAll.data?.users ?? [];
   const normalized = (value: string) => value.normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase().replace(/[^\p{Letter}\p{Number}]+/gu, ' ').trim();
   const seenSongs = new Set<string>();
   const youtubeResultSongs = [
@@ -148,12 +180,14 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
     return true;
   });
 
-  const hasAny = (results && (results.top.length > 0 || shelves.length > 0)) || allResultSongs.length > 0 || spotifyCategoryItems.length > 0 || spotifyPlaylistItems.length > 0;
+  const hasAny = (results && (results.top.length > 0 || shelves.length > 0)) || allResultSongs.length > 0 || spotifyCategoryItems.length > 0 || spotifyPlaylistItems.length > 0 || spotifyUsers.length > 0;
 
-  if (search.isLoading && spotifySearch.isLoading && youtubeSongs.isLoading && spotifyCategory.isLoading) return <ResultsSkeleton />;
-  if (search.isError && !spotifyTracks.length && !spotifyPlaylistItems.length) return <LoadError error={search.error} onRetry={() => void search.refetch()} />;
+  const isSearchLoading = search.isLoading || youtubeSongs.isLoading || spotifySearch.isLoading || spotifyAll.isLoading || (!!categoryId && spotifyCategory.isLoading);
 
-  if (!hasAny) {
+  if (isSearchLoading && !hasAny) return <ResultsSkeleton />;
+  if (search.isError && !spotifyTracks.length && !spotifyPlaylistItems.length && !allResultSongs.length) return <LoadError error={search.error} onRetry={() => void search.refetch()} />;
+
+  if (!isSearchLoading && !hasAny) {
     return <EmptyState title="No Results" detail={`Try a new search for something other than “${query}”.`} />;
   }
 
@@ -204,6 +238,40 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
             <section aria-label="Spotify Playlists">
               <h2 className={sectionTitle}>Playlists from Spotify</h2>
               <div className={topGrid}>{spotifyPlaylistItems.slice(0, 6).map((item) => <TopResult key={item.id} item={item} />)}</div>
+            </section>
+          )}
+          {spotifyUsers.length > 0 && (
+            <section aria-label="Spotify Curators & Profiles" className="mb-6">
+              <h2 className={sectionTitle}>Spotify Curators & Profiles</h2>
+              <div className="mx-(--body-gutter) mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+                {spotifyUsers.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      setFilter('spotify');
+                      setParams({ q: u.name, source: 'spotify' });
+                    }}
+                    className="group flex flex-col items-center text-center p-3 rounded-[12px] bg-white/[0.04] hover:bg-white/[0.09] transition-all cursor-pointer border border-white/[0.06] hover:border-white/[0.14]"
+                  >
+                    <div className="relative size-20 sm:size-24 rounded-full overflow-hidden mb-2.5 bg-white/[0.06] shadow-md group-hover:scale-105 transition-transform duration-200">
+                      {u.imageUrl ? (
+                        <img src={u.imageUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        <div className="size-full grid place-items-center text-secondary text-2xl font-bold bg-white/10">
+                          {u.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="type-body-emphasized text-primary truncate max-w-full font-medium text-sm group-hover:text-white">
+                      {u.name}
+                    </span>
+                    <span className="type-caption text-secondary text-xs truncate max-w-full mt-0.5">
+                      Curator • Spotify
+                    </span>
+                  </button>
+                ))}
+              </div>
             </section>
           )}
           {results && results.top.length > 0 && (
@@ -283,6 +351,40 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
               <div className={topGrid}>{spotifyPlaylistItems.map((item) => <TopResult key={item.id} item={item} />)}</div>
             </section>
           )}
+          {spotifyUsers.length > 0 && (
+            <section aria-label="Spotify Curators & Profiles" className="mb-6">
+              <h2 className={sectionTitle}>Spotify Curators & Profiles</h2>
+              <div className="mx-(--body-gutter) mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+                {spotifyUsers.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => {
+                      setFilter('spotify');
+                      setParams({ q: u.name, source: 'spotify' });
+                    }}
+                    className="group flex flex-col items-center text-center p-3 rounded-[12px] bg-white/[0.04] hover:bg-white/[0.09] transition-all cursor-pointer border border-white/[0.06] hover:border-white/[0.14]"
+                  >
+                    <div className="relative size-20 sm:size-24 rounded-full overflow-hidden mb-2.5 bg-white/[0.06] shadow-md group-hover:scale-105 transition-transform duration-200">
+                      {u.imageUrl ? (
+                        <img src={u.imageUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        <div className="size-full grid place-items-center text-secondary text-2xl font-bold bg-white/10">
+                          {u.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="type-body-emphasized text-primary truncate max-w-full font-medium text-sm group-hover:text-white">
+                      {u.name}
+                    </span>
+                    <span className="type-caption text-secondary text-xs truncate max-w-full mt-0.5">
+                      Curator • Spotify
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {spotifyTracks.length > 0 && (
             <>
               <TrackShelf
@@ -299,7 +401,7 @@ function Results({ query, initialSource, categoryId }: { query: string; initialS
               )}
             </>
           )}
-          {spotifyTracks.length === 0 && spotifyPlaylistItems.length === 0 && spotifyCategoryItems.length === 0 && !spotifySearch.isLoading && !spotifySearch.isFetchingNextPage && !spotifyAll.isLoading && (
+          {spotifyTracks.length === 0 && spotifyPlaylistItems.length === 0 && spotifyCategoryItems.length === 0 && spotifyUsers.length === 0 && !isSearchLoading && !spotifySearch.isFetchingNextPage && (
             <EmptyState title="No Spotify Results" detail="Try a different song or artist title." />
           )}
         </>

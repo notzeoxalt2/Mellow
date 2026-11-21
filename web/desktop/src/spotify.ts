@@ -711,16 +711,113 @@ export async function addTracksToPlaylist(
   }
 }
 
-/** Full Spotify Search across tracks, playlists, albums, and artists */
+export interface SpotifyUserResult {
+  id: string;
+  name: string;
+  username: string;
+  imageUrl: string | null;
+  uri: string;
+}
+
+/** Full Spotify Search across tracks, playlists, albums, artists, and users */
 export async function searchSpotifyAll(spDc: string, query: string): Promise<{
   tracks: SpotifyTrack[];
   playlists: SpotifyPlaylist[];
   albums: { id: string; name: string; artist: string; imageUrl: string | null; totalTracks: number }[];
   artists: { id: string; name: string; imageUrl: string | null; followers: number }[];
+  users: SpotifyUserResult[];
 }> {
   try {
     const token = await mintAccessToken(spDc);
-    const res = await fetch(
+    const hash = '0dff51c99e552b992377a2a6f40d213dc42b62db86ca0bcf16cf3934aec1aae6';
+    const vars = {
+      searchTerm: query,
+      offset: 0,
+      limit: 20,
+      numberOfTopResults: 5,
+      includeAudiobooks: false,
+      includeArtistHasConcertsField: false,
+      includePreReleases: false,
+      includeLocalConcertsField: false,
+    };
+    const url = `https://api-partner.spotify.com/pathfinder/v1/query?operationName=searchDesktop&variables=${encodeURIComponent(JSON.stringify(vars))}&extensions=${encodeURIComponent(JSON.stringify({ persistedQuery: { version: 1, sha256Hash: hash } }))}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const s = json.data?.searchV2;
+      if (s) {
+        const tracks: SpotifyTrack[] = (s.tracks?.items ?? []).map((wrapper: any) => {
+          const t = wrapper.data ?? wrapper;
+          return {
+            id: t.id ?? (t.uri ? t.uri.replace('spotify:track:', '') : ''),
+            title: t.name ?? '',
+            artist: t.artists?.items?.map((a: any) => a.profile?.name ?? a.name).filter(Boolean).join(', ') ?? '',
+            album: t.albumOfTrack?.name ?? t.album?.name ?? '',
+            durationMs: t.duration?.totalMilliseconds ?? t.duration_ms ?? 0,
+            imageUrl: t.albumOfTrack?.coverArt?.sources?.[0]?.url ?? largestImage(t.album?.images),
+            uri: t.uri,
+          };
+        });
+
+        const playlists: SpotifyPlaylist[] = (s.playlists?.items ?? [])
+          .filter(Boolean)
+          .map((wrapper: any) => {
+            const p = wrapper.data ?? wrapper;
+            const uri = p.uri ?? '';
+            return {
+              id: uri.replace('spotify:playlist:', ''),
+              name: p.name ?? 'Untitled Playlist',
+              imageUrl: p.images?.items?.[0]?.sources?.[0]?.url ?? largestImage(p.images),
+              owner: p.owner?.name ?? p.owner?.display_name ?? 'Spotify',
+              total: 0,
+            };
+          });
+
+        const albums = (s.albums?.items ?? []).map((wrapper: any) => {
+          const a = wrapper.data ?? wrapper;
+          const uri = a.uri ?? '';
+          return {
+            id: uri.replace('spotify:album:', ''),
+            name: a.name ?? '',
+            artist: a.artists?.items?.map((art: any) => art.profile?.name ?? art.name).filter(Boolean).join(', ') ?? '',
+            imageUrl: a.coverArt?.sources?.[0]?.url ?? largestImage(a.images),
+            totalTracks: 0,
+          };
+        });
+
+        const artists = (s.artists?.items ?? []).map((wrapper: any) => {
+          const a = wrapper.data ?? wrapper;
+          const uri = a.uri ?? '';
+          return {
+            id: uri.replace('spotify:artist:', ''),
+            name: a.profile?.name ?? a.name ?? '',
+            imageUrl: a.visuals?.avatarImage?.sources?.[0]?.url ?? largestImage(a.images),
+            followers: 0,
+          };
+        });
+
+        const users: SpotifyUserResult[] = (s.users?.items ?? []).map((wrapper: any) => {
+          const u = wrapper.data ?? wrapper;
+          return {
+            id: u.id ?? (u.uri ? u.uri.replace('spotify:user:', '') : ''),
+            name: u.displayName ?? u.username ?? 'User',
+            username: u.username ?? '',
+            imageUrl: u.image?.largeImageUrl ?? u.image?.smallImageUrl ?? null,
+            uri: u.uri ?? '',
+          };
+        });
+
+        return { tracks, playlists, albums, artists, users };
+      }
+    }
+
+    const v1Res = await fetch(
       `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track,playlist,album,artist&limit=15`,
       {
         headers: {
@@ -729,8 +826,8 @@ export async function searchSpotifyAll(spDc: string, query: string): Promise<{
         },
       },
     );
-    if (!res.ok) return { tracks: [], playlists: [], albums: [], artists: [] };
-    const data = await res.json();
+    if (!v1Res.ok) return { tracks: [], playlists: [], albums: [], artists: [], users: [] };
+    const data = await v1Res.json();
 
     const tracks: SpotifyTrack[] = (data.tracks?.items ?? []).map((t: any) => ({
       id: t.id,
@@ -766,10 +863,10 @@ export async function searchSpotifyAll(spDc: string, query: string): Promise<{
       followers: a.followers?.total ?? 0,
     }));
 
-    return { tracks, playlists, albums, artists };
+    return { tracks, playlists, albums, artists, users: [] };
   } catch (err: any) {
     console.warn('[Mellow] Spotify searchAll failed:', err?.message);
-    return { tracks: [], playlists: [], albums: [], artists: [] };
+    return { tracks: [], playlists: [], albums: [], artists: [], users: [] };
   }
 }
 
@@ -827,6 +924,26 @@ export async function fetchFollowedArtists(spDc: string): Promise<{ id: string; 
   } catch (err: any) {
     console.warn('[Mellow] fetchFollowedArtists failed:', err?.message);
     return [];
+  }
+}
+
+/** Follow a playlist on Spotify */
+export async function followPlaylist(spDc: string, playlistId: string): Promise<boolean> {
+  try {
+    const cleanId = playlistId.replace(/^spotify:playlist:/, '');
+    const token = await mintAccessToken(spDc);
+    const res = await fetch(`https://api.spotify.com/v1/playlists/${encodeURIComponent(cleanId)}/followers`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ public: false }),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
