@@ -56,6 +56,9 @@ interface ElectronAPI {
   openDownloadsFolder?: () => Promise<void>;
   deleteDownloadedTrack?: (videoId: string) => Promise<boolean>;
   onDownloadProgress?: (callback: (data: { videoId: string; percent: number; status: string; filePath?: string; error?: string }) => void) => () => void;
+  // Mobile App Account Pairing
+  getPairingCode?: () => Promise<{ code: string; lanIps: string[]; port: number }>;
+  onPhonePaired?: (callback: (data: { code: string }) => void) => () => void;
 }
 
 interface Window {

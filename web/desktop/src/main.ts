@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, session, Menu, shell, nativeImage, screen 
 import path from 'node:path';
 import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import { selectYouTubeSigningCookie } from '@bitchord/shared';
@@ -303,17 +304,89 @@ async function refreshDesktopYtAuth(): Promise<boolean> {
   }
 }
 
-// Setup local loopback server for Chrome Extension sync & quick-connect
+interface PendingPairingSession {
+  code: string;
+  createdAt: number;
+  expiresAt: number;
+}
+const pendingPairings = new Map<string, PendingPairingSession>();
+
+function getLocalLanIps(): string[] {
+  const interfaces = os.networkInterfaces();
+  const ips: string[] = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name] ?? []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        ips.push(net.address);
+      }
+    }
+  }
+  return ips;
+}
+
+// Setup local loopback & LAN server for Chrome Extension sync & Mobile quick-connect
 function startSyncServer() {
   const server = http.createServer((req, res) => {
     syncServer = server;
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    if (req.url === '/pair/probe') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, app: 'Mellow', pairReady: true }));
+      return;
+    }
+
+    if (req.url === '/pair/claim' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (chunk) => (body += chunk));
+      req.on('end', async () => {
+        try {
+          const parsed = JSON.parse(body);
+          const rawCode = String(parsed.code ?? '').replace(/[\s-]/g, '').toUpperCase();
+          const session = pendingPairings.get(rawCode);
+          if (!session || Date.now() > session.expiresAt) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: 'Invalid or expired sync code' }));
+            return;
+          }
+          pendingPairings.delete(rawCode);
+
+          const ytOrigin = 'https://music.youtube.com';
+          const { header: cookieHeader } = await desktopYtCookies(ytOrigin);
+
+          const payload = {
+            ok: true,
+            spotify: currentAuth.spDc ? {
+              spDc: currentAuth.spDc,
+              user: currentAuth.spotifyUser ?? { name: 'Spotify' },
+            } : null,
+            youtube: currentAuth.sapisid ? {
+              cookie: cookieHeader,
+              sapisid: currentAuth.sapisid,
+              sapisidName: currentAuth.sapisidName ?? 'SAPISID',
+              authUser: currentAuth.ytAuthUser ?? '0',
+              pageId: currentAuth.ytPageId ?? null,
+              active: currentAuth.ytActive ?? null,
+            } : null,
+          };
+
+          mainWindow?.webContents.send('mellow-phone-paired', { code: rawCode });
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(payload));
+        } catch (err: any) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: err?.message || 'Server error' }));
+        }
+      });
       return;
     }
 
@@ -491,8 +564,8 @@ function startSyncServer() {
     }
   });
 
-  server.listen(41838, '127.0.0.1', () => {
-    console.log('[Mellow] Chrome Sync Server listening on http://127.0.0.1:41838');
+  server.listen(41838, '0.0.0.0', () => {
+    console.log('[Mellow] Chrome & Mobile Sync Server listening on http://0.0.0.0:41838');
   });
 }
 
@@ -1114,6 +1187,20 @@ ipcMain.handle('track-open-downloads-folder', () => {
 
 ipcMain.handle('track-delete-download', (_, videoId: string) => {
   return deleteDownloadedTrack(videoId);
+});
+
+ipcMain.handle('get-pairing-code', () => {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  pendingPairings.set(code, {
+    code,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  });
+  return {
+    code,
+    lanIps: getLocalLanIps(),
+    port: 41838,
+  };
 });
 
 // Bridge request dispatcher - CRITICAL: direction MUST be 'to-page' for isBridgeResponse!

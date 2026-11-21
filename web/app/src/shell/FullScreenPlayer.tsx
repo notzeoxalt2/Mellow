@@ -163,10 +163,15 @@ export function FullScreenPlayer() {
   const downloadTrack = useDownloads((s) => s.downloadTrack);
   const openDownloadsFolder = useDownloads((s) => s.openDownloadsFolder);
   // The right-hand column: the lyrics, Up Next, or nothing. Lyrics toggle bottom left, Up Next bottom right.
-  // A music video opens on its own, without the lyrics.
-  const [panel, setPanel] = useState<'lyrics' | 'queue' | null>(() =>
-    nowPlaying && videoPreviewEnabled && !lowResourceMode && useVideo.getState().videoId === nowPlaying.videoId ? null : 'lyrics',
-  );
+  // Persisted to localStorage so listener preference is remembered across tracks.
+  const [panel, setPanel] = useState<'lyrics' | 'queue' | null>(() => {
+    try {
+      const saved = localStorage.getItem('mellow:fullscreen_panel');
+      if (saved === 'queue' || saved === 'lyrics') return saved;
+      if (saved === 'none') return null;
+    } catch {}
+    return 'queue';
+  });
   // Once the listener picks a column, a video arriving late doesn't take it away.
   const picked = useRef(false);
   const [idle, setIdle] = useState(false);
@@ -217,18 +222,25 @@ export function FullScreenPlayer() {
     try {
       const { findOfficialMusicVideo } = await import('@/playback/youtube/officialVideo');
       const { loadOfficialVideo } = await import('@/playback/youtube/videoDeck');
-      const matchedId = await findOfficialMusicVideo(nowPlaying.title, nowPlaying.artist, nowPlaying.durationSec);
-      if (matchedId) {
+
+      const resolveTask = (async () => {
+        const matchedId = await findOfficialMusicVideo(nowPlaying.title, nowPlaying.artist, nowPlaying.durationSec);
+        if (!matchedId) return 'not_found' as const;
         const ok = await loadOfficialVideo(matchedId);
-        if (ok) {
-          updateAppearancePreferences({ playMusicVideos: true });
-          setPanel(null);
-        } else {
-          setVideoStatusNotice('Video playback error');
-          setTimeout(() => setVideoStatusNotice(null), 3000);
-        }
-      } else {
+        return ok ? ('ok' as const) : ('error' as const);
+      })();
+
+      const timeoutTask = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 6000));
+      const outcome = await Promise.race([resolveTask, timeoutTask]);
+
+      if (outcome === 'ok') {
+        updateAppearancePreferences({ playMusicVideos: true });
+        setPanel(null);
+      } else if (outcome === 'not_found') {
         setVideoStatusNotice('No official music video found');
+        setTimeout(() => setVideoStatusNotice(null), 3000);
+      } else {
+        setVideoStatusNotice('Video unavailable');
         setTimeout(() => setVideoStatusNotice(null), 3000);
       }
     } catch (e) {
@@ -250,7 +262,13 @@ export function FullScreenPlayer() {
   const showQueue = panel === 'queue';
   const togglePanel = (p: 'lyrics' | 'queue') => {
     picked.current = true;
-    setPanel((on) => (on === p ? null : p));
+    setPanel((on) => {
+      const next = on === p ? null : p;
+      try {
+        localStorage.setItem('mellow:fullscreen_panel', next ?? 'none');
+      } catch {}
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -351,12 +369,7 @@ const closeCorner = `pointer-events-auto absolute z-30 ${chromeButton} size-10 t
           <VideoSurface fit="contain" className="size-full" priority={10} />
         </div>
       )}
-      {resolvingVideo && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <Loader2 size={32} className="animate-spin text-(--theme-accent)" />
-          <p className="type-callout-emphasized text-white/90">Loading official music video…</p>
-        </div>
-      )}
+
 
       <button ref={close} className={closeCorner} aria-label="Close" title="Close player" onClick={(event) => { event.stopPropagation(); setFullScreen(false); }}>
         <X size={20} />

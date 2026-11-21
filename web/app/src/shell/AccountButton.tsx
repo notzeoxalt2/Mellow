@@ -1,8 +1,9 @@
-import { ArrowUpRight, ChevronsUpDown } from 'lucide-react';
+import { ArrowUpRight, ChevronsUpDown, Smartphone } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import { useRefreshYtAuth, useSelectChannel, useSetConnected, useYtAuth } from '@/extension/useYtAuth';
 import { useSpotifyAuth } from '@/extension/useSpotifyAuth';
+import { LinkMobileModal } from '@/components/LinkMobileModal';
 
 const SIGN_IN_URL = 'https://accounts.google.com/ServiceLogin?service=youtube&continue=https://music.youtube.com/';
 
@@ -32,6 +33,7 @@ export function AccountButton() {
   const connect = useSetConnected();
   const refresh = useRefreshYtAuth();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [linkMobileOpen, setLinkMobileOpen] = useState(false);
   const close = useCallback(() => setAnchor(null), []);
 
   const isDesktop = typeof window !== 'undefined' && !!window.electronAPI?.isDesktop;
@@ -129,6 +131,17 @@ export function AccountButton() {
             </div>
           ))}
           <MenuSeparator />
+          {isDesktop && (
+            <MenuItem
+              icon={<Smartphone size={16} />}
+              onSelect={() => {
+                close();
+                setLinkMobileOpen(true);
+              }}
+            >
+              Link Mobile App (Sync Code)
+            </MenuItem>
+          )}
           <MenuItem
             icon={<ArrowUpRight size={16} />}
             onSelect={() => {
@@ -149,6 +162,7 @@ export function AccountButton() {
           </MenuItem>
         </Menu>
       )}
+      <LinkMobileModal isOpen={linkMobileOpen} onClose={() => setLinkMobileOpen(false)} />
     </>
   );
 }

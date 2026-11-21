@@ -124,10 +124,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.music.bitchord.auth.CapturedSession
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
+import com.music.bitchord.sync.SyncPayload
 import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.listentogether.JamInviteLink
@@ -3008,6 +3010,23 @@ private fun BitChordApp(
                                 onOpenLastfmLogin = { showLastfmLogin = true },
                                 onOpenDiscord = { navigator.push(AppRoute.Discord) },
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
+                                onSyncWithPc = { payload ->
+                                    if (!payload.spotifySpDc.isNullOrEmpty()) {
+                                        AppSettings.setSpotifySpdcToken(payload.spotifySpDc)
+                                    }
+                                    if (!payload.youtubeCookie.isNullOrEmpty()) {
+                                        val captured = CapturedSession(
+                                            cookie = payload.youtubeCookie,
+                                            pageId = payload.youtubePageId,
+                                            dataSyncId = null,
+                                            authUser = payload.youtubeAuthUser,
+                                            visitorData = null,
+                                            clientVersion = null,
+                                            loggedIn = true,
+                                        )
+                                        viewModel.onWebSession(captured, WebSessionMode.SIGN_IN)
+                                    }
+                                },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Sources) {
@@ -5251,6 +5270,24 @@ private fun BitChordApp(
                 },
                 onNameChosen = ListenTogether::setNickname,
                 onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                onSignInSpotify = { showSpotifyLogin = true },
+                onSyncWithPc = { payload ->
+                    if (!payload.spotifySpDc.isNullOrEmpty()) {
+                        AppSettings.setSpotifySpdcToken(payload.spotifySpDc)
+                    }
+                    if (!payload.youtubeCookie.isNullOrEmpty()) {
+                        val captured = CapturedSession(
+                            cookie = payload.youtubeCookie,
+                            pageId = payload.youtubePageId,
+                            dataSyncId = null,
+                            authUser = payload.youtubeAuthUser,
+                            visitorData = null,
+                            clientVersion = null,
+                            loggedIn = true,
+                        )
+                        viewModel.onWebSession(captured, WebSessionMode.SIGN_IN)
+                    }
+                },
                 onFinish = AppSettings::setOnboardingComplete,
             )
         }

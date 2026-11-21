@@ -15,15 +15,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.SwitchAccount
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.IosSwitch
+import com.music.bitchord.ui.components.LinkPcDialog
+import com.music.bitchord.sync.SyncPayload
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -47,9 +53,12 @@ fun AccountAndScrobblingScreen(
     onOpenLastfmLogin: () -> Unit,
     onOpenDiscord: () -> Unit,
     onOpenSpotify: () -> Unit,
+    onSyncWithPc: ((SyncPayload) -> Unit)? = null,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
+    var showLinkPcDialog by remember { mutableStateOf(false) }
+
     val lastfmEnabled by AppSettings.lastfmEnabled.collectAsStateWithLifecycle()
     val lastfmUsername by AppSettings.lastfmUsername.collectAsStateWithLifecycle()
     val lastfmSessionKey by AppSettings.lastfmSessionKey.collectAsStateWithLifecycle()
@@ -75,12 +84,24 @@ fun AccountAndScrobblingScreen(
     ) {
         SettingsPageTitle(stringResource(R.string.account_integrations))
 
+        // Link with PC (Quick Sync Code)
+        SettingsGroup(
+            header = stringResource(R.string.link_with_pc),
+            footer = stringResource(R.string.link_with_pc_subtitle),
+            topSpacing = 0.dp,
+        ) {
+            SettingsRow(
+                icon = Icons.Rounded.Devices,
+                title = stringResource(R.string.link_with_pc),
+                subtitle = "Sync YouTube & Spotify accounts using 6-digit code",
+                onClick = { showLinkPcDialog = true },
+            )
+        }
+
         // One card: who is signed in, which profile is listening, and the way
         // out, with the explanation of profiles underneath.
         SettingsGroup(
             footer = if (signedIn) stringResource(R.string.account_profiles_help) else null,
-            topSpacing = 0.dp,
-        ) {
             AccountCard(
                 signedIn = signedIn,
                 account = account,
@@ -321,6 +342,15 @@ fun AccountAndScrobblingScreen(
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+
+    if (showLinkPcDialog) {
+        LinkPcDialog(
+            onDismiss = { showLinkPcDialog = false },
+            onSyncSuccess = { payload ->
+                onSyncWithPc?.invoke(payload)
+            },
+        )
     }
 }
 

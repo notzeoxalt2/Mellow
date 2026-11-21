@@ -74,6 +74,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('track-download-progress', handler);
     return () => ipcRenderer.removeListener('track-download-progress', handler);
   },
+  // Mobile App Account Pairing
+  getPairingCode: () => ipcRenderer.invoke('get-pairing-code'),
+  onPhonePaired: (callback: (data: { code: string }) => void) => {
+    const handler = (_: unknown, data: any) => callback(data);
+    ipcRenderer.on('mellow-phone-paired', handler);
+    return () => ipcRenderer.removeListener('mellow-phone-paired', handler);
+  },
 });
 
 

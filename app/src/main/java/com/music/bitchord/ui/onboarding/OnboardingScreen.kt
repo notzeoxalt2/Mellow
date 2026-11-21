@@ -73,6 +73,9 @@ import com.music.bitchord.R
 import com.music.bitchord.sharedui.resources.Res
 import com.music.bitchord.sharedui.resources.ic_google_g
 import com.music.bitchord.sharedui.resources.ic_logo
+import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sync.SyncPayload
+import com.music.bitchord.ui.components.LinkPcDialog
 import org.jetbrains.compose.resources.painterResource
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.player.MeshGradientBackground
@@ -100,11 +103,14 @@ fun OnboardingScreen(
     onNameChosen: (String) -> Unit,
     /** Opens the Google sign-in. The caller finishes onboarding once it lands. */
     onSignIn: () -> Unit,
+    onSignInSpotify: () -> Unit = {},
+    onSyncWithPc: (SyncPayload) -> Unit = {},
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var page by rememberSaveable { mutableIntStateOf(PAGE_NAME) }
     var name by rememberSaveable { mutableStateOf(initialName) }
+    var showLinkPcDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
     BackHandler(enabled = page == PAGE_CONNECT) { page = PAGE_NAME }
@@ -112,6 +118,16 @@ fun OnboardingScreen(
     // over this page; the account landing is what ends the welcome.
     LaunchedEffect(signedIn, page) {
         if (signedIn && page == PAGE_CONNECT) onFinish()
+    }
+
+    if (showLinkPcDialog) {
+        LinkPcDialog(
+            onDismiss = { showLinkPcDialog = false },
+            onSyncSuccess = { payload ->
+                onSyncWithPc(payload)
+                onFinish()
+            },
+        )
     }
 
     // The mesh never settles on one palette: each crossfade is as long as the
@@ -179,7 +195,9 @@ fun OnboardingScreen(
                     )
                     else -> ConnectPage(
                         onBack = { page = PAGE_NAME },
-                        onSignIn = onSignIn,
+                        onLinkWithPc = { showLinkPcDialog = true },
+                        onSignInGoogle = onSignIn,
+                        onSignInSpotify = onSignInSpotify,
                         onSkip = onFinish,
                     )
                 }
@@ -260,7 +278,9 @@ private fun ColumnScope.NamePage(
 @Composable
 private fun ColumnScope.ConnectPage(
     onBack: () -> Unit,
-    onSignIn: () -> Unit,
+    onLinkWithPc: () -> Unit,
+    onSignInGoogle: () -> Unit,
+    onSignInSpotify: () -> Unit,
     onSkip: () -> Unit,
 ) {
     Spacer(Modifier.height(16.dp))
@@ -278,10 +298,19 @@ private fun ColumnScope.ConnectPage(
 
     Spacer(Modifier.weight(1f))
 
+    // 1. Link with PC (Primary option)
+    PillButton(
+        label = stringResource(R.string.link_with_pc),
+        onClick = onLinkWithPc,
+        primary = true,
+    )
+    Spacer(Modifier.height(10.dp))
+
+    // 2. Sign in with Google (Alternative standalone)
     PillButton(
         label = stringResource(R.string.onboarding_sign_in_google),
-        onClick = onSignIn,
-        primary = true,
+        onClick = onSignInGoogle,
+        primary = false,
         leading = {
             Image(
                 painter = painterResource(Res.drawable.ic_google_g),
@@ -290,7 +319,24 @@ private fun ColumnScope.ConnectPage(
             )
         },
     )
+    Spacer(Modifier.height(10.dp))
+
+    // 3. Sign in with Spotify (Alternative standalone)
+    PillButton(
+        label = stringResource(R.string.sign_in_spotify),
+        onClick = onSignInSpotify,
+        primary = false,
+        leading = {
+            Image(
+                painter = painterResource(Res.drawable.spotify_logo),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+        },
+    )
     Spacer(Modifier.height(12.dp))
+
+    // 4. Skip
     PillButton(
         label = stringResource(R.string.onboarding_skip_sign_in),
         onClick = onSkip,

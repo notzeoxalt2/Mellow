@@ -803,15 +803,6 @@ async function resolvePlayableVideoId(entry: QueueEntry, index?: number): Promis
   return videoId;
 }
 
-interface PreloadCache {
-  at: number;
-  playId: string;
-  loadedTrack: LoadedTrack;
-  deckIndex: number;
-  entry: QueueEntry;
-}
-
-let preloadedNext: PreloadCache | null = null;
 let preloadNextTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function startAt(at: number, { startSec = 0, auto = false, autoplay = true } = {}): Promise<void> {
@@ -862,53 +853,12 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     return;
   }
 
-  // Instant Deck Swap: If upcoming track was preloaded on the idle deck, switch immediately (0.0s latency)
-  if (
-    preloadedNext &&
-    (preloadedNext.at === at || preloadedNext.playId === entry.track.videoId || preloadedNext.entry.track.videoId === entry.track.videoId) &&
-    startSec === 0 &&
-    preloadedNext.deckIndex === (1 - active)
-  ) {
-    const all = await getDecks();
-    const oldDeck = all[active]!;
-    oldDeck.audio.pause();
-    void oldDeck.engine.stop().catch(() => {});
-    active = 1 - active;
-    const deck = all[active]!;
-    deck.gain = 1;
-    applyVolumes();
-    const { loadedTrack, entry: preloadedEntry } = preloadedNext;
-    preloadedNext = null;
-
-    usePlayer.setState({
-      index: at,
-      nowPlaying: hintOf(preloadedEntry.track),
-      status: autoplay ? 'playing' : 'paused',
-      error: null,
-    });
-    applyTrack(loadedTrack, preloadedEntry.track);
-    if (autoplay) {
-      void deck.audio.play().catch(() => {});
-    }
-    afterTrackStarted();
-    syncAutomix();
-    return;
-  }
-
-  if (preloadedNext) {
-    const all = await getDecks();
-    all[preloadedNext.deckIndex]!.engine.stop().catch(() => {});
-    preloadedNext = null;
-  }
-
   usePlayer.setState({ index: at, nowPlaying: hint, status: 'loading', error: null });
   try {
     const all = await getDecks();
     const deck = all[active]!;
     deck.audio.pause();
-    void deck.engine.stop().catch(() => {});
     all[1 - active]!.audio.pause();
-    all[1 - active]!.engine.stop().catch(() => {});
     deck.gain = 1;
     applyVolumes();
     const playId = await resolvePlayableVideoId(entry, at);
@@ -922,12 +872,12 @@ async function startAt(at: number, { startSec = 0, auto = false, autoplay = true
     if (token !== loadToken || (error instanceof Error && error.name === 'SupersededError')) return;
     const message = error instanceof Error ? error.message : String(error);
     usePlayer.setState({ status: 'error', error: message });
-    // A track the player reached on its own that can't play is skipped, as on the phone.
-    if (auto && planNext(true)) {
-      trackLog.w(`skipping: ${message}`, entry.track.videoId);
+    // If a track can't play, automatically skip forward to the next playable song after a brief pause
+    if (planNext(true)) {
+      trackLog.w(`auto-skipping unplayable track (${message})`, entry.track.videoId);
       setTimeout(() => {
         if (token === loadToken) void advance(true);
-      }, 1500);
+      }, 1200);
     }
   }
 }
@@ -987,7 +937,7 @@ function afterTrackStarted() {
   }
   void refillAutoplay();
 
-  // Smart Ahead Preloading: Pre-resolve and buffer the upcoming track on the idle deck
+  // Smart Ahead Preloading: Pre-resolve Spotify matches and prefetch lyrics ahead of time
   if (preloadNextTimer) {
     clearTimeout(preloadNextTimer);
     preloadNextTimer = null;
@@ -996,7 +946,6 @@ function afterTrackStarted() {
   const prefs = readAppearancePreferences();
   if (prefs.lowResourceMode) return;
 
-  // Quickly pre-buffer upcoming track (600ms) after playback begins
   preloadNextTimer = setTimeout(async () => {
     preloadNextTimer = null;
     const cur = usePlayer.getState();
@@ -1009,30 +958,10 @@ function afterTrackStarted() {
     if (!nextEntry) return;
 
     try {
-      const all = await getDecks();
-      const idleIdx = 1 - active;
-      const idleDeck = all[idleIdx]!;
-
       // 1. Resolve playback ID ahead of time (Spotify matching done in advance!)
       const nextPlayId = await resolvePlayableVideoId(nextEntry, nextAt);
 
-      if (usePlayer.getState().status !== 'playing' || usePlayer.getState().index !== index) return;
-
-      // 2. Preload on the idle deck without playing
-      const loaded = await idleDeck.engine.load(nextPlayId, { startSec: 0, autoplay: false });
-
-      if (usePlayer.getState().index === index) {
-        preloadedNext = {
-          at: nextAt,
-          playId: nextPlayId,
-          loadedTrack: loaded,
-          deckIndex: idleIdx,
-          entry: nextEntry,
-        };
-        trackLog.i(`Smart preloaded next track: ${nextEntry.track.title}`, nextPlayId);
-      }
-
-      // 3. Smart prefetch up to 3 upcoming tracks (playable IDs and lyrics)
+      // 2. Smart prefetch upcoming tracks (playable IDs and lyrics)
       try {
         const { queryClient } = await import('@/lib/queryClient');
         const { lookupLyrics } = await import('@/lyrics/repository');
